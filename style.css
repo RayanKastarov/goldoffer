@@ -270,3 +270,24 @@ footer {
     border-top: 1px solid var(--border);
     color: var(--text-muted);
 }
+@media (max-width: 768px) {
+    /* Прави целия сайт да се свива перфектно в екрана на телефона */
+    body {
+        padding: 10px;
+    }
+    
+    /* Прави бутоните и кутиите на конструктора да не излизат извън екрана */
+    .flex-container, .grid-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    /* Намалява малко огромните заглавия, за да се събират на един ред */
+    h1 {
+        font-size: 1.8rem !important;
+    }
+    h2 {
+        font-size: 1.5rem !important;
+    }
+}
