@@ -271,23 +271,36 @@ footer {
     color: var(--text-muted);
 }
 @media (max-width: 768px) {
-    /* Прави целия сайт да се свива перфектно в екрана на телефона */
-    body {
-        padding: 10px;
+    /* 1. Оправяме навигацията най-горе (Header-а) */
+    header, .nav-container, .header-main {
+        display: flex !important;
+        flex-direction: column !important; /* Нарежда бутоните един под друг, за да не се чупят */
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 15px 5px !important;
     }
-    
-    /* Прави бутоните и кутиите на конструктора да не излизат извън екрана */
-    .flex-container, .grid-container {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
+
+    /* Прави бутоните "Регистрирай се" и "Влез" да заемат равен, хубав обем */
+    header button, .nav-links a, .header-buttons {
+        width: 90% !important;
+        text-align: center !important;
+        padding: 12px !important;
+        font-size: 14px !important;
     }
-    
-    /* Намалява малко огромните заглавия, за да се събират на един ред */
-    h1 {
-        font-size: 1.8rem !important;
+
+    /* 2. Оправяме секцията за Основател Раян Кацаров */
+    .founder-banner, .founder-section {
+        display: flex !important;
+        flex-direction: column !important;
+        text-align: center !important;
+        width: 100% !important;
+        margin: 15px 0 !important;
     }
-    h2 {
-        font-size: 1.5rem !important;
+
+    /* 3. Правим централните големи кутии да заспиват на екрана */
+    .card, .section, .main-box {
+        width: 95% !important;
+        margin: 10px auto !important;
+        padding: 15px !important;
     }
 }
