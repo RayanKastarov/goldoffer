@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoldOffer - Оферти</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .form-container, .offers-container { margin-bottom: 30px; max-width: 500px; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; margin-bottom: 5px; }
+    .form-group input { width: 100%; padding: 8px; box-sizing: border-box; }
+    button { padding: 10px 15px; background-color: #ffd700; border: none; cursor: pointer; font-weight: bold; }
+    button:hover { background-color: #e6c200; }
+    .offer-card { border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+
+  <h1>Златни Оферти</h1>
+
+  <!-- Форма за добавяне на оферта -->
+  <div class="form-container">
+    <h2>Добави нова оферта</h2>
+    <form id="offerForm">
+      <div class="form-group">
+        <label for="title">Заглавие:</label>
+        <input type="text" id="title" required>
+      </div>
+      <div class="form-group">
+        <label for="weightInGrams">Тегло (грама):</label>
+        <input type="number" step="0.01" id="weightInGrams" required>
+      </div>
+      <div class="form-group">
+        <label for="karats">Карати:</label>
+        <input type="number" id="karats" required>
+      </div>
+      <div class="form-group">
+        <label for="price">Цена (€):</label>
+        <input type="number" step="0.01" id="price" required>
+      </div>
+      <div class="form-group">
+        <label for="imageUrl">URL на изображение:</label>
+        <input type="text" id="imageUrl">
+      </div>
+      <button type="submit">Запази офертата</button>
+    </form>
+  </div>
+
+  <hr>
+
+  <!-- Списък с налични оферти -->
+  <div class="offers-container">
+    <h2>Всички оферти</h2>
+    <div id="offersList">Зареждане...</div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api/offers';
+
+    // 1. Взимане и показване на офертите (GET)
+    async function fetchOffers() {
+      try {
+        const res = await fetch(API_URL);
+        const offers = await res.json();
+
+        const listElement = document.getElementById('offersList');
+        listElement.innerHTML = '';
+
+        if (offers.length === 0) {
+          listElement.innerHTML = '<p>Няма намерени оферти.</p>';
+          return;
+        }
+
+        offers.forEach(offer => {
+          const card = document.createElement('div');
+          card.className = 'offer-card';
+          card.innerHTML = `
+            <h3>${offer.title}</h3>
+            <p><strong>Тегло:</strong> ${offer.weightInGrams} гр.</p>
+            <p><strong>Карати:</strong> ${offer.karats}K</p>
+            <p><strong>Цена:</strong> €${offer.price}</p>
+            ${offer.imageUrl ? `<img src="${offer.imageUrl}" alt="${offer.title}" style="max-width:100%; height:auto;">` : ''}
+          `;
+          listElement.appendChild(card);
+        });
+      } catch (error) {
+        console.error('Грешка при извличане:', error);
+        document.getElementById('offersList').innerText = 'Грешка при зареждане на офертите.';
+      }
+    }
+
+    // 2. Изпращане на нова оферта (POST)
+    document.getElementById('offerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const imageInput = document.getElementById('imageUrl').value.trim();
+
+      const newOffer = {
+        title: document.getElementById('title').value,
+        weightInGrams: Number(document.getElementById('weightInGrams').value),
+        karats: Number(document.getElementById('karats').value),
+        price: Number(document.getElementById('price').value),
+        imageUrl: imageInput !== '' ? imageInput : undefined
+      };
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newOffer)
+        });
+
+        if (res.ok) {
+          document.getElementById('offerForm').reset();
+          fetchOffers(); // Презареждаме списъка
+        } else {
+          alert('Грешка при запис на офертата.');
+        }
+      } catch (error) {
+        console.error('Грешка при изпращане:', error);
+      }
+    });
+
+    // Първоначално зареждане
+    fetchOffers();
+  </script>
+
+</body>
+</html>

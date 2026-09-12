@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — GoldOffer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+
+    <div class="auth-card">
+        <div class="logo">GOLD<span>OFFER</span></div>
+        <h2>Вход в акаунта</h2>
+        <p class="auth-subtitle">Управлявай своите оферти</p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Имейл адрес</label>
+                <input type="email" id="email" placeholder="ivan@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Парола</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <div id="errorMsg" class="error-msg"></div>
+
+            <button type="submit" class="gold-btn full-width">
+                Влез →
+            </button>
+        </form>
+
+        <p class="auth-footer">
+            Нямаш акаунт? <a href="register.html">Регистрирай се</a>
+        </p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

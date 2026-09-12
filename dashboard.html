@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Табло за управление — GoldOffer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="logo">GOLD<span>OFFER</span></div>
+        <div class="user-menu">
+            <span id="userBusiness">Зареждане...</span>
+            <button onclick="logout()" class="secondary-btn">Изход</button>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <div class="dashboard-header">
+            <div>
+                <h1>Моите Оферти</h1>
+                <p>Статус на абонамента: <strong id="subscriptionStatus">-</strong></p>
+            </div>
+            <button id="checkoutBtn" class="gold-btn">Абонирай се / Премиум</button>
+        </div>
+
+        <div id="offersList" class="offers-grid">
+            <p class="empty-msg">Зареждане на офертите...</p>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация — GoldOffer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+
+    <div class="auth-card">
+        <div class="logo">GOLD<span>OFFER</span></div>
+        <h2>Създай своя акаунт</h2>
+        <p class="auth-subtitle">Започни своя 7-дневен безплатен период</p>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="name">Вашето име</label>
+                <input type="text" id="name" placeholder="Иван Иванов" required>
+            </div>
+
+            <div class="form-group">
+                <label for="businessName">Име на бизнеса / Студиото</label>
+                <input type="text" id="businessName" placeholder="Ivanov Photography" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Имейл адрес</label>
+                <input type="email" id="email" placeholder="ivan@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Парола</label>
+                <input type="password" id="password" placeholder="••••••••" required minlength="6">
+            </div>
+
+            <div id="errorMsg" class="error-msg"></div>
+
+            <button type="submit" class="gold-btn full-width">
+                Регистрирай се →
+            </button>
+        </form>
+
+        <p class="auth-footer">
+            Вече имаш акаунт? <a href="login.html">Влез оттук</a>
+        </p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
