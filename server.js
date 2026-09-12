@@ -178,24 +178,67 @@ app.post('/api/auth/login-verify', async (req, res) => {
 app.post('/api/ai/market-price', async (req, res) => {
   const { query, category, city } = req.body;
   try {
-    const response = await axios.post('https://openai.com', {
-      model: 'gpt-4o',
-      response_format: { type: "json_object" }, 
-      messages: [{
-        role: 'system',
-        content: `Ти си ценови аналитик за България. Анализирай реалните пазарни цени за "${query}" в бизнес категория "${category}" за град/регион "${city}". 
-        Изчисли РЕАЛИСТИЧНИ цени в БЪЛГАРСКИ ЛЕВОВЕ (BGN) спрямо икономическия стандарт на град ${city}. Ако градът е по-малък като Гоце Делчев, върни цени за местния пазар, а не надути европейски цени!
-        Върни ОКОНЧАТЕЛНО само JSON обект: 
-        {
-          "minPrice": <число_минимална_цена>, 
-          "maxPrice": <число_максимална_цена>, 
-          "avgPrice": <число_средна_цена>, 
-          "description": "<кратко и брутално точно описание на български за пазара в ${city}>"
-        }`
-      }]
-    }, {
-      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }
-    });
+ const response = await axios.post(
+  'https://api.openai.com/v1/responses',
+  {
+    model: 'gpt-5.6-luna',
+
+    tools: [
+      {
+        type: 'web_search'
+      }
+    ],
+
+    input: `
+Ти си ценови аналитик за България.
+
+Търси актуални реални оферти за:
+"${query}"
+
+Категория:
+"${category}"
+
+Град/регион:
+"${city}"
+
+Използвай web search, за да намериш реални текущи цени от магазини и сайтове.
+
+ВАЖНО:
+- Не измисляй цени.
+- Използвай реални намерени оферти.
+- Ако продуктът има различни варианти, различавай моделите/разфасовките.
+- Цените трябва да са в BGN.
+- Ако цената е в EUR или друга валута, конвертирай я в BGN.
+- За ${city} предпочитай българския пазар.
+- Не приемай, че цената е различна само защото градът е по-малък.
+- Ако няма достатъчно надеждни оферти, кажи това в description.
+
+Върни само JSON:
+
+{
+  "minPrice": number,
+  "maxPrice": number,
+  "avgPrice": number,
+  "description": "кратко описание",
+  "sources": [
+    {
+      "name": "име на магазина",
+      "price": number,
+      "url": "URL"
+    }
+  ]
+}
+`
+  },
+  {
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    }
+  }
+);
+
+console.log(response.data);
 
     const aiResult = JSON.parse(response.data.choices[0].message.content);
     res.json(aiResult);
