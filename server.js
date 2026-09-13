@@ -330,4 +330,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
 // --- СЛУЖЕБЕН ПОРТ ЗА КРАЙ НА DEPLOY FAILED ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Сървърът излетя успешно на порт ${PORT}`));
-
+const session = await stripe.checkout.sessions.create({
+  // ...
+  allow_promotion_codes: true,
+});
