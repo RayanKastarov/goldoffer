@@ -299,27 +299,36 @@ app.get('/site/:userId', async (req, res) => {
 
 // --- STRIPE SUBSCRIPTION FLOW ---
 // --- STRIPE SUBSCRIPTION FLOW ---
+// --- STRIPE SUBSCRIPTION FLOW ---
 app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
       mode: 'subscription',
 
-      line_items: [{
-        price: process.env.STRIPE_PRICE_ID,
-        quantity: 1,
-      }],
+      line_items: [
+        {
+          price: process.env.STRIPE_PRICE_ID,
+          quantity: 1,
+        },
+      ],
 
+      // ✅ Позволява въвеждане на Stripe Promotion Codes
       allow_promotion_codes: true,
 
-      success_url: `https://netlify.app`,
-      cancel_url: `https://netlify.app`,
+      success_url: 'https://netlify.app',
+      cancel_url: 'https://netlify.app',
     });
 
-    res.json({ url: session.url });
+    res.json({
+      url: session.url,
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Грешка при плащане' });
+    console.error('Stripe Checkout Error:', err);
+
+    res.status(500).json({
+      message: 'Грешка при плащане',
+    });
   }
 });
 // 📈 ЕНДПОИНТ ЗА ИСТИНСКИ СТАТИСТИКИ НА ТАБЛОТО
