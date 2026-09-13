@@ -298,20 +298,27 @@ app.get('/site/:userId', async (req, res) => {
 });
 
 // --- STRIPE SUBSCRIPTION FLOW ---
+// --- STRIPE SUBSCRIPTION FLOW ---
 app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'subscription',
+
       line_items: [{
         price: process.env.STRIPE_PRICE_ID,
         quantity: 1,
       }],
+
+      allow_promotion_codes: true,
+
       success_url: `https://netlify.app`,
       cancel_url: `https://netlify.app`,
     });
+
     res.json({ url: session.url });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Грешка при плащане' });
   }
 });
@@ -330,7 +337,3 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
 // --- СЛУЖЕБЕН ПОРТ ЗА КРАЙ НА DEPLOY FAILED ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Сървърът излетя успешно на порт ${PORT}`));
-const session = await stripe.checkout.sessions.create({
-  // ...
-  allow_promotion_codes: true,
-});
