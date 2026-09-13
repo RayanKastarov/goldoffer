@@ -4,6 +4,7 @@
 
 const API_BASE = 'https://onrender.com';
 
+
 // --- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАРЕЖДАНЕ НА СТРАНИЦАТА ---
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('goldoffer_token');
