@@ -3,6 +3,42 @@
 // =====================================================
 const API_BASE = 'https://onrender.com';
 
+// Търсим бутона за плащане в HTML страницата
+const payButton = document.getElementById('pay-button'); // Уверете се, че в HTML бутонът има id="pay-button"
+
+if (payButton) {
+    payButton.addEventListener('click', async () => {
+        try {
+            // Изпращаме заявка към вашия реален сървър в Render
+            const response = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.url) {
+                // Пренасочваме потребителя към ЖИВАТА страница за плащане на Stripe
+                window.location.href = data.url;
+            } else {
+                alert('Грешка при създаване на сесия за плащане.');
+            }
+        } catch (error) {
+            console.error('Грешка:', error);
+            alert('Възникна проблем при връзката със сървъра.');
+        }
+    });
+}
+
+// --- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАРЕЖДАНЕ НА СТРАНИЦАТА ---
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('goldoffer_token');
+    // Тук продължава вашата логика за регистрация/вход...
+});
+
+
 // --- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАРЕЖДАНЕ НА СТРАНИЦАТА ---
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('goldoffer_token');
