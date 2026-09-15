@@ -1,9 +1,7 @@
 // =====================================================
 // GOLDOFFER — CLIENT APP LOGIC
 // =====================================================
-
 const API_BASE = 'https://onrender.com';
-
 
 // --- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАРЕЖДАНЕ НА СТРАНИЦАТА ---
 document.addEventListener('DOMContentLoaded', () => {
