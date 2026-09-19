@@ -1,7 +1,8 @@
 // =====================================================
 // GOLDOFFER — CLIENT APP LOGIC
 // =====================================================
-const API_BASE = 'https://onrender.com';
+const API_BASE = 'https://goldoffer.onrender.com';
+
 
 // Търсим бутона за плащане в HTML страницата
 const payButton = document.getElementById('pay-button'); // Уверете се, че в HTML бутонът има id="pay-button"
