@@ -304,3 +304,13 @@ footer {
         padding: 15px !important;
     }
 }
+.header {
+    display: flex;
+    align-items: center;
+    padding: 15px 30px;
+}
+
+.logo {
+    width: 120px;
+    height: auto;
+}
