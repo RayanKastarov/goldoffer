@@ -29,9 +29,9 @@ const authLimiter = rateLimit({
   message: { message: 'Твърде много опити. Моля, опитайте снова след 15 минути.' }
 });
 
+
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const upload = multer({ dest: 'uploads/' });
-
 app.use(express.json());
 
 // --- Database Connection ---
@@ -181,7 +181,7 @@ app.post('/api/ai/market-price', async (req, res) => {
  const response = await axios.post(
   'https://api.openai.com/v1/responses',
   {
-    model: 'gpt-5.6-luna',
+    model: 'gpt-4o-mini',
 
     tools: [
       {
