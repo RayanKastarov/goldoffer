@@ -2,17 +2,6 @@
 // GOLDOFFER — CLIENT APP LOGIC
 // =====================================================
 const API_BASE = 'https://goldoffer.onrender.com';
-const translations = {
-  bg: { title: "Добре дошли в GoldOffer Studio", desc: "Изградете вашия сайт..." },
-  en: { title: "Welcome to GoldOffer Studio", desc: "Build your website..." }
-};
-
-// Хакерският авто-детектор за държавата на клиента:
-const userLang = navigator.language || navigator.userLanguage; 
-const currentLang = userLang.includes('bg') ? 'bg' : 'en'; // Ако не е от БГ, автоматично пуска Английски!
-
-// Заковаваш текстовете по екрана на чисто:
-document.getElementById('site-title').innerText = translations[currentLang].title;
 
 
 // Търсим бутона за плащане в HTML страницата
