@@ -315,6 +315,14 @@ app.delete('/api/offers/:id', authenticateToken, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Remove only the photo of an offer (the offer itself stays)
+app.delete('/api/offers/:id/image', authenticateToken, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
+  const offer = await Offer.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { imageUrl: null }, { new: true });
+  if (!offer) return res.status(404).json({ message: 'Offer not found' });
+  res.json({ offer });
+});
+
 // ---------- Orders ----------
 app.patch('/api/orders/:id', authenticateToken, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });

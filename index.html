@@ -155,6 +155,12 @@
     .url-box { background: var(--soft); border: 1px solid var(--border); border-radius: 12px; padding: 14px; word-break: break-all; margin: 10px 0 14px; font-weight: 600; }
     .url-box a { color: var(--ink); }
     .note { font-size: .82rem; color: var(--muted); line-height: 1.55; margin-top: 12px; }
+    .thumb { position: relative; display: inline-block; margin-top: 8px; }
+    .thumb img { height: 96px; max-width: 220px; border-radius: 10px; display: block; object-fit: cover; border: 1px solid var(--border); }
+    .thumb.sm { margin: 0 12px 0 0; }
+    .thumb.sm img { height: 52px; width: 52px; }
+    .thumb .x { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; background: #dc2626; color: #fff; cursor: pointer; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+    .thumb .x:hover { background: #b91c1c; }
 
     /* Dashboard */
     #dashboard { display: none; width: 100%; max-width: 1200px; }
@@ -260,7 +266,9 @@
           <div class="range" id="oRange"></div>
           <div class="field" style="margin-top:12px"><label>Price (EUR)</label><input type="number" id="oPrice" min="0" step="0.01" placeholder="e.g. 25"></div>
           <div class="field"><label>Description</label><input type="text" id="oDesc" placeholder="Short description"></div>
-          <div class="field"><label>Photo (optional)</label><input type="file" id="oImg" accept="image/*"></div>
+          <div class="field"><label>Photo (optional)</label><input type="file" id="oImg" accept="image/*" onchange="previewPhoto()">
+            <div class="thumb" id="oImgPrev" style="display:none"><img id="oImgPrevImg" alt="Selected photo"><button type="button" class="x" title="Remove photo" onclick="clearPhoto()">&times;</button></div>
+          </div>
           <button class="btn btn-block" id="addOfferBtn" onclick="addOffer()">Add offer</button>
         </div>
         <button class="btn btn-lg btn-block" style="margin-top:20px" onclick="publishSite()">Publish website</button>
@@ -619,7 +627,9 @@
     const box = $('offerList');
     if (!S.offers.length) { box.innerHTML = '<p class="note" style="margin:0 0 10px">No offers yet. Add your first one below.</p>'; return; }
     box.innerHTML = S.offers.map(o =>
-      '<div class="offer-row"><div><b>' + esc(o.title) + '</b><small>EUR ' + money(o.price) + '</small></div>' +
+      '<div class="offer-row"><div class="row" style="flex-wrap:nowrap">' +
+      (o.imageUrl ? '<span class="thumb sm"><img src="' + esc(o.imageUrl) + '" alt=""><button type="button" class="x" title="Remove photo" onclick="removeOfferImage(\'' + esc(o._id) + '\')">&times;</button></span>' : '') +
+      '<div><b>' + esc(o.title) + '</b><small>EUR ' + money(o.price) + '</small></div></div>' +
       '<button class="btn-danger" onclick="removeOffer(\'' + esc(o._id) + '\')">Delete</button></div>').join('');
   }
   async function lookupPrice() {
@@ -660,6 +670,7 @@
       const d = await api('/api/offers', { method: 'POST', body: JSON.stringify({ title, price, description: $('oDesc').value.trim(), imageUrl }) });
       S.offers.unshift(d.offer);
       ['oTitle', 'oPrice', 'oDesc', 'oImg'].forEach(i => $(i).value = '');
+      clearPhoto();
       $('oRange').style.display = 'none';
       renderOfferList(); renderPreview();
     } catch (e) { notify(e.message, 'Error'); }
@@ -669,6 +680,25 @@
     try {
       await api('/api/offers/' + id, { method: 'DELETE' });
       S.offers = S.offers.filter(o => o._id !== id);
+      renderOfferList(); renderPreview();
+    } catch (e) { notify(e.message, 'Error'); }
+  }
+
+  function previewPhoto() {
+    const f = $('oImg').files[0];
+    if (!f) return clearPhoto();
+    $('oImgPrevImg').src = URL.createObjectURL(f);
+    $('oImgPrev').style.display = 'inline-block';
+  }
+  function clearPhoto() {
+    $('oImg').value = '';
+    $('oImgPrevImg').removeAttribute('src');
+    $('oImgPrev').style.display = 'none';
+  }
+  async function removeOfferImage(id) {
+    try {
+      const d = await api('/api/offers/' + id + '/image', { method: 'DELETE' });
+      S.offers = S.offers.map(o => o._id === id ? d.offer : o);
       renderOfferList(); renderPreview();
     } catch (e) { notify(e.message, 'Error'); }
   }
