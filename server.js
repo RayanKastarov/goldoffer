@@ -177,11 +177,16 @@ async function uniqueSlug(base, userId) {
   }
   return `${slugify(base)}-${Date.now().toString(36)}`;
 }
+// Free plan: up to 10 offers. Paid (active subscription): effectively unlimited.
+const FREE_OFFER_LIMIT = 10;
+const PAID_OFFER_LIMIT = 500; // safety cap against abuse
+const offerLimitFor = (u) => (u.subscriptionStatus === 'active' ? PAID_OFFER_LIMIT : FREE_OFFER_LIMIT);
 const publicUser = (u) => ({
   id: u._id, firstName: u.firstName, lastName: u.lastName, email: u.email,
   subscriptionStatus: u.subscriptionStatus, siteName: u.siteName, slug: u.slug,
   category: u.category, city: u.city, theme: u.theme, font: u.font, published: u.published,
-  siteUrl: u.slug && u.published ? `${PUBLIC_BASE}/site/${u.slug}` : null
+  siteUrl: u.slug && u.published ? `${PUBLIC_BASE}/site/${u.slug}` : null,
+  offerLimit: offerLimitFor(u)
 });
 if (!process.env.JWT_SECRET) console.error('WARNING: JWT_SECRET is not set. Login and registration will fail.');
 const signToken = (u) => jwt.sign({ id: u._id, email: u.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -293,6 +298,18 @@ app.get('/api/offers', authenticateToken, async (req, res) => {
 
 app.post('/api/offers', authenticateToken, async (req, res) => {
   try {
+    const owner = await User.findById(req.user.id);
+    if (!owner) return res.status(404).json({ message: 'User not found' });
+    const limit = offerLimitFor(owner);
+    const existing = await Offer.countDocuments({ userId: req.user.id });
+    if (existing >= limit) {
+      return res.status(402).json({
+        message: owner.subscriptionStatus === 'active'
+          ? `You reached the maximum of ${limit} offers.`
+          : `The free plan allows up to ${FREE_OFFER_LIMIT} offers. Upgrade to add more.`,
+        limitReached: true
+      });
+    }
     const { title, price, description, imageUrl } = req.body || {};
     if (!title || !String(title).trim()) return res.status(400).json({ message: 'Title is required.' });
     const p = Number(price);

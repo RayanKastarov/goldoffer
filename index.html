@@ -259,6 +259,7 @@
       <div id="step-3" class="step">
         <h2>3. Your offers</h2>
         <p class="sub">Each offer is saved to your account as soon as you add it.</p>
+        <div class="note" id="offerLimit" style="margin:0 0 12px"></div>
         <div id="offerList"></div>
         <div class="add-box">
           <div class="field"><label>Title</label><input type="text" id="oTitle" placeholder="e.g. Oil change"></div>
@@ -623,7 +624,17 @@
   }
 
   // ---------- Offers ----------
+  function offerLimit() { return (S.user && S.user.offerLimit) || 10; }
+  function isPaid() { return !!(S.user && S.user.subscriptionStatus === 'active'); }
+  function renderLimitInfo() {
+    const el = $('offerLimit'); if (!el) return;
+    const n = S.offers.length, max = offerLimit();
+    if (isPaid()) { el.textContent = 'Paid plan: ' + n + ' offers added.'; return; }
+    el.innerHTML = 'Free plan: <b>' + n + ' of ' + max + '</b> offers used.' +
+      (n >= max ? ' <button type="button" class="btn-ghost" style="padding:4px 10px;font-size:.8rem;margin-left:6px" onclick="payNow()">Upgrade for more</button>' : '');
+  }
   function renderOfferList() {
+    renderLimitInfo();
     const box = $('offerList');
     if (!S.offers.length) { box.innerHTML = '<p class="note" style="margin:0 0 10px">No offers yet. Add your first one below.</p>'; return; }
     box.innerHTML = S.offers.map(o =>
@@ -652,6 +663,9 @@
     btn.disabled = false; btn.textContent = 'Check market price';
   }
   async function addOffer() {
+    if (!isPaid() && S.offers.length >= offerLimit()) {
+      return notify('The free plan allows up to ' + offerLimit() + ' offers. Upgrade to add more.', 'Limit reached');
+    }
     const title = $('oTitle').value.trim();
     if (!title) return notify('Please enter a title.');
     const price = parseFloat($('oPrice').value);
