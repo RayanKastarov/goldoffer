@@ -1,7 +1,6 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -87,8 +86,7 @@ app.get('/api/health', (req, res) => {
     server: 'ok',
     database: states[mongoose.connection.readyState] || 'unknown',
     mongodbUriSet: !!process.env.MONGODB_URI,
-    jwtSecretSet: !!process.env.JWT_SECRET,
-    emailSet: !!((process.env.BREVO_API_KEY || process.env.RESEND_API_KEY) && process.env.MAIL_FROM)
+    jwtSecretSet: !!process.env.JWT_SECRET
   });
 });
 
@@ -106,19 +104,6 @@ const UserSchema = new mongoose.Schema({
   theme: { type: String, default: 'gold' },
   font: { type: String, default: 'sans' },
   published: { type: Boolean, default: false },
-  categoryLabel: String,
-  phone: String,
-  address: String,
-  hours: String,
-  facebook: String,
-  instagram: String,
-  logoUrl: String,
-  lang: { type: String, default: 'bg' },
-  notifyEmail: String,
-  notifyOn: { type: Boolean, default: true },
-  termsAcceptedAt: Date,
-  resetTokenHash: String,
-  resetExpires: Date,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -128,7 +113,6 @@ const OfferSchema = new mongoose.Schema({
   price: Number,
   description: String,
   imageUrl: String,
-  order: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -194,40 +178,6 @@ async function uniqueSlug(base, userId) {
   }
   return `${slugify(base)}-${Date.now().toString(36)}`;
 }
-// Accepts a full link or just a handle (e.g. "mybusiness") and returns a safe https link or ''
-function cleanSocial(value, host) {
-  let v = String(value || '').trim().slice(0, 200);
-  if (!v) return '';
-  if (!/^https?:\/\//i.test(v)) v = /^[A-Za-z0-9._-]+$/.test(v) ? `https://www.${host}/${v}` : `https://${v}`;
-  try { const u = new URL(v); return /^https?:$/.test(u.protocol) ? u.toString() : ''; } catch (e) { return ''; }
-}
-const isEmail = (v) => /^\S+@\S+\.\S+$/.test(String(v || ''));
-
-// Sends an email through Brevo or Resend (plain HTTPS, because free Render blocks SMTP ports)
-async function sendMail({ to, subject, html, text }) {
-  const from = process.env.MAIL_FROM || '';
-  const m = from.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
-  const sender = m ? { name: m[1].replace(/^"|"$/g, '') || 'GoldOffer Studio', email: m[2] } : { name: 'GoldOffer Studio', email: from.trim() };
-  try {
-    if (process.env.BREVO_API_KEY && sender.email) {
-      await axios.post('https://api.brevo.com/v3/smtp/email',
-        { sender, to: [{ email: to }], subject, htmlContent: html, textContent: text },
-        { headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json' } });
-      return true;
-    }
-    if (process.env.RESEND_API_KEY && sender.email) {
-      await axios.post('https://api.resend.com/emails',
-        { from: `${sender.name} <${sender.email}>`, to: [to], subject, html, text },
-        { headers: { Authorization: 'Bearer ' + process.env.RESEND_API_KEY } });
-      return true;
-    }
-    console.warn('Email is not set up: BREVO_API_KEY (or RESEND_API_KEY) and MAIL_FROM are missing.');
-  } catch (e) {
-    console.error('Email error:', e.response ? JSON.stringify(e.response.data) : e.message);
-  }
-  return false;
-}
-
 // Free plan: up to 10 offers. Paid (active subscription): effectively unlimited.
 const FREE_OFFER_LIMIT = 10;
 const PAID_OFFER_LIMIT = 500; // safety cap against abuse
@@ -237,10 +187,7 @@ const publicUser = (u) => ({
   subscriptionStatus: u.subscriptionStatus, siteName: u.siteName, slug: u.slug,
   category: u.category, city: u.city, theme: u.theme, font: u.font, published: u.published,
   siteUrl: u.slug && u.published ? `${PUBLIC_BASE}/site/${u.slug}` : null,
-  offerLimit: offerLimitFor(u),
-  categoryLabel: u.categoryLabel, phone: u.phone, address: u.address, hours: u.hours,
-  facebook: u.facebook, instagram: u.instagram, logoUrl: u.logoUrl,
-  lang: u.lang || 'bg', notifyEmail: u.notifyEmail, notifyOn: u.notifyOn !== false
+  offerLimit: offerLimitFor(u)
 });
 if (!process.env.JWT_SECRET) console.error('WARNING: JWT_SECRET is not set. Login and registration will fail.');
 const signToken = (u) => jwt.sign({ id: u._id, email: u.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -258,9 +205,8 @@ const authenticateToken = (req, res, next) => {
 // ---------- Auth ----------
 app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
-    const { firstName, lastName, email, password, acceptTerms } = req.body || {};
+    const { firstName, lastName, email, password } = req.body || {};
     if (!firstName || !email || !password) return res.status(400).json({ message: 'Please fill in all fields.' });
-    if (acceptTerms !== true) return res.status(400).json({ message: 'Please accept the Terms and the Privacy Policy.' });
     if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: 'Invalid email address.' });
     if (String(password).length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
 
@@ -271,8 +217,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       firstName: String(firstName).trim(),
       lastName: String(lastName || '').trim(),
       email,
-      password: await bcrypt.hash(password, 10),
-      termsAcceptedAt: new Date()
+      password: await bcrypt.hash(password, 10)
     });
     res.json({ token: signToken(user), user: publicUser(user) });
   } catch (err) {
@@ -304,48 +249,6 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   }
 });
 
-// ---------- Forgot / reset password ----------
-app.post('/api/auth/forgot', authLimiter, async (req, res) => {
-  const email = String((req.body || {}).email || '').toLowerCase().trim();
-  const answer = { message: 'If this email is registered, we sent a link to reset the password.' };
-  try {
-    const user = await User.findOne({ email });
-    if (user) {
-      const token = crypto.randomBytes(32).toString('hex');
-      user.resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
-      user.resetExpires = new Date(Date.now() + 60 * 60 * 1000);
-      await user.save();
-      const link = `${PUBLIC_BASE}/reset?token=${token}`;
-      sendMail({
-        to: user.email,
-        subject: 'Нова парола за GoldOffer / Reset your GoldOffer password',
-        text: `Здравейте,\nНатиснете връзката, за да зададете нова парола (валидна 1 час):\n${link}\n\nHello,\nOpen this link to set a new password (valid for 1 hour):\n${link}\n\nАко не сте поискали това, игнорирайте писмото. / If you did not ask for this, ignore this email.`,
-        html: `<p>Здравейте,</p><p><a href="${link}">Задайте нова парола</a> (валидна 1 час).</p><hr><p>Hello,</p><p><a href="${link}">Set a new password</a> (valid for 1 hour).</p><p style="color:#777">Ако не сте поискали това, игнорирайте писмото. / If you did not ask for this, ignore this email.</p>`
-      });
-    }
-  } catch (err) {
-    console.error('Forgot error', err.message);
-  }
-  res.json(answer);
-});
-
-app.post('/api/auth/reset', authLimiter, async (req, res) => {
-  try {
-    const { token, password } = req.body || {};
-    if (String(password || '').length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
-    const hash = crypto.createHash('sha256').update(String(token || '')).digest('hex');
-    const user = await User.findOne({ resetTokenHash: hash, resetExpires: { $gt: new Date() } });
-    if (!user) return res.status(400).json({ message: 'This reset link is invalid or has expired.' });
-    user.password = await bcrypt.hash(password, 10);
-    user.resetTokenHash = undefined;
-    user.resetExpires = undefined;
-    await user.save();
-    res.json({ token: signToken(user), user: publicUser(user) });
-  } catch (err) {
-    res.status(500).json({ message: 'Could not reset the password.' });
-  }
-});
-
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ message: 'User not found' });
@@ -355,24 +258,13 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 // ---------- Site settings / publishing ----------
 app.put('/api/site', authenticateToken, async (req, res) => {
   try {
-    const b = req.body || {};
-    const { siteName, category, city, theme, font, publish } = b;
+    const { siteName, category, city, theme, font, publish } = req.body || {};
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (siteName !== undefined) user.siteName = String(siteName).trim().slice(0, 80);
     if (category !== undefined) user.category = String(category).slice(0, 80);
-    if (b.categoryLabel !== undefined) user.categoryLabel = String(b.categoryLabel).slice(0, 80);
     if (city !== undefined) user.city = String(city).slice(0, 80);
-    if (b.phone !== undefined) user.phone = String(b.phone).trim().slice(0, 40);
-    if (b.address !== undefined) user.address = String(b.address).trim().slice(0, 160);
-    if (b.hours !== undefined) user.hours = String(b.hours).trim().slice(0, 400);
-    if (b.facebook !== undefined) user.facebook = cleanSocial(b.facebook, 'facebook.com');
-    if (b.instagram !== undefined) user.instagram = cleanSocial(b.instagram, 'instagram.com');
-    if (b.logoUrl !== undefined) user.logoUrl = /^https:\/\//.test(b.logoUrl || '') ? b.logoUrl : '';
-    if (b.lang === 'bg' || b.lang === 'en') user.lang = b.lang;
-    if (b.notifyEmail !== undefined) user.notifyEmail = isEmail(b.notifyEmail) ? String(b.notifyEmail).trim() : '';
-    if (typeof b.notifyOn === 'boolean') user.notifyOn = b.notifyOn;
     if (Object.keys(THEMES).includes(theme)) user.theme = theme;
     if (Object.keys(FONTS).includes(font)) user.font = font;
     if (!user.slug && user.siteName) user.slug = await uniqueSlug(user.siteName, user._id);
@@ -401,7 +293,7 @@ app.put('/api/site/slug', authenticateToken, async (req, res) => {
 
 // ---------- Offers ----------
 app.get('/api/offers', authenticateToken, async (req, res) => {
-  const offers = await Offer.find({ userId: req.user.id }).sort({ order: 1, createdAt: 1 });
+  const offers = await Offer.find({ userId: req.user.id }).sort({ createdAt: -1 });
   res.json({ offers });
 });
 
@@ -428,8 +320,7 @@ app.post('/api/offers', authenticateToken, async (req, res) => {
       title: String(title).trim().slice(0, 120),
       price: p,
       description: String(description || '').slice(0, 500),
-      imageUrl: /^https:\/\//.test(imageUrl || '') ? imageUrl : null,
-      order: existing
+      imageUrl: /^https:\/\//.test(imageUrl || '') ? imageUrl : null
     });
     res.json({ offer });
   } catch (err) {
@@ -441,39 +332,6 @@ app.delete('/api/offers/:id', authenticateToken, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
   await Offer.deleteOne({ _id: req.params.id, userId: req.user.id });
   res.json({ ok: true });
-});
-
-// New order of the offers: body { ids: [...] } in the wanted order (declared before "/:id")
-app.put('/api/offers/reorder', authenticateToken, async (req, res) => {
-  const ids = Array.isArray(req.body && req.body.ids) ? req.body.ids.filter(id => mongoose.isValidObjectId(id)) : [];
-  if (!ids.length) return res.status(400).json({ message: 'Nothing to reorder.' });
-  await Offer.bulkWrite(ids.map((id, i) => ({ updateOne: { filter: { _id: id, userId: req.user.id }, update: { $set: { order: i } } } })));
-  res.json({ ok: true });
-});
-
-// Edit an existing offer
-app.put('/api/offers/:id', authenticateToken, async (req, res) => {
-  try {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
-    const b = req.body || {};
-    const set = {};
-    if (b.title !== undefined) {
-      if (!String(b.title).trim()) return res.status(400).json({ message: 'Title is required.' });
-      set.title = String(b.title).trim().slice(0, 120);
-    }
-    if (b.price !== undefined) {
-      const p = Number(b.price);
-      if (!isFinite(p) || p < 0) return res.status(400).json({ message: 'Invalid price.' });
-      set.price = p;
-    }
-    if (b.description !== undefined) set.description = String(b.description).slice(0, 500);
-    if (b.imageUrl !== undefined) set.imageUrl = /^https:\/\//.test(b.imageUrl || '') ? b.imageUrl : null;
-    const offer = await Offer.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { $set: set }, { new: true });
-    if (!offer) return res.status(404).json({ message: 'Offer not found' });
-    res.json({ offer });
-  } catch (err) {
-    res.status(500).json({ message: 'Could not save the offer.' });
-  }
 });
 
 // Remove only the photo of an offer (the offer itself stays)
