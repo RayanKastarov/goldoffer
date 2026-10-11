@@ -82,7 +82,12 @@ mongoose.connect(process.env.MONGODB_URI)
 // Open /api/health in the browser to see whether the database is connected
 app.get('/api/health', (req, res) => {
   const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-  res.json({ server: 'ok', database: states[mongoose.connection.readyState] || 'unknown', uriSet: !!process.env.MONGODB_URI });
+  res.json({
+    server: 'ok',
+    database: states[mongoose.connection.readyState] || 'unknown',
+    mongodbUriSet: !!process.env.MONGODB_URI,
+    jwtSecretSet: !!process.env.JWT_SECRET
+  });
 });
 
 const UserSchema = new mongoose.Schema({
@@ -177,6 +182,7 @@ const publicUser = (u) => ({
   category: u.category, city: u.city, theme: u.theme, font: u.font, published: u.published,
   siteUrl: u.slug && u.published ? `${PUBLIC_BASE}/site/${u.slug}` : null
 });
+if (!process.env.JWT_SECRET) console.error('WARNING: JWT_SECRET is not set. Login and registration will fail.');
 const signToken = (u) => jwt.sign({ id: u._id, email: u.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
 const authenticateToken = (req, res, next) => {
@@ -209,6 +215,9 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     res.json({ token: signToken(user), user: publicUser(user) });
   } catch (err) {
     console.error('Register error', err.message);
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: 'Server setting JWT_SECRET is missing. Add it in Render, Environment.' });
+    }
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({ message: 'The database is not connected. Check MONGODB_URI on the server.' });
     }
@@ -225,6 +234,10 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     }
     res.json({ token: signToken(user), user: publicUser(user) });
   } catch (err) {
+    console.error('Login error', err.message);
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: 'Server setting JWT_SECRET is missing. Add it in Render, Environment.' });
+    }
     res.status(500).json({ message: 'Login failed. Please try again.' });
   }
 });
