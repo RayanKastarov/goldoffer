@@ -39,16 +39,16 @@
     button, input { font-family: var(--font); }
     html { scroll-behavior: smooth; }
     body {
-      background: var(--bg);
+      background: color-mix(in srgb, var(--a) 7%, #f7f8fb);
       background-image:
-        radial-gradient(900px 400px at 10% -5%, color-mix(in srgb, var(--a) 14%, transparent), transparent 70%),
-        radial-gradient(800px 400px at 95% 10%, color-mix(in srgb, var(--b) 12%, transparent), transparent 70%);
+        radial-gradient(1000px 520px at 8% -5%, color-mix(in srgb, var(--a) 30%, transparent), transparent 70%),
+        radial-gradient(900px 520px at 98% 8%, color-mix(in srgb, var(--b) 26%, transparent), transparent 70%);
       background-repeat: no-repeat;
       color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 0 20px 60px;
     }
 
     /* Header */
-    .site-header { position: sticky; top: 0; z-index: 50; width: 100vw; background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); margin-bottom: 40px; display: flex; justify-content: center; padding: 0 20px; }
+    .site-header { position: sticky; top: 0; z-index: 50; width: 100vw; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); border-bottom: 3px solid var(--a); margin-bottom: 40px; display: flex; justify-content: center; padding: 0 20px; }
     .nav { width: 100%; max-width: 1200px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px 0; }
     .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2rem; letter-spacing: -0.3px; }
     .brand img, .badge { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; }
@@ -232,6 +232,7 @@
           <input type="text" id="profSearch" placeholder="Search professions, e.g. barber, plumber, bakery" oninput="renderProfs()">
         </div>
         <div class="prof-scroll"><div class="prof-grid" id="profGrid"></div></div>
+        <p class="note" style="margin:0 0 8px">Photos are loaded from Wikipedia.</p>
         <div class="selected-line" id="selLine">No profession selected yet.</div>
         <button class="btn btn-block" onclick="step1Next()">Continue</button>
         <button class="link-btn" onclick="goStep(0)">Back</button>
@@ -381,7 +382,24 @@
     ['Locksmith', 'locksmith'], ['Air conditioning', 'air,conditioner'], ['Computer repair', 'computer,repair'], ['Furniture maker', 'furniture,workshop']
   ];
 
-  const S = { token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', font: 'sans', mode: 'signup', chart: null };
+  // Wikipedia article whose lead photo best shows each profession
+  const WIKI = {
+    'Auto mechanic': 'Automobile repair shop', 'Bakery': 'Bakery', 'Fire safety': 'Firefighter', 'Jeweler': 'Jewellery',
+    'Barber': 'Barber', 'Hairdresser': 'Hairdresser', 'Beauty salon': 'Beauty salon', 'Nail technician': 'Manicure',
+    'Massage therapist': 'Massage', 'Personal trainer': 'Personal trainer', 'Yoga instructor': 'Yoga', 'Photographer': 'Photographer',
+    'Videographer': 'Videography', 'Plumber': 'Plumber', 'Electrician': 'Electrician', 'Carpenter': 'Carpenter',
+    'Painter and decorator': 'Painter and decorator', 'Roofer': 'Roofer', 'Construction': 'Construction worker', 'Interior designer': 'Interior design',
+    'Cleaning service': 'Cleaning', 'Landscaper and gardener': 'Landscaping', 'Florist': 'Floristry', 'Restaurant': 'Restaurant',
+    'Cafe': 'Café', 'Catering': 'Catering', 'Butcher': 'Butcher', 'Pastry chef': 'Pastry chef',
+    'Dentist': 'Dentist', 'Medical clinic': 'Clinic', 'Veterinarian': 'Veterinarian', 'Pharmacy': 'Pharmacy',
+    'Lawyer': 'Lawyer', 'Accountant': 'Accountant', 'Real estate agent': 'Real estate agent', 'Tutor and teacher': 'Teacher',
+    'Driving school': 'Driving school', 'Taxi and transport': 'Taxi', 'Moving company': 'Moving company', 'Tailor': 'Tailor',
+    'Shoe repair': 'Cobbler', 'Web designer': 'Web design', 'Solar installer': 'Solar panel', 'Tattoo artist': 'Tattoo artist',
+    'Event planner': 'Event management', 'DJ and music': 'Disc jockey', 'Car wash': 'Car wash', 'Tire shop': 'Tire',
+    'Locksmith': 'Locksmithing', 'Air conditioning': 'Air conditioning', 'Computer repair': 'Computer repair technician', 'Furniture maker': 'Furniture'
+  };
+
+  const S = { photos: {}, token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', font: 'sans', mode: 'signup', chart: null };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
   const money = (n) => Number(n || 0).toFixed(2);
@@ -427,7 +445,35 @@
   }
 
   // ---------- Profession picker ----------
-  function profImg(i, kw) { return 'https://loremflickr.com/320/200/' + encodeURIComponent(kw) + '?lock=' + (i + 11); }
+  // Fetch one real photo per profession from Wikipedia (free, no key). Cached in the browser.
+  async function loadProfPhotos() {
+    try {
+      const cached = JSON.parse(localStorage.getItem('profPhotos_v1') || 'null');
+      if (cached && Object.keys(cached).length > 10) { S.photos = cached; renderProfs(); return; }
+    } catch (e) {}
+    const names = Object.keys(WIKI);
+    const found = {};
+    for (let i = 0; i < names.length; i += 25) {
+      const chunk = names.slice(i, i + 25);
+      const titles = chunk.map(n => WIKI[n]);
+      const url = 'https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=480&titles=' + encodeURIComponent(titles.join('|'));
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const q = data.query || {};
+        const norm = {}; (q.normalized || []).forEach(x => norm[x.from] = x.to);
+        const redir = {}; (q.redirects || []).forEach(x => redir[x.from] = x.to);
+        const byTitle = {}; Object.values(q.pages || {}).forEach(p => { if (p.thumbnail) byTitle[p.title] = p.thumbnail.source; });
+        chunk.forEach(n => {
+          let t = WIKI[n]; t = norm[t] || t; t = redir[t] || t;
+          if (byTitle[t]) found[n] = byTitle[t];
+        });
+      } catch (e) {}
+    }
+    S.photos = found;
+    if (Object.keys(found).length) { try { localStorage.setItem('profPhotos_v1', JSON.stringify(found)); } catch (e) {} }
+    renderProfs();
+  }
   function renderProfs() {
     const q = $('profSearch').value.trim().toLowerCase();
     const list = PROFESSIONS.map((p, i) => ({ name: p[0], kw: p[1], i })).filter(p => !q || p.name.toLowerCase().includes(q) || p.kw.includes(q));
@@ -440,7 +486,9 @@
     }
     grid.innerHTML = list.map(p =>
       '<button type="button" class="prof' + (S.category === p.name ? ' selected' : '') + '" data-n="' + esc(p.name) + '">' +
-      '<div class="pic"><img loading="lazy" alt="" src="' + profImg(p.i, p.kw) + '" onerror="this.parentNode.textContent=\'' + esc(p.name.charAt(0)) + '\'"></div>' +
+      '<div class="pic">' + (S.photos[p.name]
+        ? '<img loading="lazy" alt="' + esc(p.name) + '" src="' + esc(S.photos[p.name]) + '" onerror="this.parentNode.textContent=\'' + esc(p.name.charAt(0)) + '\'">'
+        : esc(p.name.charAt(0))) + '</div>' +
       '<div class="name">' + esc(p.name) + '</div></button>').join('');
   }
   $ ('profGrid').addEventListener('click', (e) => {
@@ -524,7 +572,7 @@
   }
 
   async function init() {
-    buildPickers(); renderProfs(); renderAuth(); renderPreview();
+    buildPickers(); renderProfs(); loadProfPhotos(); renderAuth(); renderPreview();
     if (S.token) {
       try { const d = await api('/api/auth/me'); S.user = d.user; await afterLogin(); } catch (e) { renderAuth(); }
     }
@@ -580,10 +628,14 @@
     const btn = $('aiBtn'); btn.disabled = true; btn.textContent = 'Searching...';
     try {
       const d = await api('/api/ai/market-price', { method: 'POST', body: JSON.stringify({ query: title, category: S.category, city: $('city').value.trim() || 'Bulgaria' }) });
-      if (d.avgPrice) $('oPrice').value = Number(d.avgPrice).toFixed(2);
+      if (!d.estimated && d.avgPrice) $('oPrice').value = Number(d.avgPrice).toFixed(2);
       if (d.description && !$('oDesc').value) $('oDesc').value = d.description;
-      if (d.minPrice != null && d.maxPrice != null) {
-        const r = $('oRange'); r.style.display = 'block';
+      const r = $('oRange');
+      if (d.estimated) {
+        r.style.display = 'block';
+        r.textContent = d.message;
+      } else if (d.minPrice != null && d.maxPrice != null) {
+        r.style.display = 'block';
         r.textContent = 'Market range: EUR ' + money(d.minPrice) + ' to ' + money(d.maxPrice) + ' (average EUR ' + money(d.avgPrice) + ')';
       }
     } catch (e) { notify(e.message, 'Price lookup'); }

@@ -395,19 +395,30 @@ Return ONLY JSON: {"minPrice": number, "maxPrice": number, "avgPrice": number, "
     if (!match) throw new Error('No JSON in AI response');
     res.json({ ...JSON.parse(match[0]), estimated: false });
   } catch (err) {
-    console.error('AI price error:', err.message);
-    res.status(502).json({ message: 'Market price lookup is unavailable right now. Please enter the price manually.' });
+    console.error('AI price error:', err.response ? JSON.stringify(err.response.data) : err.message);
+    // No live price data: fill in a description only, never invent prices
+    const where = city ? ` in ${city}` : '';
+    res.json({
+      estimated: true,
+      description: `Professional ${query}${where}. Quality work, fair prices and reliable service.`,
+      message: 'Live market prices are unavailable right now. Please enter the price manually.'
+    });
   }
 });
 
 // ---------- Image upload ----------
 app.post('/api/upload', authenticateToken, upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ message: 'Please choose an image file.' });
+  if (!req.file) return res.status(400).json({ message: 'Please choose an image file (JPG or PNG, max 5 MB).' });
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(500).json({ message: 'Image upload is not set up yet. Add the CLOUDINARY settings in Render, Environment.' });
+  }
   try {
     const result = await cloudinary.uploader.upload(req.file.path);
     res.json({ url: result.secure_url });
   } catch (err) {
-    res.status(500).json({ message: 'Image upload failed.' });
+    console.error('Upload error:', err.message || err);
+    res.status(500).json({ message: 'Image upload failed. Check the CLOUDINARY keys in Render.' });
   } finally {
     fs.unlink(req.file.path, () => {});
   }
@@ -529,7 +540,7 @@ app.get('/', (req, res) => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
-    "connect-src 'self' https://cdn.jsdelivr.net",
+    "connect-src 'self' https://cdn.jsdelivr.net https://en.wikipedia.org",
     "form-action 'self'"
   ].join('; '));
   res.sendFile(file);
