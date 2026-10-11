@@ -75,7 +75,15 @@ const upload = multer({
 });
 
 // ---------- Database ----------
-mongoose.connect(process.env.MONGODB_URI).catch(err => console.error('MongoDB error', err));
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB error', err.message));
+
+// Open /api/health in the browser to see whether the database is connected
+app.get('/api/health', (req, res) => {
+  const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+  res.json({ server: 'ok', database: states[mongoose.connection.readyState] || 'unknown', uriSet: !!process.env.MONGODB_URI });
+});
 
 const UserSchema = new mongoose.Schema({
   firstName: String,
@@ -200,7 +208,10 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     });
     res.json({ token: signToken(user), user: publicUser(user) });
   } catch (err) {
-    console.error('Register error', err);
+    console.error('Register error', err.message);
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'The database is not connected. Check MONGODB_URI on the server.' });
+    }
     res.status(500).json({ message: 'Registration failed. Please try again.' });
   }
 });
