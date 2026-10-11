@@ -80,13 +80,25 @@ mongoose.connect(process.env.MONGODB_URI)
   .catch(err => console.error('MongoDB error', err.message));
 
 // Open /api/health in the browser to see whether the database is connected
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+  // Checks the Cloudinary keys for real, so a wrong key shows up here instead of during an upload
+  let cloudinaryStatus = 'not set';
+  if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+    try {
+      await cloudinary.api.ping();
+      cloudinaryStatus = 'ok';
+    } catch (err) {
+      const code = err && (err.http_code || (err.error && err.error.http_code));
+      cloudinaryStatus = 'rejected' + (code ? ' (' + code + ')' : '');
+    }
+  }
   res.json({
     server: 'ok',
     database: states[mongoose.connection.readyState] || 'unknown',
     mongodbUriSet: !!process.env.MONGODB_URI,
-    jwtSecretSet: !!process.env.JWT_SECRET
+    jwtSecretSet: !!process.env.JWT_SECRET,
+    cloudinary: cloudinaryStatus
   });
 });
 
@@ -440,12 +452,17 @@ app.post('/api/upload', authenticateToken, upload.single('file'), async (req, re
     return res.status(500).json({ message: 'Image upload is not set up yet. Add the CLOUDINARY settings in Render, Environment.' });
   }
   try {
-    const result = await cloudinary.uploader.upload(req.file.path);
+    const result = await cloudinary.uploader.upload(req.file.path, { resource_type: 'image', folder: 'goldoffer' });
     res.json({ url: result.secure_url });
   } catch (err) {
     const reason = (err && (err.message || (err.error && err.error.message))) || 'unknown error';
-    console.error('Upload error:', reason);
-    res.status(500).json({ message: 'Image upload failed: ' + reason });
+    const code = (err && (err.http_code || (err.error && err.error.http_code))) || 0;
+    console.error('Upload error:', code, reason);
+    let message = 'Image upload failed: ' + reason;
+    if (code === 401 || code === 403) {
+      message = 'Image storage rejected the keys (' + code + '). Check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in Render, Environment, then redeploy.';
+    }
+    res.status(500).json({ message });
   } finally {
     fs.unlink(req.file.path, () => {});
   }
