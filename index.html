@@ -16,12 +16,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      /* interface palette */
       --ink: #05070b; --deep: #0a0e15; --panel: #10151e; --raise: #171e2a;
       --line: rgba(255,255,255,.09); --line2: rgba(255,255,255,.17);
       --paper: #f1eee8; --soft: #c4cad5; --mute: #8b94a5;
       --iris: #8b7bff; --lagoon: #4fe3cf; --amber: #ffb454; --danger: #ff7a7a;
-      /* customer-site theme (set by the theme picker, used only inside the preview and the chart) */
+      --lt: #e9e9e6; --lt2: #f4f4f1; --ltext: #0b0e14; --lmute: #586070; --lline: rgba(10,14,20,.12);
       --ta: #ffd700; --tb: #ff8c00; --tink: #b45309; --ton: #1a1a1a;
       --pfont: 'Inter', sans-serif;
       --display: 'Bricolage Grotesque', 'Inter', sans-serif;
@@ -35,7 +34,6 @@
     body.theme-sunset-orange { --ta:#ff4e00; --tb:#ec9f05; --tink:#c2410c; --ton:#ffffff; }
     body.theme-cyber-pink { --ta:#ff007f; --tb:#7928ca; --tink:#be185d; --ton:#ffffff; }
     body.theme-midnight-silver { --ta:#64748b; --tb:#1e293b; --tink:#334155; --ton:#ffffff; }
-
     body.font-sans { --pfont: 'Inter', sans-serif; }
     body.font-serif { --pfont: 'Playfair Display', serif; }
     body.font-mono { --pfont: 'JetBrains Mono', monospace; }
@@ -50,65 +48,83 @@
     body { background: var(--ink); color: var(--paper); font-family: 'Inter', sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
     a { color: inherit; }
     :focus-visible { outline: 2px solid var(--lagoon); outline-offset: 3px; border-radius: 6px; }
-    section[id] { scroll-margin-top: calc(var(--nav-h) + 8px); }
     h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: -.025em; line-height: 1.06; }
+    .view { display: none; }
+    .view.active { display: block; animation: fadein .35s ease; }
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+    .light { background: var(--lt2); color: var(--ltext); }
+    .light .lead2, .light p.muted { color: var(--lmute); }
+
+    /* reveal on scroll */
+    .rv { opacity: 0; transform: translateY(34px); transition: opacity .8s var(--d, 0ms), transform .8s var(--d, 0ms); }
+    .rv.shown { opacity: 1; transform: none; }
 
     /* ---------- Buttons ---------- */
     .btn { background: var(--paper); color: #0b0e14; border: 0; border-radius: 10px; padding: 12px 22px; font-weight: 600; font-size: .95rem; cursor: pointer; transition: background .15s, transform .15s; text-decoration: none; display: inline-block; text-align: center; }
     .btn:hover { background: #fff; transform: translateY(-1px); }
     .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
     .btn-lg { padding: 15px 28px; font-size: 1rem; }
+    .btn-dark { background: #0b0e14; color: #fff; }
+    .btn-dark:hover { background: #1a2030; }
     .btn-ghost { background: transparent; color: var(--paper); border: 1px solid var(--line2); border-radius: 10px; padding: 11px 18px; font-weight: 500; font-size: .92rem; cursor: pointer; transition: border-color .15s, background .15s; text-decoration: none; display: inline-block; text-align: center; }
     .btn-ghost:hover { border-color: var(--paper); background: rgba(255,255,255,.05); }
+    .light .btn-ghost { color: var(--ltext); border-color: rgba(10,14,20,.25); }
+    .light .btn-ghost:hover { border-color: #0b0e14; background: rgba(10,14,20,.05); }
     .btn-block { width: 100%; margin-top: 12px; display: block; }
     .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,122,122,.35); border-radius: 8px; padding: 6px 12px; font-size: .8rem; font-weight: 500; cursor: pointer; }
     .btn-danger:hover { background: rgba(255,122,122,.1); }
     .link-btn { background: none; border: 0; color: var(--mute); text-decoration: underline; font-size: .88rem; margin-top: 14px; width: 100%; cursor: pointer; }
     .link-btn:hover { color: var(--paper); }
 
-    /* ---------- Navigation ---------- */
-    .nav:not(.solid):not(.menu-open):not(.open) { background: linear-gradient(180deg, rgba(5,7,11,.9), rgba(5,7,11,0)); }
-    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 80; height: var(--nav-h); transition: background .25s, border-color .25s; border-bottom: 1px solid transparent; }
-    .nav.solid, .nav.menu-open { background: rgba(5,7,11,.82); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom-color: var(--line); }
+    /* ---------- Navigation (turns light over light sections) ---------- */
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 80; height: var(--nav-h); transition: background .3s, border-color .3s, color .3s; border-bottom: 1px solid transparent; color: var(--paper); }
+    .nav:not(.solid):not(.menu-open):not(.open) { background: linear-gradient(180deg, rgba(5,7,11,.85), rgba(5,7,11,0)); }
+    .nav.solid, .nav.menu-open, .nav.open { background: rgba(5,7,11,.84); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom-color: var(--line); }
+    .nav.light { color: #0b0e14; }
+    .nav.light:not(.solid):not(.menu-open):not(.open) { background: linear-gradient(180deg, rgba(244,244,241,.9), rgba(244,244,241,0)); }
+    .nav.light.solid, .nav.light.menu-open, .nav.light.open { background: rgba(244,244,241,.88); border-bottom-color: var(--lline); }
     .nav-in { height: 100%; max-width: 1360px; margin: 0 auto; padding: 0 28px; display: flex; align-items: center; gap: 36px; }
     .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; font-family: var(--display); font-weight: 600; font-size: 1.22rem; letter-spacing: -.02em; flex-shrink: 0; }
     .mark { width: 34px; height: 34px; flex-shrink: 0; }
     .menu { display: flex; align-self: stretch; align-items: stretch; gap: 4px; }
     .mi { display: flex; align-items: center; }
-    .mb, .ml { background: none; border: 0; color: var(--soft); font-size: .96rem; font-weight: 500; padding: 0 14px; cursor: pointer; display: flex; align-items: center; text-decoration: none; height: 100%; transition: color .15s; }
-    .mb:hover, .ml:hover, .mi.open .mb, .ml.active { color: #fff; }
+    .mb, .ml { background: none; border: 0; color: inherit; opacity: .78; font-size: .96rem; font-weight: 500; padding: 0 14px; cursor: pointer; display: flex; align-items: center; text-decoration: none; height: 100%; transition: opacity .15s; }
+    .mb:hover, .ml:hover, .mi.open .mb, .ml.active { opacity: 1; }
     .mb::after { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); margin-left: 9px; transition: transform .2s; }
     .mi.open .mb::after { transform: rotate(225deg) translate(-1px, -1px); }
     .nav-end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-    .nav-end .who { color: var(--mute); font-size: .88rem; margin-right: 4px; }
+    .nav-end .who { opacity: .65; font-size: .88rem; margin-right: 4px; }
     .nav-end .btn, .nav-end .btn-ghost { padding: 9px 18px; font-size: .9rem; }
-    .burger { display: none; background: none; border: 1px solid var(--line2); border-radius: 10px; width: 42px; height: 42px; cursor: pointer; color: var(--paper); align-items: center; justify-content: center; }
+    .nav.light .nav-end .btn { background: #0b0e14; color: #fff; }
+    .nav.light .nav-end .btn-ghost { color: #0b0e14; border-color: rgba(10,14,20,.25); }
+    .burger { display: none; background: none; border: 1px solid var(--line2); border-radius: 10px; width: 42px; height: 42px; cursor: pointer; color: inherit; align-items: center; justify-content: center; }
+    .nav.light .burger { border-color: rgba(10,14,20,.25); }
     .burger span, .burger span::before, .burger span::after { display: block; width: 18px; height: 1.5px; background: currentColor; position: relative; content: ''; }
     .burger span::before { position: absolute; top: -6px; } .burger span::after { position: absolute; top: 6px; }
 
     .mega { position: absolute; left: 0; right: 0; top: 100%; background: rgba(6,8,13,.97); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--line); opacity: 0; visibility: hidden; transform: translateY(-6px); transition: opacity .18s, transform .18s, visibility .18s; }
+    .nav.light .mega { background: rgba(240,240,237,.98); border-bottom-color: var(--lline); }
     .mi.open > .mega { opacity: 1; visibility: visible; transform: none; }
-    .mega-in { max-width: 1360px; margin: 0 auto; padding: 38px 28px 46px; display: grid; gap: 48px; }
-    .mega-2 { grid-template-columns: 1fr 1fr 1.3fr; }
-    .mega-4 { grid-template-columns: repeat(4, 1fr) 1.3fr; }
-    .mcol h4 { font-weight: 500; font-size: .85rem; color: var(--mute); margin-bottom: 16px; }
-    .mcol a { display: block; text-decoration: none; padding: 7px 0; font-family: var(--display); font-size: 1.28rem; font-weight: 500; letter-spacing: -.015em; color: var(--paper); cursor: pointer; transition: color .15s, transform .15s; }
-    .mcol a small { display: block; font-family: 'Inter', sans-serif; font-size: .8rem; font-weight: 400; color: var(--mute); letter-spacing: 0; margin-top: 1px; }
-    .mcol a:hover { color: var(--lagoon); transform: translateX(3px); }
-    .mfeat { position: relative; border-radius: 14px; overflow: hidden; min-height: 220px; display: flex; align-items: flex-end; text-decoration: none; cursor: pointer; border: 1px solid var(--line); }
-    .mfeat .ph { position: absolute; inset: 0; transition: transform .6s; }
-    .mfeat:hover .ph { transform: scale(1.05); }
-    .mfeat::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 20%, rgba(5,7,11,.9)); }
-    .mfeat span { position: relative; z-index: 1; padding: 20px; font-family: var(--display); font-size: 1.3rem; font-weight: 500; line-height: 1.15; }
-    .mfeat span small { display: block; font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 400; color: var(--soft); margin-top: 6px; }
-
+    .mega-in { max-width: 1360px; margin: 0 auto; padding: 38px 28px 46px; display: grid; gap: 40px; grid-template-columns: 1fr 1fr 1.1fr 1.1fr; align-items: start; }
+    .mega-s { grid-template-columns: 1fr 1fr 1fr 1.1fr 1.1fr; }
+    .mcol h4 { font-weight: 500; font-size: .85rem; opacity: .55; margin-bottom: 16px; }
+    .mcol a { display: block; text-decoration: none; padding: 7px 0; font-family: var(--display); font-size: 1.28rem; font-weight: 500; letter-spacing: -.015em; cursor: pointer; transition: opacity .15s, transform .15s; }
+    .mcol a small { display: block; font-family: 'Inter', sans-serif; font-size: .8rem; font-weight: 400; opacity: .6; letter-spacing: 0; margin-top: 1px; }
+    .mcol a:hover { transform: translateX(3px); color: var(--lagoon); }
+    .nav.light .mcol a:hover { color: #3b2fd6; }
+    .mcard { display: block; text-decoration: none; background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 18px; padding: 10px; transition: transform .25s, background .25s; }
+    .nav.light .mcard { background: #fff; border-color: var(--lline); }
+    .mcard:hover { transform: translateY(-3px); }
+    .mcard .ph { height: 168px; border-radius: 12px; transition: transform .6s; }
+    .mcard span { display: block; padding: 12px 6px 4px; font-size: .92rem; font-weight: 500; }
     .ph { background: var(--fb, linear-gradient(135deg, #2b3550, #141a2a)); background-size: cover; background-position: center; }
 
-    /* ---------- Scroll stage (hero) ---------- */
+    /* ---------- Hero scroll stage ---------- */
     .stage-track { height: 340vh; position: relative; background: var(--ink); }
     .stage-sticky { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; perspective: 1900px;
       --w: 100vw; --h: 100vh; --cy: 50; --r: 0px; --e: 0; --rx: 0deg;
-      background: radial-gradient(900px 560px at 50% 62%, rgba(139,123,255,.12), transparent 70%), var(--ink); }
+      background: radial-gradient(900px 560px at 50% 62%, rgba(139,123,255,.14), transparent 70%), var(--ink); }
     .ghost { position: absolute; left: 50%; top: calc(var(--cy) * 1%); width: calc(var(--w) + 44px); height: calc(var(--h) + 44px); transform: translate(-50%, -50%) rotate(-1.3deg); border: 1px solid rgba(255,255,255,.3); border-radius: calc(var(--r) + 22px); opacity: calc(var(--e) * .9); pointer-events: none; }
     .ghost.g2 { width: calc(var(--w) + 84px); height: calc(var(--h) + 70px); transform: translate(-50%, -50%) rotate(1deg); border-color: rgba(255,255,255,.16); border-radius: calc(var(--r) + 40px); }
     .device { position: absolute; left: 50%; top: calc(var(--cy) * 1%); width: var(--w); height: var(--h); transform: translate(-50%, -50%) rotateX(var(--rx)); border-radius: var(--r); overflow: hidden; background: #0c1017; border: 1px solid rgba(255,255,255, calc(var(--e) * .18)); box-shadow: 0 40px 120px rgba(0,0,0,.65); display: flex; flex-direction: column; will-change: width, height; }
@@ -117,7 +133,6 @@
     .dev-bar .url { margin-left: 10px; background: #0a0e15; color: var(--mute); border-radius: 7px; padding: 5px 14px; font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .dev-screen { position: relative; flex: 1; overflow: hidden; container-type: inline-size; background: #eef2ee; }
     .shade { position: absolute; inset: 0; z-index: 6; pointer-events: none; background: radial-gradient(75% 65% at 50% 50%, rgba(5,7,11,.95), rgba(5,7,11,.92)); opacity: calc(1 - var(--e) * .97); }
-
     .stage-copy { position: absolute; z-index: 5; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; padding: 0 24px; will-change: opacity, transform; }
     .stage-copy h1 { font-size: clamp(2.6rem, 6.6vw, 6rem); letter-spacing: -.04em; max-width: 15ch; margin: 0 auto 22px; }
     .stage-copy p.lead { color: var(--soft); font-size: clamp(1rem, 1.5vw, 1.25rem); max-width: 52ch; margin: 0 auto 32px; }
@@ -126,23 +141,24 @@
     .stage-copy .founder b { color: var(--soft); font-weight: 600; }
     .scroll-hint { position: absolute; z-index: 5; bottom: 26px; left: 50%; transform: translateX(-50%); color: var(--mute); font-size: .8rem; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
     .scroll-hint::after { content: ''; width: 1px; height: 30px; background: linear-gradient(var(--mute), transparent); }
-
     .stage-desc { position: absolute; z-index: 5; left: 50%; bottom: 7vh; transform: translateX(-50%); width: min(960px, 90vw); font-family: var(--display); font-size: clamp(1.45rem, 3vw, 2.7rem); line-height: 1.16; letter-spacing: -.025em; font-weight: 500; text-align: left; opacity: 0; }
     .stage-desc .w { opacity: .18; }
 
-    /* the mock bakery site that plays inside the device */
-    .mock { opacity: calc(.4 + var(--e) * .6); position: absolute; left: 0; right: 0; top: 0; width: 100%; font-family: 'Inter', sans-serif; color: #1d2a24; animation: browse 26s ease-in-out infinite alternate; will-change: transform; }
-    @keyframes browse { 0%, 8% { transform: translateY(0); } 45%, 52% { transform: translateY(-20%); } 92%, 100% { transform: translateY(-43%); } }
+    /* the demo business site that plays inside the device, cycling through professions */
+    .mock-wrap { position: absolute; inset: 0; transition: opacity .45s; }
+    .mock-wrap.out { opacity: 0; }
+    .mock { opacity: calc(.4 + var(--e) * .6); position: absolute; left: 0; right: 0; top: 0; width: 100%; font-family: 'Inter', sans-serif; color: #1d2a24; animation: browse 24s ease-in-out infinite alternate; will-change: transform; }
+    @keyframes browse { 0%, 8% { transform: translateY(0); } 50%, 58% { transform: translateY(-18%); } 92%, 100% { transform: translateY(-34%); } }
     .m-nav { opacity: var(--e); height: 7cqw; display: flex; align-items: center; justify-content: space-between; padding: 0 5cqw; background: #eef2ee; }
     .m-nav b { font-size: 2.1cqw; font-weight: 700; letter-spacing: -.01em; }
-    .m-nav span { display: flex; gap: 3cqw; font-size: 1.5cqw; color: #4b5b52; font-style: normal; }
+    .m-nav span { display: flex; gap: 3cqw; font-size: 1.5cqw; color: #4b5b52; }
     .m-nav i { font-style: normal; }
     .m-hero { position: relative; height: 46cqw; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 5cqw 5.5cqw; color: #fff; }
     .m-hero .ph { position: absolute; inset: 0; }
-    .m-hero .ph::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,24,19,.05), rgba(14,24,19,.72)); }
+    .m-hero .ph::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,24,19,.1), rgba(10,14,12,.78)); }
     .m-hero > *:not(.ph) { position: relative; z-index: 2; opacity: clamp(0, calc(var(--e) * 2.2), 1); }
-    .m-h1 { font-family: 'Inter', sans-serif; font-size: 6.4cqw; font-weight: 800; letter-spacing: -.04em; line-height: 1; width: fit-content; }
-    .m-sub { font-size: 1.9cqw; margin: 1.2cqw 0 2.4cqw; opacity: .9; }
+    .m-h1 { font-family: 'Inter', sans-serif; font-size: 6.4cqw; font-weight: 800; letter-spacing: -.04em; line-height: 1; width: fit-content; max-width: 90%; }
+    .m-sub { font-size: 1.9cqw; margin: 1.2cqw 0 2.4cqw; opacity: .92; }
     .m-cta { width: fit-content; background: #f3c969; color: #1d2a24; font-weight: 700; font-size: 1.7cqw; padding: 1.3cqw 3cqw; border-radius: 99cqw; }
     .m-title { font-size: 3.4cqw; font-weight: 800; letter-spacing: -.03em; padding: 6cqw 5cqw 2.6cqw; background: #eef2ee; }
     .m-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.6cqw; padding: 0 5cqw 3cqw; background: #eef2ee; }
@@ -155,59 +171,98 @@
     .m-card .rq { font-size: 1.3cqw; font-weight: 700; background: #1d2a24; color: #fff; padding: .9cqw 1.6cqw; border-radius: 99cqw; }
     .m-foot { background: #16241d; color: #cfe0d6; padding: 5cqw; font-size: 1.7cqw; display: flex; justify-content: space-between; }
     .m-foot b { color: #fff; font-size: 2.2cqw; }
-
-    /* annotation boxes, like labelled detections: they fade in as the clip shrinks */
     .ann { position: relative; }
     .ann::after { content: ''; position: absolute; inset: var(--i, -.9cqw); z-index: 4; border: .22cqw solid var(--c); background: color-mix(in srgb, var(--c) 13%, transparent); border-radius: .5cqw; pointer-events: none; opacity: clamp(0, calc((var(--e) - var(--s)) * 5), 1); }
     .ann::before { content: attr(data-label); position: absolute; left: var(--i, -.9cqw); top: calc(var(--i, -.9cqw) - 2.3cqw); z-index: 5; background: var(--c); color: #07090d; letter-spacing: 0; text-transform: none; font: 600 1.2cqw/1 'Inter', sans-serif; padding: .55cqw .9cqw; border-radius: .4cqw; white-space: nowrap; pointer-events: none; opacity: clamp(0, calc((var(--e) - var(--s)) * 5), 1); }
-
     .toast-wrap { position: absolute; inset: 0; z-index: 7; pointer-events: none; opacity: var(--e); }
-    .toast { position: absolute; right: 2.4cqw; bottom: 2.4cqw; background: #0d1219; color: #fff; border-radius: 1.4cqw; padding: 1.5cqw 2.2cqw; font-size: 1.5cqw; box-shadow: 0 2cqw 6cqw rgba(0,0,0,.4); display: flex; gap: 1.4cqw; align-items: center; opacity: 0; animation: toast 13s ease-in-out infinite; }
+    .toast { position: absolute; right: 2.4cqw; bottom: 2.4cqw; background: #0d1219; color: #fff; border-radius: 1.4cqw; padding: 1.5cqw 2.2cqw; font-size: 1.5cqw; box-shadow: 0 2cqw 6cqw rgba(0,0,0,.4); display: flex; gap: 1.4cqw; align-items: center; opacity: 0; animation: toast 12s ease-in-out infinite; }
     .toast::before { content: ''; width: 1.1cqw; height: 1.1cqw; border-radius: 50%; background: var(--lagoon); flex-shrink: 0; }
     .toast small { display: block; color: var(--mute); font-size: 1.15cqw; }
-    @keyframes toast { 0%, 56% { opacity: 0; transform: translateY(2cqw); } 62%, 86% { opacity: 1; transform: none; } 92%, 100% { opacity: 0; transform: translateY(2cqw); } }
+    @keyframes toast { 0%, 50% { opacity: 0; transform: translateY(2cqw); } 58%, 84% { opacity: 1; transform: none; } 92%, 100% { opacity: 0; transform: translateY(2cqw); } }
+    .prof-dots { position: absolute; z-index: 8; left: 50%; bottom: 3.2vh; transform: translateX(-50%); display: flex; gap: 8px; opacity: 0; transition: opacity .3s; }
+    .prof-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.28); transition: background .3s, width .3s; }
+    .prof-dots i.on { background: #fff; width: 22px; border-radius: 6px; }
 
-    /* ---------- Sections ---------- */
-    .section { max-width: 1240px; margin: 0 auto; padding: 130px 28px; }
-    .section-head { max-width: 760px; margin-bottom: 64px; }
+    /* ---------- Home: statement + moving photos ---------- */
+    .statement { background: var(--ink); padding: 40px 24px 130px; }
+    .st-grid { max-width: 1360px; margin: 0 auto 28px; display: grid; grid-template-columns: 340px 1fr; gap: 28px; align-items: stretch; }
+    .annot { position: relative; border-radius: 20px; overflow: hidden; min-height: 300px; background: #0e131c; border: 1px solid var(--line); }
+    .annot .ph { position: absolute; inset: 0; opacity: .55; filter: grayscale(1) contrast(1.1); }
+    .mk { position: absolute; width: 11px; height: 11px; border: 1.5px solid rgba(255,255,255,.75); border-radius: 3px; animation: mkfloat 7s ease-in-out infinite alternate; }
+    .mk.tri { border: 0; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 11px solid rgba(255,255,255,.7); border-radius: 0; }
+    .mk.big { width: 26px; height: 26px; border-radius: 6px; border-color: #fff; background: rgba(255,255,255,.08); }
+    @keyframes mkfloat { 0% { transform: translate(0, 0); } 50% { transform: translate(14px, -10px); } 100% { transform: translate(-10px, 12px); } }
+    .st-card { background: #17352a; border-radius: 22px; padding: clamp(32px, 5vw, 64px); display: flex; flex-direction: column; justify-content: space-between; gap: 40px; min-height: 300px; }
+    .st-card h2 { font-size: clamp(2rem, 4.2vw, 3.7rem); color: #e8e6df; max-width: 20ch; }
+    .st-card .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .scatter { position: relative; max-width: 1360px; margin: 0 auto; border-radius: 26px; background: #e8e8e5; height: 118vh; min-height: 760px; overflow: hidden; color: #0b0e14; }
+    .scatter .tile { position: absolute; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px rgba(10,14,20,.18); will-change: transform; background-color: #c9ccd2; }
+    .scatter .tile span { position: absolute; left: 10px; bottom: 8px; font-size: .74rem; font-weight: 600; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
+    .scatter .tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(5,7,11,.55)); }
+    .scatter .center { position: absolute; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; width: min(720px, 86%); pointer-events: none; }
+    .scatter .center h2 { font-size: clamp(2.2rem, 5vw, 4.4rem); text-shadow: 0 0 40px rgba(232,232,229,.95), 0 0 20px rgba(232,232,229,.9); }
+    .scatter .center p { color: #3c4452; margin-top: 16px; font-size: 1.1rem; text-shadow: 0 0 20px rgba(232,232,229,.95); }
+
+    .counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--lline); margin-top: 40px; }
+    .counter { padding: 36px 24px 10px 0; border-right: 1px solid var(--lline); }
+    .counter:last-child { border-right: 0; }
+    .counter b { display: block; font-family: var(--display); font-size: clamp(3rem, 6vw, 5.4rem); font-weight: 600; letter-spacing: -.04em; line-height: 1; }
+    .counter span { color: var(--lmute); font-size: .98rem; }
+    .lcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 70px; }
+    .lcard { position: relative; display: block; height: 420px; border-radius: 22px; overflow: hidden; text-decoration: none; color: #fff; }
+    .lcard .ph { position: absolute; inset: 0; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+    .lcard:hover .ph { transform: scale(1.07); }
+    .lcard::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(5,7,11,.88)); }
+    .lcard div.t { position: absolute; z-index: 1; left: 26px; right: 26px; bottom: 24px; }
+    .lcard h3 { font-size: 1.9rem; margin-bottom: 6px; }
+    .lcard p { color: #d6dbe4; font-size: .95rem; }
+    .cta-band { text-align: center; padding: 150px 24px; background: radial-gradient(900px 400px at 50% 100%, rgba(139,123,255,.28), transparent 70%), var(--ink); }
+    .cta-band h2 { font-size: clamp(2.4rem, 6vw, 5rem); max-width: 16ch; margin: 0 auto 30px; }
+
+    /* ---------- Generic sections / page heads ---------- */
+    .section { max-width: 1240px; margin: 0 auto; padding: 120px 28px; }
+    .page-head { max-width: 1240px; margin: 0 auto; padding: calc(var(--nav-h) + 84px) 28px 56px; }
+    .page-head h1 { font-size: clamp(2.6rem, 6.4vw, 5.4rem); letter-spacing: -.04em; max-width: 16ch; margin-bottom: 22px; }
+    .page-head p { font-size: 1.18rem; max-width: 56ch; color: var(--soft); }
+    .light .page-head p { color: var(--lmute); }
+    .section-head { max-width: 760px; margin-bottom: 56px; }
     .section-head h2 { font-size: clamp(2.2rem, 4.8vw, 3.9rem); margin-bottom: 18px; }
     .section-head p { color: var(--soft); font-size: 1.12rem; max-width: 56ch; }
-    .band { border-top: 1px solid var(--line); }
+    .light .section-head p { color: var(--lmute); }
 
-    /* how it works: a real sequence, so numbered */
-    .how { display: grid; grid-template-columns: 1fr 1.25fr; gap: 80px; align-items: start; }
-    .how .section-head { position: sticky; top: calc(var(--nav-h) + 40px); margin-bottom: 0; }
-    .steps { display: flex; flex-direction: column; }
-    .st { display: grid; grid-template-columns: 56px 1fr; gap: 24px; padding: 34px 0; border-top: 1px solid var(--line); }
-    .st:last-child { border-bottom: 1px solid var(--line); }
-    .st .n { font-family: var(--display); font-size: 1.1rem; color: var(--mute); padding-top: 5px; }
-    .st h3 { font-size: 1.7rem; margin-bottom: 8px; }
-    .st p { color: var(--soft); max-width: 46ch; margin-bottom: 20px; }
+    .steps { display: flex; flex-direction: column; max-width: 980px; }
+    .st { display: grid; grid-template-columns: 70px 1fr; gap: 24px; padding: 40px 0; border-top: 1px solid var(--lline); }
+    .st:last-child { border-bottom: 1px solid var(--lline); }
+    .st .n { font-family: var(--display); font-size: 2.6rem; color: #9aa1ad; line-height: 1; transition: color .5s; }
+    .st.shown .n { color: #0b0e14; }
+    .st h3 { font-size: 2rem; margin-bottom: 10px; }
+    .st p { color: var(--lmute); max-width: 52ch; margin-bottom: 22px; font-size: 1.05rem; }
     .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip { border: 1px solid var(--line2); border-radius: 99px; padding: 6px 14px; font-size: .86rem; color: var(--soft); }
-    .chip.on { background: var(--paper); color: #0b0e14; border-color: var(--paper); }
+    .chip { border: 1px solid rgba(10,14,20,.22); border-radius: 99px; padding: 6px 14px; font-size: .86rem; color: var(--lmute); }
+    .chip.on { background: #0b0e14; color: #fff; border-color: #0b0e14; }
     .dots { display: flex; gap: 8px; }
-    .dots i { width: 34px; height: 34px; border-radius: 10px; border: 2px solid var(--ink); box-shadow: 0 0 0 1px var(--line2); }
-    .dots i.sel { box-shadow: 0 0 0 2px var(--paper); }
-    .mini-row { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: .92rem; max-width: 420px; }
-    .mini-row b { font-weight: 600; } .mini-row span { color: var(--lagoon); font-weight: 600; }
-    .urlpill { display: inline-block; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 11px 18px; font-size: .92rem; color: var(--soft); }
-    .urlpill b { color: var(--paper); font-weight: 600; }
+    .dots i { width: 34px; height: 34px; border-radius: 10px; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--lline); }
+    .dots i.sel { box-shadow: 0 0 0 2px #0b0e14; }
+    .mini-row { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid var(--lline); border-radius: 12px; padding: 12px 16px; font-size: .92rem; max-width: 420px; }
+    .mini-row b { font-weight: 600; } .mini-row span { color: #0a7a6d; font-weight: 700; }
+    .urlpill { display: inline-block; background: #fff; border: 1px solid var(--lline); border-radius: 10px; padding: 11px 18px; font-size: .92rem; color: var(--lmute); }
+    .urlpill b { color: #0b0e14; font-weight: 600; }
 
-    /* professions marquee */
     .marq { overflow: hidden; display: flex; flex-direction: column; gap: 16px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
     .marq-row { display: flex; gap: 16px; width: max-content; animation: slide 90s linear infinite; }
     .marq-row.rev { animation-direction: reverse; animation-duration: 110s; }
     .marq:hover .marq-row { animation-play-state: paused; }
     @keyframes slide { to { transform: translateX(-50%); } }
-    .pcard { position: relative; flex: 0 0 auto; width: 250px; height: 320px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); cursor: pointer; background: none; color: var(--paper); text-align: left; padding: 0; }
-    .pcard .ph { position: absolute; inset: 0; transition: transform .6s; }
-    .pcard:hover .ph { transform: scale(1.06); }
-    .pcard::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(5,7,11,.92)); }
-    .pcard span { position: absolute; z-index: 1; left: 18px; right: 18px; bottom: 16px; font-family: var(--display); font-size: 1.3rem; font-weight: 500; line-height: 1.1; }
-    .marq-note { margin-top: 28px; color: var(--mute); font-size: .88rem; }
+    .pcard, .gtile { position: relative; flex: 0 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); cursor: pointer; background: none; color: var(--paper); text-align: left; padding: 0; }
+    .pcard { width: 250px; height: 320px; }
+    .pcard .ph, .gtile .ph { position: absolute; inset: 0; transition: transform .6s; }
+    .pcard:hover .ph, .gtile:hover .ph { transform: scale(1.06); }
+    .pcard::after, .gtile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(5,7,11,.92)); }
+    .pcard span, .gtile span { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: 14px; font-family: var(--display); font-size: 1.25rem; font-weight: 500; line-height: 1.1; }
+    .gsearch { max-width: 520px; margin-bottom: 28px; }
+    .ggrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+    .gtile { height: 250px; width: 100%; }
 
-    /* bento features */
     .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
     .bx { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 32px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
     .bx h3 { font-size: 1.55rem; margin-bottom: 8px; }
@@ -224,23 +279,34 @@
     .range-bar u { position: absolute; left: 52%; top: -4px; width: 3px; height: 16px; background: #fff; border-radius: 2px; }
     .range-nums { display: flex; justify-content: space-between; font-size: .85rem; color: var(--soft); }
     .bars { display: flex; align-items: flex-end; gap: 8px; height: 92px; }
-    .bars i { flex: 1; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, var(--iris), rgba(139,123,255,.25)); }
+    .bars i { flex: 1; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, var(--iris), rgba(139,123,255,.25)); transform-origin: bottom; animation: grow 2.4s ease-in-out infinite alternate; }
+    .bars i:nth-child(2n) { animation-delay: .3s; } .bars i:nth-child(3n) { animation-delay: .6s; }
+    @keyframes grow { from { transform: scaleY(.55); } to { transform: scaleY(1); } }
     .look-demo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .look-demo i { height: 38px; border-radius: 10px; }
 
-    /* pricing */
     .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 920px; }
-    .plan { border: 1px solid var(--line); border-radius: 22px; padding: 38px; background: var(--panel); display: flex; flex-direction: column; }
-    .plan.pro { background: linear-gradient(160deg, #1a1f36, #10151e 60%); border-color: rgba(139,123,255,.45); }
+    .plan { border: 1px solid var(--lline); border-radius: 22px; padding: 38px; background: #fff; display: flex; flex-direction: column; }
+    .plan.pro { background: #0b0e14; color: #fff; border-color: #0b0e14; }
     .plan h3 { font-size: 1.4rem; margin-bottom: 18px; font-weight: 500; }
     .plan .price { font-family: var(--display); font-size: 3.6rem; letter-spacing: -.04em; line-height: 1; font-weight: 600; }
-    .plan .price small { font-family: 'Inter', sans-serif; font-size: 1rem; color: var(--mute); letter-spacing: 0; font-weight: 400; }
-    .plan .sub2 { color: var(--mute); font-size: .92rem; margin: 10px 0 26px; min-height: 1.4em; }
+    .plan .price small { font-family: 'Inter', sans-serif; font-size: 1rem; opacity: .6; letter-spacing: 0; font-weight: 400; }
+    .plan .sub2 { opacity: .6; font-size: .92rem; margin: 10px 0 26px; min-height: 1.4em; }
     .plan ul { list-style: none; margin-bottom: 30px; flex: 1; }
-    .plan li { padding: 10px 0; border-top: 1px solid var(--line); color: var(--soft); font-size: .96rem; }
-    .price-note { color: var(--mute); font-size: .88rem; margin-top: 22px; max-width: 70ch; }
+    .plan li { padding: 10px 0; border-top: 1px solid var(--lline); font-size: .96rem; }
+    .plan.pro li { border-top-color: rgba(255,255,255,.14); }
+    .plan.pro .btn { background: #fff; color: #0b0e14; }
+    .price-note { color: var(--lmute); font-size: .88rem; margin-top: 22px; max-width: 70ch; }
+    .faq { max-width: 920px; margin-top: 80px; }
+    .faq h2 { font-size: 2.2rem; margin-bottom: 20px; }
+    .faq details { border-top: 1px solid var(--lline); padding: 20px 0; }
+    .faq details:last-child { border-bottom: 1px solid var(--lline); }
+    .faq summary { cursor: pointer; font-family: var(--display); font-size: 1.3rem; font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 20px; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after { content: '+'; font-size: 1.6rem; line-height: 1; transition: transform .25s; }
+    .faq details[open] summary::after { transform: rotate(45deg); }
+    .faq details p { color: var(--lmute); margin-top: 12px; max-width: 64ch; }
 
-    /* about */
     .about { display: grid; grid-template-columns: 1.1fr 1fr; gap: 72px; align-items: start; }
     .about h2 { font-size: clamp(2.2rem, 4.6vw, 3.7rem); margin-bottom: 26px; }
     .about p { color: var(--soft); font-size: 1.12rem; margin-bottom: 18px; max-width: 54ch; }
@@ -256,10 +322,18 @@
     .contact small { color: var(--mute); font-size: .8rem; display: block; }
     .contact b { font-weight: 500; font-size: 1.05rem; word-break: break-all; }
     .contact em { font-style: normal; color: var(--mute); font-size: .85rem; }
+    .ccards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 980px; }
+    .ccard { display: block; text-decoration: none; background: #fff; border: 1px solid var(--lline); border-radius: 22px; padding: 38px; transition: transform .25s, box-shadow .25s; }
+    .ccard:hover { transform: translateY(-4px); box-shadow: 0 24px 60px rgba(10,14,20,.12); }
+    .ccard small { color: var(--lmute); font-size: .86rem; }
+    .ccard b { display: block; font-family: var(--display); font-size: clamp(1.4rem, 2.6vw, 2.1rem); letter-spacing: -.02em; font-weight: 600; margin: 8px 0 24px; word-break: break-all; }
+    .ccard em { font-style: normal; font-weight: 600; font-size: .92rem; }
+    .tips { max-width: 980px; margin-top: 70px; }
+    .tips h2 { font-size: 2rem; margin-bottom: 18px; }
+    .tips li { list-style: none; padding: 16px 0; border-top: 1px solid var(--lline); color: var(--lmute); font-size: 1.02rem; }
+    .tips li:last-child { border-bottom: 1px solid var(--lline); }
 
-    /* studio (the real builder) */
-    .studio { background: var(--deep); border-top: 1px solid var(--line); }
-    .studio .section { padding-top: 110px; padding-bottom: 130px; }
+    /* ---------- Builder ---------- */
     .layout { display: grid; grid-template-columns: 1fr 420px; gap: 28px; align-items: start; }
     .card { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 34px; position: relative; }
     .card h2 { font-size: 1.7rem; margin-bottom: 8px; letter-spacing: -.025em; }
@@ -278,7 +352,6 @@
     input:focus { border-color: var(--iris); box-shadow: 0 0 0 4px rgba(139,123,255,.2); }
     input[type=file]::file-selector-button { background: var(--raise); color: var(--paper); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 12px; margin-right: 12px; cursor: pointer; }
     .field { margin-bottom: 16px; }
-
     .search-wrap { position: relative; margin-bottom: 12px; }
     .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--mute); }
     .search-wrap input { padding-left: 42px; }
@@ -293,7 +366,6 @@
     .no-match { text-align: center; padding: 22px 10px; color: var(--mute); font-size: .9rem; }
     .selected-line { font-size: .88rem; color: var(--mute); margin-bottom: 8px; }
     .selected-line b { color: var(--lagoon); font-weight: 600; }
-
     .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-bottom: 22px; }
     @media (max-width: 520px) { .swatches { grid-template-columns: repeat(4, 1fr); } }
     .sw { height: 40px; border-radius: 10px; border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--line2); cursor: pointer; }
@@ -303,7 +375,6 @@
     .fbtn span { display: block; font-size: 1.15rem; margin-bottom: 2px; }
     .fbtn small { color: var(--mute); font-size: .74rem; }
     .fbtn.selected { border-color: var(--paper); }
-
     .offer-row { background: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
     .offer-row b { display: block; font-size: .95rem; font-weight: 600; }
     .offer-row small { color: var(--lagoon); font-weight: 600; }
@@ -318,8 +389,6 @@
     .thumb.sm { margin: 0 12px 0 0; } .thumb.sm img { height: 52px; width: 52px; }
     .thumb .x { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); background: #dc2626; color: #fff; cursor: pointer; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
     .thumb .x:hover { background: #b91c1c; }
-
-    /* live preview of the customer's site */
     .preview { position: sticky; top: calc(var(--nav-h) + 24px); background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 14px; }
     .pbar { display: flex; align-items: center; gap: 6px; padding: 4px 6px 12px; }
     .dot { width: 10px; height: 10px; border-radius: 50%; background: #2b3447; }
@@ -337,8 +406,9 @@
     .empty { color: #8b94a5; text-align: center; font-size: .85rem; padding: 50px 10px; line-height: 1.6; }
 
     /* footer */
-    .foot { border-top: 1px solid var(--line); }
-    .foot-in { max-width: 1240px; margin: 0 auto; padding: 64px 28px 40px; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; }
+    .foot { border-top: 1px solid var(--line); background: var(--ink); }
+    body[data-page=dashboard] .foot { display: none; }
+    .foot-in { max-width: 1240px; margin: 0 auto; padding: 64px 28px 40px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; }
     .foot .brand { margin-bottom: 14px; }
     .foot p { color: var(--mute); font-size: .92rem; max-width: 34ch; }
     .foot h4 { font-weight: 500; color: var(--mute); font-size: .85rem; margin-bottom: 14px; }
@@ -347,15 +417,13 @@
     .foot-end { max-width: 1240px; margin: 0 auto; padding: 0 28px 40px; color: var(--mute); font-size: .84rem; }
 
     /* dashboard */
-    #dashboard { display: none; width: 100%; max-width: 1240px; margin: 0 auto; padding: calc(var(--nav-h) + 56px) 28px 100px; min-height: 100vh; }
-    #dashboard.active { display: block; animation: rise .3s ease; }
-    #dashboard h1 { font-size: 2.6rem; margin-bottom: 28px; }
+    .dash { max-width: 1240px; margin: 0 auto; padding: calc(var(--nav-h) + 56px) 28px 100px; min-height: 100vh; }
+    .dash h1 { font-size: 2.6rem; margin-bottom: 28px; }
     .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 16px; }
     .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
     .stat h3 { font-family: 'Inter', sans-serif; font-size: .86rem; color: var(--mute); margin-bottom: 12px; font-weight: 500; letter-spacing: 0; }
     .stat .v { font-family: var(--display); font-size: 2.3rem; font-weight: 600; letter-spacing: -.03em; }
     .dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
-    @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
     .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
     .panel h2 { font-size: 1.2rem; margin-bottom: 16px; }
     table { width: 100%; border-collapse: collapse; font-size: .88rem; }
@@ -366,7 +434,7 @@
     .pill.Pending { background: rgba(255,180,84,.14); color: var(--amber); }
 
     .modal { display: none; position: fixed; inset: 0; background: rgba(2,3,6,.7); backdrop-filter: blur(6px); justify-content: center; align-items: center; padding: 20px; z-index: 120; }
-    .modal-box { background: var(--panel); border: 1px solid var(--line2); border-radius: 20px; padding: 32px; width: 100%; max-width: 430px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 30px 90px rgba(0,0,0,.6); }
+    .modal-box { background: var(--panel); border: 1px solid var(--line2); border-radius: 20px; padding: 32px; width: 100%; max-width: 430px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 30px 90px rgba(0,0,0,.6); color: var(--paper); }
     .modal-box h3 { margin-bottom: 18px; font-size: 1.6rem; }
     .close { position: absolute; right: 16px; top: 10px; font-size: 1.6rem; color: var(--mute); background: none; border: 0; cursor: pointer; }
     .close:hover { color: #fff; }
@@ -374,56 +442,64 @@
 
     /* ---------- Responsive ---------- */
     @media (max-width: 1100px) {
-      .how { grid-template-columns: 1fr; gap: 40px; } .how .section-head { position: static; }
       .about { grid-template-columns: 1fr; gap: 44px; }
       .bento { grid-template-columns: repeat(2, 1fr); } .b1 { grid-column: span 2; } .b2, .b3, .b4, .b5 { grid-column: span 1; }
-      .mega-4 { grid-template-columns: repeat(2, 1fr); } .mega-2 { grid-template-columns: 1fr 1fr; } .mfeat { display: none; }
+      .mega-in, .mega-s { grid-template-columns: repeat(3, 1fr); } .mcard { display: none; }
+      .st-grid { grid-template-columns: 1fr; } .annot { min-height: 220px; }
+      .lcards { grid-template-columns: 1fr; } .lcard { height: 300px; }
+      .counters { grid-template-columns: repeat(2, 1fr); } .counter:nth-child(2) { border-right: 0; }
     }
-    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } .preview { position: static; } }
+    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } .preview { position: static; } .dash-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px) {
       :root { --nav-h: 64px; }
       .nav-in { padding: 0 18px; gap: 12px; }
       .burger { display: flex; margin-left: 8px; }
       .menu { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; background: rgba(5,7,11,.98); border-bottom: 1px solid var(--line); padding: 8px 18px 18px; max-height: calc(100vh - var(--nav-h)); overflow-y: auto; align-self: auto; }
-      .nav.open { background: rgba(5,7,11,.98); }
+      .nav.light .menu { background: rgba(244,244,241,.99); border-bottom-color: var(--lline); }
       .nav.open .menu { display: flex; }
       .mi { flex-direction: column; align-items: stretch; }
-      .mb, .ml { height: auto; padding: 14px 4px; font-size: 1.05rem; justify-content: space-between; border-bottom: 1px solid var(--line); }
-      .mega { position: static; opacity: 1; visibility: visible; transform: none; display: none; background: none; border: 0; backdrop-filter: none; }
+      .mb, .ml { height: auto; padding: 14px 4px; font-size: 1.05rem; justify-content: space-between; border-bottom: 1px solid var(--line); opacity: 1; }
+      .nav.light .mb, .nav.light .ml { border-bottom-color: var(--lline); }
+      .mega { position: static; opacity: 1; visibility: visible; transform: none; display: none; background: none !important; border: 0 !important; backdrop-filter: none; }
       .mi.open > .mega { display: block; }
-      .mega-in { padding: 14px 4px 8px; gap: 8px; grid-template-columns: 1fr !important; }
+      .mega-in, .mega-s { padding: 14px 4px 8px; gap: 8px; grid-template-columns: 1fr !important; }
       .nav-end .who { display: none; }
       .section { padding: 84px 20px; }
-      .plans { grid-template-columns: 1fr; }
-      .foot-in { grid-template-columns: 1fr; }
-      .st { grid-template-columns: 40px 1fr; gap: 14px; }
+      .page-head { padding: calc(var(--nav-h) + 50px) 20px 36px; }
+      .plans, .ccards { grid-template-columns: 1fr; }
+      .foot-in { grid-template-columns: 1fr 1fr; }
+      .st { grid-template-columns: 44px 1fr; gap: 14px; }
+      .scatter { height: 90vh; min-height: 560px; }
     }
     @media (max-width: 700px) { .stage-desc { bottom: auto; top: 49%; } }
     @media (max-width: 520px) {
       .brand span { display: none; }
       .nav-in { gap: 8px; }
       .nav-end .btn, .nav-end .btn-ghost { padding: 8px 12px; font-size: .84rem; white-space: nowrap; }
-      .nav-end #authArea { gap: 6px; }
       .burger { margin-left: 4px; width: 40px; height: 40px; flex-shrink: 0; }
+      .foot-in { grid-template-columns: 1fr; }
+      .dash { padding-inline: 18px; }
     }
     @media (max-width: 640px) {
       .offer-demo { grid-template-columns: 1fr 1fr; } .offer-demo .od:nth-child(3) { display: none; }
       .card { padding: 24px; } .stage-track { height: 300vh; }
       .pcard { width: 200px; height: 270px; }
       .bx { padding: 24px; }
+      .statement { padding-inline: 14px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .mock, .toast, .marq-row { animation: none !important; }
+      .mock, .toast, .marq-row, .mk, .bars i { animation: none !important; }
+      .rv { opacity: 1; transform: none; }
       .toast { opacity: 1; }
       html { scroll-behavior: auto; }
     }
   </style>
 </head>
-<body class="theme-gold font-sans" id="top">
+<body class="theme-gold font-sans" id="top" data-page="home">
 
 <header class="nav" id="nav">
   <div class="nav-in">
-    <a class="brand" id="tabBuilder" href="#top" onclick="goHome(event)" aria-label="GoldOffer Studio, home">
+    <a class="brand" href="/" data-link aria-label="GoldOffer Studio, home">
       <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b7bff"/><stop offset="1" stop-color="#4fe3cf"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#bg1)"/><text x="32" y="47" font-size="40" font-weight="800" text-anchor="middle" fill="#07090d" font-family="Arial, Helvetica, sans-serif">G</text></svg>
       <span>GoldOffer Studio</span>
     </a>
@@ -431,39 +507,53 @@
     <nav class="menu" id="menu" aria-label="Main">
       <div class="mi" data-menu>
         <button class="mb" type="button" aria-expanded="false" aria-haspopup="true">Product</button>
-        <div class="mega"><div class="mega-in mega-2">
-          <div class="mcol"><h4>Build</h4>
-            <a onclick="goSection(event,'studio')">Website builder<small>Profession, look, offers, publish</small></a>
-            <a onclick="goSection(event,'features')">Offers with photos<small>Titles, prices, descriptions</small></a>
-            <a onclick="goSection(event,'features')">Request form<small>Customers contact you from the site</small></a>
+        <div class="mega"><div class="mega-in">
+          <div class="mcol"><h4>Product</h4>
+            <a href="/how-it-works" data-link>How it works<small>Four steps to a live site</small></a>
+            <a href="/features" data-link>Features<small>Offers, photos, requests</small></a>
+            <a href="/pricing" data-link>Pricing<small>Free to start</small></a>
           </div>
-          <div class="mcol"><h4>Run</h4>
-            <a onclick="openDashboard(event)">Dashboard<small>Requests, revenue, status</small></a>
-            <a onclick="goSection(event,'features')">Market price check<small>See what others charge</small></a>
-            <a onclick="goSection(event,'features')">Your own address<small>Choose the name in your link</small></a>
+          <div class="mcol"><h4>Tools</h4>
+            <a href="/build" data-link>Website builder<small>Build and publish</small></a>
+            <a href="/dashboard" data-link>Dashboard<small>Requests and revenue</small></a>
+            <a href="/professions" data-link>Professions<small>50 to start from</small></a>
           </div>
-          <a class="mfeat" onclick="goSection(event,'how')"><div class="ph" data-photo="Bakery"></div><span>Live in four steps<small>See how a site gets built</small></span></a>
+          <a class="mcard" href="/how-it-works" data-link><div class="ph" data-photo="Bakery"></div><span>See how a site gets built</span></a>
+          <a class="mcard" href="/professions" data-link><div class="ph" data-photo="Barber"></div><span>Find your profession</span></a>
         </div></div>
       </div>
 
       <div class="mi" data-menu>
         <button class="mb" type="button" aria-expanded="false" aria-haspopup="true">Solutions</button>
-        <div class="mega"><div class="mega-in mega-4">
+        <div class="mega"><div class="mega-in mega-s">
           <div class="mcol"><h4>Food and drink</h4>
-            <a onclick="pickProf('Bakery')">Bakery</a><a onclick="pickProf('Restaurant')">Restaurant</a><a onclick="pickProf('Cafe')">Cafe</a></div>
-          <div class="mcol"><h4>Beauty</h4>
-            <a onclick="pickProf('Barber')">Barber</a><a onclick="pickProf('Hairdresser')">Hairdresser</a><a onclick="pickProf('Beauty salon')">Beauty salon</a></div>
-          <div class="mcol"><h4>Trades</h4>
-            <a onclick="pickProf('Plumber')">Plumber</a><a onclick="pickProf('Electrician')">Electrician</a><a onclick="pickProf('Auto mechanic')">Auto mechanic</a></div>
-          <div class="mcol"><h4>Health and care</h4>
-            <a onclick="pickProf('Dentist')">Dentist</a><a onclick="pickProf('Medical clinic')">Medical clinic</a><a onclick="pickProf('Veterinarian')">Veterinarian</a></div>
-          <a class="mfeat" onclick="goSection(event,'professions')"><div class="ph" data-photo="Barber"></div><span>All professions<small>Or type your own</small></span></a>
+            <a href="/build" data-link data-prof="Bakery">Bakery</a><a href="/build" data-link data-prof="Restaurant">Restaurant</a><a href="/build" data-link data-prof="Cafe">Cafe</a></div>
+          <div class="mcol"><h4>Beauty and health</h4>
+            <a href="/build" data-link data-prof="Barber">Barber</a><a href="/build" data-link data-prof="Hairdresser">Hairdresser</a><a href="/build" data-link data-prof="Dentist">Dentist</a></div>
+          <div class="mcol"><h4>Trades and services</h4>
+            <a href="/build" data-link data-prof="Plumber">Plumber</a><a href="/build" data-link data-prof="Electrician">Electrician</a><a href="/build" data-link data-prof="Auto mechanic">Auto mechanic</a></div>
+          <a class="mcard" href="/professions" data-link><div class="ph" data-photo="Florist"></div><span>All 50 professions</span></a>
+          <a class="mcard" href="/build" data-link><div class="ph" data-photo="Photographer"></div><span>Not listed? Type your own</span></a>
         </div></div>
       </div>
 
-      <div class="mi"><a class="ml" href="#pricing" onclick="goSection(event,'pricing')">Pricing</a></div>
-      <div class="mi"><a class="ml" href="#about" onclick="goSection(event,'about')">About</a></div>
-      <div class="mi"><a class="ml" id="tabDash" href="#dashboard" onclick="openDashboard(event)">Dashboard</a></div>
+      <div class="mi" data-menu>
+        <button class="mb" type="button" aria-expanded="false" aria-haspopup="true">Company</button>
+        <div class="mega"><div class="mega-in">
+          <div class="mcol"><h4>GoldOffer Studio</h4>
+            <a href="/about" data-link>About<small>Who builds this</small></a>
+            <a href="/contact" data-link>Contact<small>Email and phone</small></a>
+          </div>
+          <div class="mcol"><h4>Start</h4>
+            <a href="/build" data-link>Build your site<small>Free, no card</small></a>
+            <a href="/pricing" data-link>Pricing<small>Free and Pro</small></a>
+          </div>
+          <a class="mcard" href="/about" data-link><div class="ph" data-photo="Tailor"></div><span>Built for local businesses</span></a>
+          <a class="mcard" href="/contact" data-link><div class="ph" data-photo="Cafe"></div><span>Talk to the founder</span></a>
+        </div></div>
+      </div>
+
+      <div class="mi"><a class="ml" href="/pricing" data-link>Pricing</a></div>
     </nav>
 
     <div class="nav-end"><span id="authArea" class="row" style="flex-wrap:nowrap"></span></div>
@@ -471,51 +561,31 @@
   </div>
 </header>
 
-<div id="builder">
+<!-- =================== HOME =================== -->
+<main class="view active" id="v-home">
 
-  <!-- ===== Scroll stage ===== -->
-  <section class="stage-track" id="stageTrack" aria-label="Introduction">
+  <section class="stage-track" id="stageTrack" data-nav="dark" aria-label="Introduction">
     <div class="stage-sticky" id="stageSticky">
       <div class="ghost"></div><div class="ghost g2"></div>
 
       <div class="device" id="device" aria-hidden="true">
-        <div class="dev-bar"><i></i><i></i><i></i><span class="url">goldoffer.onrender.com/site/pekarnata-na-emi</span></div>
+        <div class="dev-bar"><i></i><i></i><i></i><span class="url" id="devUrl">goldoffer.onrender.com/site/your-business</span></div>
         <div class="dev-screen">
-          <div class="mock">
-            <div class="m-nav"><b>Пекарната на Еми</b><span><i>Offers</i><i>About</i><i>Contact</i></span></div>
-            <div class="m-hero ann" style="--c:var(--iris);--s:.22;--i:1.4cqw" data-label="Hero photo">
-              <div class="ph" data-photo="Bakery" style="--fb:linear-gradient(135deg,#8a6a3b,#3a2a17)"></div>
-              <div class="m-h1 ann" style="--c:var(--amber);--s:.4" data-label="Business name">Пекарната на Еми</div>
-              <div class="m-sub">Bakery in Plovdiv. Fresh every morning.</div>
-              <div class="m-cta ann" style="--c:var(--lagoon);--s:.7" data-label="Request button">Request an offer</div>
+          <div class="mock-wrap" id="mockWrap">
+            <div class="mock">
+              <div class="m-nav"><b id="mkName"></b><span><i>Offers</i><i>About</i><i>Contact</i></span></div>
+              <div class="m-hero ann" style="--c:var(--iris);--s:.22;--i:1.4cqw" data-label="Hero photo">
+                <div class="ph" id="mkHero"></div>
+                <div class="m-h1 ann" id="mkH1" style="--c:var(--amber);--s:.4" data-label="Business name"></div>
+                <div class="m-sub" id="mkSub"></div>
+                <div class="m-cta ann" style="--c:var(--lagoon);--s:.7" data-label="Request button">Request an offer</div>
+              </div>
+              <div class="m-title">Offers</div>
+              <div class="m-grid" id="mkGrid"></div>
+              <div class="m-foot"><div><b id="mkFoot"></b><br><span id="mkMeta"></span></div><div>Website made with GoldOffer Studio</div></div>
             </div>
-            <div class="m-title">Offers</div>
-            <div class="m-grid">
-              <div class="m-card ann" style="--c:var(--lagoon);--s:.55" data-label="Offer with photo and price">
-                <div class="ph" data-photo="Pastry chef" style="--fb:linear-gradient(135deg,#c28d4a,#6b4521)"></div>
-                <h5>Banitsa with cheese</h5><p>Baked in the morning, sold by the piece.</p>
-                <div class="row"><span class="pr">&euro;2.50</span><span class="rq">Request</span></div></div>
-              <div class="m-card"><div class="ph" data-photo="Cafe" style="--fb:linear-gradient(135deg,#7a8f6a,#2f3d29)"></div>
-                <h5>Sourdough loaf</h5><p>Slow-risen, 800 g.</p>
-                <div class="row"><span class="pr">&euro;3.20</span><span class="rq">Request</span></div></div>
-              <div class="m-card"><div class="ph" style="--fb:linear-gradient(135deg,#d9a7a0,#7a3f3a)"></div>
-                <h5>Birthday cake</h5><p>Made to order, ready in two days.</p>
-                <div class="row"><span class="pr">&euro;38.00</span><span class="rq">Request</span></div></div>
-            </div>
-            <div class="m-grid">
-              <div class="m-card"><div class="ph" style="--fb:linear-gradient(135deg,#e2c27a,#8a6425)"></div>
-                <h5>Croissants, box of 6</h5><p>Butter, no shortcuts.</p>
-                <div class="row"><span class="pr">&euro;7.00</span><span class="rq">Request</span></div></div>
-              <div class="m-card"><div class="ph" style="--fb:linear-gradient(135deg,#9db5c4,#3d5463)"></div>
-                <h5>Office breakfast</h5><p>Delivered for teams of 10 or more.</p>
-                <div class="row"><span class="pr">&euro;45.00</span><span class="rq">Request</span></div></div>
-              <div class="m-card"><div class="ph" style="--fb:linear-gradient(135deg,#b8a1d6,#4c3a6b)"></div>
-                <h5>Wedding dessert table</h5><p>Tasting included.</p>
-                <div class="row"><span class="pr">&euro;220.00</span><span class="rq">Request</span></div></div>
-            </div>
-            <div class="m-foot"><div><b>Пекарната на Еми</b><br>Bakery &middot; Plovdiv</div><div>Website made with GoldOffer Studio</div></div>
+            <div class="toast-wrap"><div class="toast"><div>New request<small id="mkToast"></small></div></div></div>
           </div>
-          <div class="toast-wrap"><div class="toast"><div>New request<small>Sourdough loaf, from Anna</small></div></div></div>
           <div class="shade"></div>
         </div>
       </div>
@@ -525,102 +595,150 @@
         <p class="lead">Pick your profession, add your offers with photos and prices, and publish a real website with its own public link. Free to start.</p>
         <div class="cta-row">
           <button class="btn btn-lg" type="button" onclick="cta()">Start building</button>
-          <a class="btn-ghost btn-lg" href="#how" onclick="goSection(event,'how')" style="padding:15px 26px;font-size:1rem">See how it works</a>
+          <a class="btn-ghost btn-lg" href="/how-it-works" data-link style="padding:15px 26px;font-size:1rem">See how it works</a>
         </div>
         <p class="founder"><b>Rayan Katsarov, founder.</b> &ldquo;A real website should bring customers, not headaches.&rdquo;</p>
       </div>
 
       <p class="stage-desc" id="stageDesc">Customers decide in seconds whether a business is real. GoldOffer gives yours real photos, clear prices and a request form that sends every inquiry straight to you.</p>
+      <div class="prof-dots" id="profDots"></div>
       <div class="scroll-hint" id="scrollHint">Scroll</div>
     </div>
   </section>
 
-  <!-- ===== How it works ===== -->
-  <section class="band" id="how">
-    <div class="section how">
-      <div class="section-head">
-        <h2>From nothing to a live website in four steps.</h2>
-        <p>No designer, no code, no hosting to set up. Your site is public the moment you publish it.</p>
+  <section class="statement" data-nav="dark">
+    <div class="st-grid">
+      <div class="annot rv" id="annot" aria-hidden="true">
+        <div class="ph" data-photo="Barber"></div>
       </div>
+      <div class="st-card rv">
+        <h2>Every small business deserves a website that looks as real as it is.</h2>
+        <div class="row"><button class="btn" type="button" onclick="cta()">Start building</button><a class="btn-ghost" href="/professions" data-link>Browse professions</a></div>
+      </div>
+    </div>
+    <div class="scatter" id="scatter">
+      <div class="center"><h2>Real photos. Real prices. A real link.</h2><p>Your offers, in front of customers, in minutes.</p></div>
+    </div>
+  </section>
+
+  <section class="light" data-nav="light">
+    <div class="section">
+      <div class="section-head rv"><h2>Small to start. Built to look serious.</h2><p>Everything you need is already inside, so you spend the time on your business, not on your website.</p></div>
+      <div class="counters rv">
+        <div class="counter"><b><span data-to="50">0</span></b><span>professions to start from</span></div>
+        <div class="counter"><b><span data-to="8">0</span></b><span>color themes</span></div>
+        <div class="counter"><b><span data-to="7">0</span></b><span>font styles</span></div>
+        <div class="counter"><b><span data-to="10">0</span></b><span>offers on the free plan</span></div>
+      </div>
+      <div class="lcards">
+        <a class="lcard rv" href="/how-it-works" data-link><div class="ph" data-photo="Bakery"></div><div class="t"><h3>How it works</h3><p>Four steps from nothing to a live site.</p></div></a>
+        <a class="lcard rv" href="/professions" data-link style="--d:90ms"><div class="ph" data-photo="Barber"></div><div class="t"><h3>Professions</h3><p>Start from yours, or type your own.</p></div></a>
+        <a class="lcard rv" href="/pricing" data-link style="--d:180ms"><div class="ph" data-photo="Florist"></div><div class="t"><h3>Pricing</h3><p>Free to start. Pay only when you grow.</p></div></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-band" data-nav="dark">
+    <h2 class="rv">Your website, live today.</h2>
+    <button class="btn btn-lg rv" type="button" onclick="cta()" style="--d:120ms">Start building, it is free</button>
+  </section>
+</main>
+
+<!-- =================== HOW IT WORKS =================== -->
+<main class="view" id="v-how">
+  <div class="light" data-nav="light" style="min-height:100vh">
+    <div class="page-head"><h1>From nothing to a live website in four steps.</h1><p>No designer, no code, no hosting to set up. Your site is public the moment you publish it.</p></div>
+    <div class="section" style="padding-top:0">
       <div class="steps">
-        <div class="st"><div class="n">1</div><div><h3>Choose your profession and city</h3><p>Start from a list of professions with real photos, or type your own if yours is not there.</p>
+        <div class="st rv"><div class="n">1</div><div><h3>Choose your profession and city</h3><p>Start from a list of professions with real photos, or type your own if yours is not there.</p>
           <div class="chips"><span class="chip on">Bakery</span><span class="chip">Barber</span><span class="chip">Plumber</span><span class="chip">Dentist</span></div></div></div>
-        <div class="st"><div class="n">2</div><div><h3>Name it and pick a look</h3><p>Eight color themes and seven font styles. The preview updates while you choose.</p>
+        <div class="st rv"><div class="n">2</div><div><h3>Name it and pick a look</h3><p>Eight color themes and seven font styles. The preview updates while you choose.</p>
           <div class="dots"><i style="background:linear-gradient(135deg,#ffd700,#ff8c00)" class="sel"></i><i style="background:linear-gradient(135deg,#00f2fe,#4facfe)"></i><i style="background:linear-gradient(135deg,#00f5a0,#00d9f5)"></i><i style="background:linear-gradient(135deg,#ff0844,#ff7a59)"></i><i style="background:linear-gradient(135deg,#b300ff,#7928ca)"></i></div></div></div>
-        <div class="st"><div class="n">3</div><div><h3>Add your offers</h3><p>A title, a price, a short description and a photo for each one. Not sure what to charge? Check the market price.</p>
+        <div class="st rv"><div class="n">3</div><div><h3>Add your offers</h3><p>A title, a price, a short description and a photo for each one. Not sure what to charge? Check the market price.</p>
           <div class="mini-row"><b>Sourdough loaf</b><span>EUR 3.20</span></div></div></div>
-        <div class="st"><div class="n">4</div><div><h3>Publish</h3><p>You get a public link anyone can open, and you can change its name. Requests arrive in your dashboard.</p>
+        <div class="st rv"><div class="n">4</div><div><h3>Publish</h3><p>You get a public link anyone can open, and you can change its name. Requests arrive in your dashboard.</p>
           <span class="urlpill">goldoffer.onrender.com/site/<b>your-business</b></span></div></div>
       </div>
+      <div style="margin-top:56px"><button class="btn btn-dark btn-lg" type="button" onclick="cta()">Start building</button></div>
     </div>
-  </section>
+  </div>
+</main>
 
-  <!-- ===== Professions ===== -->
-  <section class="band" id="professions">
-    <div class="section" style="padding-bottom:70px">
-      <div class="section-head" style="margin-bottom:48px">
-        <h2><span id="profCount">50</span> professions to start from.</h2>
-        <p>Pick yours and the builder opens with it selected. If it is not on the list, type it in and use that.</p>
-      </div>
-    </div>
-    <div class="marq" id="marq" style="padding-bottom:130px"></div>
-  </section>
-
-  <!-- ===== Features ===== -->
-  <section class="band" id="features">
-    <div class="section">
-      <div class="section-head">
-        <h2>Everything a small business site needs. Nothing it does not.</h2>
-        <p>Each part does one job, and all of it works from the first day.</p>
-      </div>
+<!-- =================== FEATURES =================== -->
+<main class="view" id="v-features">
+  <div data-nav="dark" style="min-height:100vh">
+    <div class="page-head"><h1>Everything a small business site needs. Nothing it does not.</h1><p>Each part does one job, and all of it works from the first day.</p></div>
+    <div class="section" style="padding-top:20px">
       <div class="bento">
-        <div class="bx b1"><h3>Offers with real photos</h3><p>Upload a photo for every offer. Customers see what they are buying before they ask.</p>
+        <div class="bx b1 rv"><h3>Offers with real photos</h3><p>Upload a photo for every offer. Customers see what they are buying before they ask.</p>
           <div class="vis"><div class="offer-demo">
             <div class="od"><div class="ph" data-photo="Bakery"></div><div><b>Banitsa</b><span>EUR 2.50</span></div></div>
             <div class="od"><div class="ph" data-photo="Pastry chef"></div><div><b>Birthday cake</b><span>EUR 38.00</span></div></div>
             <div class="od"><div class="ph" data-photo="Cafe"></div><div><b>Office breakfast</b><span>EUR 45.00</span></div></div>
           </div></div></div>
-        <div class="bx b2"><h3>Check the market price</h3><p>Type the offer title and see what others charge. Example shown.</p>
+        <div class="bx b2 rv" style="--d:80ms"><h3>Check the market price</h3><p>Type the offer title and see what others charge. Example shown.</p>
           <div class="vis"><div class="range-demo"><small>Market range</small><div class="range-bar"><i></i><u></u></div><div class="range-nums"><span>EUR 18</span><span>avg 25</span><span>EUR 32</span></div></div></div></div>
-        <div class="bx b3"><h3>Requests in one place</h3><p>Every request lands in your dashboard. Mark it completed when it is done.</p>
+        <div class="bx b3 rv"><h3>Requests in one place</h3><p>Every request lands in your dashboard. Mark it completed when it is done.</p>
           <div class="vis"><div class="bars"><i style="height:30%"></i><i style="height:48%"></i><i style="height:40%"></i><i style="height:66%"></i><i style="height:58%"></i><i style="height:92%"></i></div></div></div>
-        <div class="bx b4"><h3>Your own address</h3><p>Choose the name that appears in your link, and change it whenever you like.</p>
-          <div class="vis"><span class="urlpill" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">/site/<b>pekarnata-na-emi</b></span></div></div>
-        <div class="bx b5"><h3>A look that is yours</h3><p>Eight themes, seven fonts. Change them any time and the live site follows.</p>
+        <div class="bx b4 rv" style="--d:80ms"><h3>Your own address</h3><p>Choose the name that appears in your link, and change it whenever you like.</p>
+          <div class="vis"><span class="urlpill" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--raise);border-color:var(--line);color:var(--soft)">/site/<b style="color:#fff">your-business</b></span></div></div>
+        <div class="bx b5 rv" style="--d:160ms"><h3>A look that is yours</h3><p>Eight themes, seven fonts. Change them any time and the live site follows.</p>
           <div class="vis"><div class="look-demo"><i style="background:linear-gradient(135deg,#ffd700,#ff8c00)"></i><i style="background:linear-gradient(135deg,#00f2fe,#4facfe)"></i><i style="background:linear-gradient(135deg,#00f5a0,#00d9f5)"></i><i style="background:linear-gradient(135deg,#ff0844,#ff7a59)"></i><i style="background:linear-gradient(135deg,#b300ff,#7928ca)"></i><i style="background:linear-gradient(135deg,#ff4e00,#ec9f05)"></i><i style="background:linear-gradient(135deg,#ff007f,#7928ca)"></i><i style="background:linear-gradient(135deg,#64748b,#1e293b)"></i></div></div></div>
       </div>
     </div>
-  </section>
+  </div>
+</main>
 
-  <!-- ===== Pricing ===== -->
-  <section class="band" id="pricing">
-    <div class="section">
-      <div class="section-head">
-        <h2>Start free. Pay when you grow.</h2>
-        <p>The free plan is a complete website. Upgrade when you need more offers.</p>
-      </div>
+<!-- =================== PROFESSIONS =================== -->
+<main class="view" id="v-professions">
+  <div data-nav="dark" style="min-height:100vh">
+    <div class="page-head"><h1><span id="profCount">50</span> professions to start from.</h1><p>Pick yours and the builder opens with it selected. If it is not on the list, type it in and use that.</p></div>
+    <div class="marq" id="marq" style="margin-bottom:60px"></div>
+    <div class="section" style="padding-top:20px">
+      <div class="search-wrap gsearch"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="text" id="gSearch" placeholder="Search professions" oninput="renderGallery()"></div>
+      <div class="ggrid" id="gGrid"></div>
+    </div>
+  </div>
+</main>
+
+<!-- =================== PRICING =================== -->
+<main class="view" id="v-pricing">
+  <div class="light" data-nav="light" style="min-height:100vh">
+    <div class="page-head"><h1>Start free. Pay when you grow.</h1><p>The free plan is a complete website. Upgrade when you need more offers.</p></div>
+    <div class="section" style="padding-top:10px">
       <div class="plans">
-        <div class="plan"><h3>Free</h3><div class="price">EUR 0</div><div class="sub2">No card needed</div>
+        <div class="plan rv"><h3>Free</h3><div class="price">EUR 0</div><div class="sub2">No card needed</div>
           <ul><li>Public website with its own link</li><li>Up to 10 offers with photos</li><li>Request form and dashboard</li></ul>
-          <button class="btn btn-block" style="margin-top:0" type="button" onclick="cta()">Start building</button></div>
-        <div class="plan pro"><h3>Pro</h3><div class="price">EUR 19.99 <small>/ month</small></div><div class="sub2">First 7 days free</div>
+          <button class="btn btn-dark btn-block" style="margin-top:0" type="button" onclick="cta()">Start building</button></div>
+        <div class="plan pro rv" style="--d:100ms"><h3>Pro</h3><div class="price">EUR 19.99 <small>/ month</small></div><div class="sub2">First 7 days free</div>
           <ul><li>Everything in Free</li><li>Up to 500 offers</li><li>Cancel any time</li></ul>
           <button class="btn btn-block" style="margin-top:0" type="button" onclick="proCta()">Start 7-day free trial</button></div>
       </div>
       <p class="price-note">Your site is hosted for free on this platform's domain. Connecting your own domain, for example yourbusiness.com, can be added later.</p>
-    </div>
-  </section>
-
-  <!-- ===== About ===== -->
-  <section class="band" id="about">
-    <div class="section about">
-      <div>
-        <h2>Built by one person who wants small businesses to look as real as they are.</h2>
-        <p>GoldOffer Studio is made by Rayan Katsarov. It is for people who run a bakery, a barbershop, a workshop or a clinic and need a website that earns trust on the first look.</p>
-        <p>Something not working, or an idea for what the builder should do next? Write or call directly.</p>
-        <blockquote>A real website should bring customers, not headaches.</blockquote>
+      <div class="faq">
+        <h2>Questions</h2>
+        <details><summary>Do I need a card to start?</summary><p>No. You can register, build, publish and add up to 10 offers without paying anything.</p></details>
+        <details><summary>What happens when I pass 10 offers?</summary><p>The builder asks you to upgrade to Pro. Your existing site and offers stay exactly as they are.</p></details>
+        <details><summary>Can customers open my site without an account?</summary><p>Yes. Your site has a public link that anyone can open on a phone or a computer.</p></details>
+        <details><summary>Can I use my own domain?</summary><p>Not yet. Your site lives on this platform's domain. Connecting your own domain can be added later.</p></details>
       </div>
-      <div class="person">
+    </div>
+  </div>
+</main>
+
+<!-- =================== ABOUT =================== -->
+<main class="view" id="v-about">
+  <div data-nav="dark" style="min-height:100vh">
+    <div class="page-head"><h1>About GoldOffer Studio.</h1><p>A small product with one goal: make small businesses look as real online as they are in person.</p></div>
+    <div class="section about" style="padding-top:20px">
+      <div>
+        <h2 class="rv">Built by one person who wants small businesses to look as real as they are.</h2>
+        <p class="rv">GoldOffer Studio is made by Rayan Katsarov. It is for people who run a bakery, a barbershop, a workshop or a clinic and need a website that earns trust on the first look.</p>
+        <p class="rv">Something not working, or an idea for what the builder should do next? Write or call directly.</p>
+        <blockquote class="rv">A real website should bring customers, not headaches.</blockquote>
+      </div>
+      <div class="person rv">
         <div class="top"><div class="avatar" aria-hidden="true">RK</div><div><b>Rayan Katsarov</b><span>Founder, GoldOffer Studio</span></div></div>
         <div class="contact">
           <a href="mailto:rayankatsarov2013@gmail.com"><div><small>Email</small><b>rayankatsarov2013@gmail.com</b></div><em>Write</em></a>
@@ -628,15 +746,35 @@
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</main>
 
-  <!-- ===== Studio (the real builder) ===== -->
-  <section class="studio" id="studio">
-    <div class="section">
-      <div class="section-head" style="margin-bottom:44px">
-        <h2>Build your website.</h2>
-        <p>Answer a few questions and watch the site take shape on the right.</p>
+<!-- =================== CONTACT =================== -->
+<main class="view" id="v-contact">
+  <div class="light" data-nav="light" style="min-height:100vh">
+    <div class="page-head"><h1>Talk to the person who builds it.</h1><p>Questions, problems or ideas. Write or call, you will reach Rayan directly.</p></div>
+    <div class="section" style="padding-top:10px">
+      <div class="ccards">
+        <a class="ccard rv" href="mailto:rayankatsarov2013@gmail.com"><small>Email</small><b>rayankatsarov2013@gmail.com</b><em>Write a message</em></a>
+        <a class="ccard rv" href="tel:+359896255898" style="--d:100ms"><small>Phone</small><b>0896 255 898</b><em>Call now</em></a>
       </div>
+      <div class="tips">
+        <h2>To get help faster</h2>
+        <ul>
+          <li>Tell us the email you registered with, so we can find your account.</li>
+          <li>Describe what you clicked and what you expected to happen.</li>
+          <li>If you saw an error message, copy its text into your message.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- =================== BUILDER =================== -->
+<main class="view" id="v-build">
+  <div data-nav="dark" style="min-height:100vh">
+    <div class="page-head"><h1>Build your website.</h1><p>Answer a few questions and watch the site take shape on the right.</p></div>
+    <div class="section" style="padding-top:10px">
       <div class="layout">
         <div class="card">
           <div class="nodes" id="nodes" style="display:none">
@@ -645,7 +783,7 @@
 
           <div id="step-0" class="step active">
             <h2>Create your unique website</h2>
-            <p class="sub">Answer a few quick questions and customize the look. 7 days free, then EUR 19.99 per month.</p>
+            <p class="sub">Answer a few quick questions and customize the look. Free for up to 10 offers.</p>
             <button class="btn btn-lg btn-block" style="margin-top:0" onclick="startWizard()">Start the builder</button>
           </div>
 
@@ -723,43 +861,45 @@
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</main>
 
-  <footer class="foot">
-    <div class="foot-in">
-      <div>
-        <a class="brand" href="#top" onclick="goHome(event)" style="padding:0">
-          <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="url(#bg1)"/><text x="32" y="47" font-size="40" font-weight="800" text-anchor="middle" fill="#07090d" font-family="Arial, Helvetica, sans-serif">G</text></svg>
-          <span>GoldOffer Studio</span></a>
-        <p>Websites for local businesses. Free to start.</p>
+<!-- =================== DASHBOARD =================== -->
+<main class="view" id="v-dashboard">
+  <div class="dash" data-nav="dark">
+    <h1>Dashboard</h1>
+    <div id="dashGate" class="panel" style="display:none">Please sign up or log in to see your dashboard.</div>
+    <div id="dashBody">
+      <div class="stats">
+        <div class="stat"><h3>Revenue (completed)</h3><div class="v" id="sRevenue">0.00 EUR</div></div>
+        <div class="stat"><h3>Completed orders</h3><div class="v" id="sCompleted">0</div></div>
+        <div class="stat"><h3>Pending requests</h3><div class="v" id="sPending">0</div></div>
+        <div class="stat"><h3>Active offers</h3><div class="v" id="sOffers">0</div></div>
       </div>
-      <div><h4>Product</h4>
-        <a onclick="goSection(event,'how')">How it works</a><a onclick="goSection(event,'features')">Features</a><a onclick="goSection(event,'pricing')">Pricing</a><a onclick="goSection(event,'studio')">Website builder</a></div>
-      <div><h4>Contact</h4>
-        <a onclick="goSection(event,'about')">About</a><a href="mailto:rayankatsarov2013@gmail.com">rayankatsarov2013@gmail.com</a><a href="tel:+359896255898">0896 255 898</a></div>
-    </div>
-    <div class="foot-end">&copy; 2026 GoldOffer Studio. Founded by Rayan Katsarov.</div>
-  </footer>
-</div>
-
-<div id="dashboard">
-  <h1>Dashboard</h1>
-  <div id="dashGate" class="panel" style="display:none">Please sign up or log in to see your dashboard.</div>
-  <div id="dashBody">
-    <div class="stats">
-      <div class="stat"><h3>Revenue (completed)</h3><div class="v" id="sRevenue">0.00 EUR</div></div>
-      <div class="stat"><h3>Completed orders</h3><div class="v" id="sCompleted">0</div></div>
-      <div class="stat"><h3>Pending requests</h3><div class="v" id="sPending">0</div></div>
-      <div class="stat"><h3>Active offers</h3><div class="v" id="sOffers">0</div></div>
-    </div>
-    <div class="dash-grid">
-      <div class="panel"><h2>Revenue, last 6 months</h2><canvas id="chart"></canvas></div>
-      <div class="panel"><h2>Recent orders</h2>
-        <table><thead><tr><th>Offer</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody id="orderRows"></tbody></table>
+      <div class="dash-grid">
+        <div class="panel"><h2>Revenue, last 6 months</h2><canvas id="chart"></canvas></div>
+        <div class="panel"><h2>Recent orders</h2>
+          <table><thead><tr><th>Offer</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody id="orderRows"></tbody></table>
+        </div>
       </div>
     </div>
   </div>
-</div>
+</main>
+
+<footer class="foot" id="foot">
+  <div class="foot-in">
+    <div>
+      <a class="brand" href="/" data-link style="padding:0">
+        <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="url(#bg1)"/><text x="32" y="47" font-size="40" font-weight="800" text-anchor="middle" fill="#07090d" font-family="Arial, Helvetica, sans-serif">G</text></svg>
+        <span>GoldOffer Studio</span></a>
+      <p>Websites for local businesses. Free to start.</p>
+    </div>
+    <div><h4>Product</h4><a href="/how-it-works" data-link>How it works</a><a href="/features" data-link>Features</a><a href="/pricing" data-link>Pricing</a><a href="/build" data-link>Website builder</a></div>
+    <div><h4>Explore</h4><a href="/professions" data-link>Professions</a><a href="/dashboard" data-link>Dashboard</a></div>
+    <div><h4>Company</h4><a href="/about" data-link>About</a><a href="/contact" data-link>Contact</a><a href="mailto:rayankatsarov2013@gmail.com">rayankatsarov2013@gmail.com</a><a href="tel:+359896255898">0896 255 898</a></div>
+  </div>
+  <div class="foot-end">&copy; 2026 GoldOffer Studio. Founded by Rayan Katsarov.</div>
+</footer>
 
 <div id="authModal" class="modal">
   <div class="modal-box">
@@ -813,7 +953,6 @@
     ['geo', 'Montserrat', 'Geometric', "'Montserrat', sans-serif"]
   ];
 
-  // [display name, photo keywords]
   const PROFESSIONS = [
     ['Auto mechanic', 'car,repair'], ['Bakery', 'bakery,bread'], ['Fire safety', 'firefighter'], ['Jeweler', 'jewelry'],
     ['Barber', 'barber'], ['Hairdresser', 'hairdresser'], ['Beauty salon', 'beauty,salon'], ['Nail technician', 'manicure'],
@@ -847,10 +986,33 @@
     'Locksmith': 'Locksmithing', 'Air conditioning': 'Air conditioning', 'Computer repair': 'Computer repair technician', 'Furniture maker': 'Furniture'
   };
 
+  // The demo site in the hero clip cycles through different professions
+  const MOCKS = [
+    { prof: 'Bakery', name: 'Golden Crust Bakery', slug: 'golden-crust', meta: 'Bakery · Plovdiv', hue: 36, sub: 'Bread and pastries, baked fresh every morning.',
+      toast: 'Sourdough loaf, from Anna',
+      cards: [['Cheese banitsa', 'Baked this morning, sold by the piece.', '2.50', 'Pastry chef'], ['Sourdough loaf', 'Slow-risen, 800 g.', '3.20', 'Cafe'], ['Birthday cake', 'Made to order, ready in two days.', '38.00', 'Bakery']] },
+    { prof: 'Barber', name: 'Sharp Edge Barbers', slug: 'sharp-edge', meta: 'Barber · Sofia', hue: 215, sub: 'Classic cuts and hot-towel shaves. Book in minutes.',
+      toast: 'Classic haircut, from Martin',
+      cards: [['Classic haircut', 'Wash, cut and style. 45 minutes.', '15.00', 'Barber'], ['Beard trim and shave', 'Hot towel and straight razor.', '12.00', 'Hairdresser'], ['Father and son cut', 'Two chairs, one visit.', '25.00', 'Beauty salon']] },
+    { prof: 'Auto mechanic', name: 'Prime Auto Service', slug: 'prime-auto', meta: 'Auto mechanic · Varna', hue: 8, sub: 'Honest repairs, clear prices, done on time.',
+      toast: 'Brake inspection, from Ivan',
+      cards: [['Oil and filter change', 'Synthetic oil, all filters checked.', '45.00', 'Auto mechanic'], ['Brake inspection', 'Pads, discs and fluid.', '20.00', 'Car wash'], ['Full diagnostics', 'Computer scan and written report.', '35.00', 'Tire shop']] },
+    { prof: 'Florist', name: 'Bloom and Petal', slug: 'bloom-petal', meta: 'Florist · Burgas', hue: 330, sub: 'Fresh flowers for every moment, delivered to the door.',
+      toast: 'Spring bouquet, from Elena',
+      cards: [['Spring bouquet', 'Seasonal flowers, hand tied.', '28.00', 'Florist'], ['Wedding arrangements', 'Bouquet, table pieces and arch.', '260.00', 'Event planner'], ['Weekly office flowers', 'Fresh every Monday.', '40.00', 'Landscaper and gardener']] },
+    { prof: 'Dentist', name: 'BrightSmile Dental', slug: 'brightsmile', meta: 'Dentist · Ruse', hue: 190, sub: 'Gentle care for the whole family.',
+      toast: 'Check-up, from Petya',
+      cards: [['Check-up and cleaning', 'Exam, polish and advice.', '35.00', 'Dentist'], ['Teeth whitening', 'One visit, visible result.', '120.00', 'Medical clinic'], ['Children visit', 'Calm and friendly first visit.', '20.00', 'Pharmacy']] },
+    { prof: 'Photographer', name: 'Frame and Light Studio', slug: 'frame-light', meta: 'Photographer · Sofia', hue: 265, sub: 'Portraits, weddings and brand photos that feel real.',
+      toast: 'Portrait session, from Daniel',
+      cards: [['Portrait session', '45 minutes, 15 edited photos.', '80.00', 'Photographer'], ['Wedding day', 'Full-day coverage and gallery.', '650.00', 'Event planner'], ['Brand photos', 'For your site and social media.', '180.00', 'Videographer']] }
+  ];
+
   const S = { photos: {}, token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', font: 'sans', mode: 'signup', chart: null };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
   const money = (n) => Number(n || 0).toFixed(2);
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 
   function notify(msg, title) { $('alertTitle').textContent = title || 'Notice'; $('alertMsg').textContent = msg; $('alertModal').style.display = 'flex'; }
 
@@ -869,7 +1031,50 @@
     return data;
   }
 
-  // ---------- Navigation helpers ----------
+  // ---------- Router: every route is its own page ----------
+  const ROUTES = { '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard' };
+  const TITLES = {
+    home: 'GoldOffer Studio - Websites for local businesses', how: 'How it works - GoldOffer Studio', features: 'Features - GoldOffer Studio',
+    professions: 'Professions - GoldOffer Studio', pricing: 'Pricing - GoldOffer Studio', about: 'About - GoldOffer Studio',
+    contact: 'Contact - GoldOffer Studio', build: 'Website builder - GoldOffer Studio', dashboard: 'Dashboard - GoldOffer Studio'
+  };
+  let currentPage = 'home';
+
+  function navigate(path, push) {
+    const clean = (String(path).split('?')[0].split('#')[0].replace(/\/+$/, '')) || '/';
+    const name = ROUTES[clean] || 'home';
+    const finalPath = ROUTES[clean] ? clean : '/';
+    closeMenus(); $('nav').classList.remove('open');
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + name));
+    if (push !== false && location.pathname !== finalPath) history.pushState({}, '', finalPath);
+    document.title = TITLES[name];
+    document.body.dataset.page = name;
+    currentPage = name;
+    window.scrollTo(0, 0);
+    document.querySelectorAll('.menu a.ml').forEach(a => a.classList.toggle('active', a.getAttribute('href') === finalPath));
+    if (name === 'dashboard') loadDashboard();
+    if (name === 'professions') { renderMarquee(); renderGallery(); }
+    window.dispatchEvent(new Event('resize'));
+    frame();
+  }
+  window.addEventListener('popstate', () => navigate(location.pathname, false));
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-link]');
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    if (a.dataset.prof) { pickProf(a.dataset.prof); return; }
+    navigate(a.getAttribute('href'));
+  });
+
+  function cta() { navigate('/build'); if (!S.user) openAuth('signup'); else if ($('step-0').classList.contains('active')) goStep(1); }
+  function proCta() { if (!S.user) { openAuth('signup'); return; } payNow(); }
+  function pickProf(name) {
+    setCategory(name); renderProfs();
+    navigate('/build');
+    if (!S.user) openAuth('signup'); else if ($('step-0').classList.contains('active')) goStep(1);
+  }
+
+  // ---------- Navigation menus and light/dark switching ----------
   function closeMenus() {
     document.querySelectorAll('[data-menu]').forEach(i => { i.classList.remove('open'); i.querySelector('.mb').setAttribute('aria-expanded', 'false'); });
     $('nav').classList.remove('menu-open');
@@ -878,28 +1083,6 @@
     const n = $('nav'); const open = !n.classList.contains('open');
     n.classList.toggle('open', open); $('burger').setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
   }
-  function goHome(e) { if (e) e.preventDefault(); closeMenus(); $('nav').classList.remove('open'); switchView('builder'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-  function goSection(e, id) {
-    if (e) e.preventDefault();
-    closeMenus(); $('nav').classList.remove('open');
-    if (!$('dashboard').classList.contains('active')) { const el = $(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
-    switchView('builder');
-    setTimeout(() => { const el = $(id); if (el) el.scrollIntoView({ block: 'start' }); }, 30);
-  }
-  function openDashboard(e) { if (e) e.preventDefault(); closeMenus(); $('nav').classList.remove('open'); switchView('dashboard'); }
-  function cta() {
-    if (!S.user) { openAuth('signup'); return; }
-    goSection(null, 'studio');
-    if ($('step-0').classList.contains('active')) goStep(1);
-  }
-  function proCta() { if (!S.user) { openAuth('signup'); return; } payNow(); }
-  function pickProf(name) {
-    setCategory(name); renderProfs(); closeMenus(); $('nav').classList.remove('open');
-    if (!S.user) { openAuth('signup'); return; }
-    goSection(null, 'studio');
-    if ($('step-0').classList.contains('active')) goStep(1);
-  }
-
   function initMenu() {
     const items = [...document.querySelectorAll('[data-menu]')];
     const canHover = () => window.matchMedia('(hover: hover) and (min-width: 901px)').matches;
@@ -912,22 +1095,34 @@
     });
     document.addEventListener('click', (e) => { if (!e.target.closest('[data-menu]')) closeMenus(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMenus(); $('nav').classList.remove('open'); } });
-    const onScroll = () => $('nav').classList.toggle('solid', window.scrollY > 24);
-    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  }
+  function setNavTheme() {
+    const nav = $('nav');
+    nav.classList.toggle('solid', window.scrollY > 24);
+    const y = 36;
+    let theme = 'dark';
+    const els = document.querySelectorAll('.view.active [data-nav]');
+    for (const el of els) { const r = el.getBoundingClientRect(); if (r.top <= y && r.bottom > y) { theme = el.dataset.nav; break; } }
+    nav.classList.toggle('light', theme === 'light');
   }
 
-  // ---------- Scroll stage: the clip shrinks as you scroll, then the description lights up ----------
+  // ---------- One scroll loop: hero clip, moving tiles, nav ----------
+  let queued = false;
+  const frameFns = [];
+  function frame() { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; frameFns.forEach(f => f()); }); } }
+  window.addEventListener('scroll', frame, { passive: true });
+  window.addEventListener('resize', frame);
+
+  // ---------- Hero scroll stage ----------
   function initStage() {
-    const track = $('stageTrack'), st = $('stageSticky'), copy = $('stageCopy'), desc = $('stageDesc'), hint = $('scrollHint');
+    const track = $('stageTrack'), st = $('stageSticky'), copy = $('stageCopy'), desc = $('stageDesc'), hint = $('scrollHint'), dots = $('profDots');
     desc.innerHTML = desc.textContent.trim().split(/\s+/).map(w => '<span class="w">' + esc(w) + '</span>').join(' ');
     const words = [...desc.querySelectorAll('.w')];
-    const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
     const lerp = (a, b, t) => a + (b - a) * t;
     const ease = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    let queued = false;
+    dots.innerHTML = MOCKS.map(() => '<i></i>').join('');
 
-    function update() {
-      queued = false;
+    frameFns.push(function () {
       if (track.offsetParent === null) return;
       const vw = window.innerWidth, vh = window.innerHeight;
       const total = track.offsetHeight - vh;
@@ -940,51 +1135,161 @@
       const e2 = ease(clamp((p - .5) / .34));
       const w = lerp(lerp(vw, tw, e1), tw * .9, e2);
       const h = lerp(lerp(vh, th, e1), th2, e2);
-      st.style.setProperty('--w', w + 'px');
-      st.style.setProperty('--h', h + 'px');
+      st.style.setProperty('--w', w + 'px'); st.style.setProperty('--h', h + 'px');
       st.style.setProperty('--cy', lerp(50, mobile ? 31 : 34, e2));
-      st.style.setProperty('--r', (30 * e1) + 'px');
-      st.style.setProperty('--e', e1.toFixed(3));
+      st.style.setProperty('--r', (30 * e1) + 'px'); st.style.setProperty('--e', e1.toFixed(3));
       st.style.setProperty('--rx', (7 * e1 * (1 - e2)).toFixed(2) + 'deg');
-
       const co = 1 - clamp(p / .2);
       copy.style.opacity = co; copy.style.transform = 'translateY(calc(-50% - ' + (p * 90) + 'px))';
       copy.style.visibility = co <= 0.01 ? 'hidden' : 'visible';
       hint.style.opacity = 1 - clamp(p / .06);
-
+      dots.style.opacity = clamp((e1 - .6) / .4) * (1 - clamp((p - .5) / .1));
       desc.style.opacity = clamp((p - .6) / .08);
       const prog = clamp((p - .66) / .3) * words.length;
       for (let i = 0; i < words.length; i++) words[i].style.opacity = (.18 + .82 * clamp(prog - i)).toFixed(2);
+    });
+
+    // cycle the demo site through different professions
+    let idx = 0;
+    applyMock(0);
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setInterval(() => {
+        if (currentPage !== 'home' || document.hidden) return;
+        const r = track.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight) return;
+        const wrap = $('mockWrap'); wrap.classList.add('out');
+        setTimeout(() => { idx = (idx + 1) % MOCKS.length; applyMock(idx); wrap.classList.remove('out'); }, 450);
+      }, 5200);
     }
-    const queue = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
-    window.addEventListener('scroll', queue, { passive: true });
-    window.addEventListener('resize', queue);
-    update();
+  }
+  function mockGradient(h) { return 'linear-gradient(135deg,hsl(' + h + ' 45% 38%),hsl(' + ((h + 40) % 360) + ' 50% 16%))'; }
+  function setPhoto(el, key, hue) {
+    const fb = mockGradient(hue);
+    el.style.setProperty('--fb', fb);
+    const u = S.photos[key];
+    el.style.backgroundImage = u ? 'url("' + u.replace(/"/g, '%22') + '"), ' + fb : fb;
+  }
+  let activeMock = 0;
+  function applyMock(i) {
+    activeMock = i;
+    const m = MOCKS[i];
+    $('mkName').textContent = m.name; $('mkH1').textContent = m.name; $('mkSub').textContent = m.sub;
+    $('mkFoot').textContent = m.name; $('mkMeta').textContent = m.meta; $('mkToast').textContent = m.toast;
+    $('devUrl').textContent = 'goldoffer.onrender.com/site/' + m.slug;
+    setPhoto($('mkHero'), m.prof, m.hue);
+    $('mkGrid').innerHTML = m.cards.map((c, k) =>
+      '<div class="m-card' + (k === 0 ? ' ann' : '') + '"' + (k === 0 ? ' style="--c:var(--lagoon);--s:.55" data-label="Offer with photo and price"' : '') + '>' +
+      '<div class="ph" data-k="' + k + '"></div><h5>' + esc(c[0]) + '</h5><p>' + esc(c[1]) + '</p>' +
+      '<div class="row"><span class="pr">&euro;' + esc(c[2]) + '</span><span class="rq">Request</span></div></div>').join('');
+    $('mkGrid').querySelectorAll('.ph').forEach((el, k) => setPhoto(el, m.cards[k][3], (m.hue + k * 35) % 360));
+    [...$('profDots').children].forEach((d, k) => d.classList.toggle('on', k === i));
   }
 
-  // ---------- Photos from Wikipedia: painted into the page wherever data-photo is used ----------
+  // ---------- Moving photo tiles, markers, reveal, counters ----------
+  const TILES = [
+    ['Barber', 4, 12, 150, 190, 1.3], ['Plumber', 28, 6, 120, 150, .8], ['Florist', 52, 10, 170, 210, 1.5], ['Dentist', 78, 4, 130, 160, .9],
+    ['Restaurant', 10, 52, 140, 170, 1.1], ['Photographer', 36, 62, 170, 200, 1.6], ['Auto mechanic', 63, 56, 140, 180, .7], ['Bakery', 84, 50, 150, 190, 1.2],
+    ['Tailor', 20, 78, 120, 150, .9], ['Veterinarian', 70, 78, 130, 160, 1.4]
+  ];
+  function initScatter() {
+    const box = $('scatter');
+    box.insertAdjacentHTML('afterbegin', TILES.map(t =>
+      '<div class="tile" data-photo="' + esc(t[0]) + '" data-sp="' + t[5] + '" style="left:' + t[1] + '%;top:' + t[2] + '%;width:' + t[3] + 'px;height:' + t[4] + 'px"><span>' + esc(t[0]) + '</span></div>').join(''));
+    const an = $('annot'); let h = '';
+    for (let i = 0; i < 16; i++) h += '<i class="mk' + (i % 3 === 0 ? ' tri' : '') + '" style="left:' + (8 + Math.random() * 84).toFixed(0) + '%;top:' + (8 + Math.random() * 84).toFixed(0) + '%;animation-delay:-' + (Math.random() * 7).toFixed(1) + 's"></i>';
+    for (let i = 0; i < 3; i++) h += '<i class="mk big" style="left:' + (18 + i * 26) + '%;top:' + (24 + (i % 2) * 34) + '%;animation-delay:-' + (i * 2.2) + 's"></i>';
+    an.insertAdjacentHTML('beforeend', h);
+    frameFns.push(function () {
+      if (box.offsetParent === null) return;
+      const r = box.getBoundingClientRect(), vh = window.innerHeight;
+      const p = clamp((vh - r.top) / (vh + r.height));
+      box.querySelectorAll('.tile').forEach(t => {
+        const sp = +t.dataset.sp;
+        const y = (0.5 - p) * sp * 360;
+        const s = .55 + .62 * Math.sin(Math.PI * p);
+        t.style.transform = 'translate3d(0,' + y.toFixed(1) + 'px,0) scale(' + s.toFixed(3) + ')';
+      });
+    });
+  }
+  function initReveal() {
+    if (!('IntersectionObserver' in window)) { document.querySelectorAll('.rv').forEach(e => e.classList.add('shown')); return; }
+    const io = new IntersectionObserver((es) => es.forEach(e => {
+      if (!e.isIntersecting) return;
+      e.target.classList.add('shown'); io.unobserve(e.target);
+      e.target.querySelectorAll('[data-to]').forEach(countUp);
+    }), { threshold: .12 });
+    document.querySelectorAll('.rv').forEach(e => io.observe(e));
+  }
+  function countUp(el) {
+    const to = +el.dataset.to, t0 = performance.now(), dur = 1500;
+    (function step(now) {
+      const k = clamp((now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = Math.round(to * e);
+      if (k < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  // ---------- Photos from Wikipedia ----------
   function paintPhotos() {
     document.querySelectorAll('[data-photo]').forEach(el => {
       const u = S.photos[el.dataset.photo];
       if (u) el.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '"), var(--fb, linear-gradient(135deg,#2b3550,#141a2a))';
     });
   }
+  function phStyle(name, i) {
+    const hue = (i * 47) % 360;
+    const fb = mockGradient(hue);
+    const u = S.photos[name];
+    return '--fb:' + fb + ';background-image:' + (u ? 'url(&quot;' + esc(u) + '&quot;),' : '') + fb;
+  }
   function renderMarquee() {
     const box = $('marq'); if (!box) return;
     $('profCount').textContent = PROFESSIONS.length;
-    const card = (p, i) => {
-      const hue = (i * 47) % 360;
-      const fb = 'linear-gradient(135deg,hsl(' + hue + ' 40% 30%),hsl(' + ((hue + 50) % 360) + ' 45% 13%))';
-      const u = S.photos[p[0]];
-      const bg = u ? 'url(&quot;' + esc(u) + '&quot;),' + fb : fb;
-      return '<button type="button" class="pcard" data-n="' + esc(p[0]) + '"><div class="ph" style="--fb:' + fb + ';background-image:' + bg + '"></div><span>' + esc(p[0]) + '</span></button>';
-    };
+    const card = (p, i) => '<button type="button" class="pcard" data-n="' + esc(p[0]) + '"><div class="ph" style="' + phStyle(p[0], i) + '"></div><span>' + esc(p[0]) + '</span></button>';
     const half = Math.ceil(PROFESSIONS.length / 2);
     const rowA = PROFESSIONS.slice(0, half).map((p, i) => card(p, i)).join('');
     const rowB = PROFESSIONS.slice(half).map((p, i) => card(p, i + half)).join('');
     box.innerHTML = '<div class="marq-row">' + rowA + rowA + '</div><div class="marq-row rev">' + rowB + rowB + '</div>';
   }
   $('marq').addEventListener('click', (e) => { const b = e.target.closest('.pcard'); if (b) pickProf(b.dataset.n); });
+  function renderGallery() {
+    const q = ($('gSearch').value || '').trim().toLowerCase();
+    const list = PROFESSIONS.map((p, i) => ({ p, i })).filter(x => !q || x.p[0].toLowerCase().includes(q) || x.p[1].includes(q));
+    $('gGrid').innerHTML = list.length
+      ? list.map(x => '<button type="button" class="gtile" data-n="' + esc(x.p[0]) + '"><div class="ph" style="' + phStyle(x.p[0], x.i) + '"></div><span>' + esc(x.p[0]) + '</span></button>').join('')
+      : '<p class="note">No profession found. Open the builder to type your own.</p>';
+  }
+  $('gGrid').addEventListener('click', (e) => { const b = e.target.closest('.gtile'); if (b) pickProf(b.dataset.n); });
+
+  async function loadProfPhotos() {
+    const done = () => { renderProfs(); renderMarquee(); renderGallery(); paintPhotos(); applyMock(activeMock); };
+    try {
+      const cached = JSON.parse(localStorage.getItem('profPhotos_v1') || 'null');
+      if (cached && Object.keys(cached).length > 10) { S.photos = cached; done(); return; }
+    } catch (e) {}
+    const names = Object.keys(WIKI);
+    const found = {};
+    for (let i = 0; i < names.length; i += 25) {
+      const chunk = names.slice(i, i + 25);
+      const titles = chunk.map(n => WIKI[n]);
+      const url = 'https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=480&titles=' + encodeURIComponent(titles.join('|'));
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const q = data.query || {};
+        const norm = {}; (q.normalized || []).forEach(x => norm[x.from] = x.to);
+        const redir = {}; (q.redirects || []).forEach(x => redir[x.from] = x.to);
+        const byTitle = {}; Object.values(q.pages || {}).forEach(p => { if (p.thumbnail) byTitle[p.title] = p.thumbnail.source; });
+        chunk.forEach(n => {
+          let t = WIKI[n]; t = norm[t] || t; t = redir[t] || t;
+          if (byTitle[t]) found[n] = byTitle[t];
+        });
+      } catch (e) {}
+    }
+    S.photos = found;
+    if (Object.keys(found).length) { try { localStorage.setItem('profPhotos_v1', JSON.stringify(found)); } catch (e) {} }
+    done();
+  }
 
   // ---------- Theme and font pickers ----------
   function buildPickers() {
@@ -1009,36 +1314,7 @@
     document.querySelectorAll('#fonts .fbtn').forEach(b => b.classList.toggle('selected', b.dataset.f === f));
   }
 
-  // ---------- Profession picker ----------
-  // Fetch one real photo per profession from Wikipedia (free, no key). Cached in the browser.
-  async function loadProfPhotos() {
-    try {
-      const cached = JSON.parse(localStorage.getItem('profPhotos_v1') || 'null');
-      if (cached && Object.keys(cached).length > 10) { S.photos = cached; renderProfs(); renderMarquee(); paintPhotos(); return; }
-    } catch (e) {}
-    const names = Object.keys(WIKI);
-    const found = {};
-    for (let i = 0; i < names.length; i += 25) {
-      const chunk = names.slice(i, i + 25);
-      const titles = chunk.map(n => WIKI[n]);
-      const url = 'https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=480&titles=' + encodeURIComponent(titles.join('|'));
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        const q = data.query || {};
-        const norm = {}; (q.normalized || []).forEach(x => norm[x.from] = x.to);
-        const redir = {}; (q.redirects || []).forEach(x => redir[x.from] = x.to);
-        const byTitle = {}; Object.values(q.pages || {}).forEach(p => { if (p.thumbnail) byTitle[p.title] = p.thumbnail.source; });
-        chunk.forEach(n => {
-          let t = WIKI[n]; t = norm[t] || t; t = redir[t] || t;
-          if (byTitle[t]) found[n] = byTitle[t];
-        });
-      } catch (e) {}
-    }
-    S.photos = found;
-    if (Object.keys(found).length) { try { localStorage.setItem('profPhotos_v1', JSON.stringify(found)); } catch (e) {} }
-    renderProfs(); renderMarquee(); paintPhotos();
-  }
+  // ---------- Builder: profession picker ----------
   function renderProfs() {
     const q = $('profSearch').value.trim().toLowerCase();
     const list = PROFESSIONS.map((p, i) => ({ name: p[0], kw: p[1], i })).filter(p => !q || p.name.toLowerCase().includes(q) || p.kw.includes(q));
@@ -1075,7 +1351,7 @@
   function renderAuth() {
     const a = $('authArea');
     if (S.user) {
-      a.innerHTML = '<span class="who">' + esc(S.user.firstName || S.user.email) + '</span><button class="btn-ghost" onclick="logout()">Log out</button>';
+      a.innerHTML = '<span class="who">' + esc(S.user.firstName || S.user.email) + '</span><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><button class="btn-ghost" onclick="logout()">Log out</button>';
     } else {
       a.innerHTML = '<button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button><button class="btn" onclick="openAuth(\'signup\')">Get started</button>';
     }
@@ -1092,7 +1368,6 @@
     $('authSwitch').textContent = su ? 'I already have an account' : 'Create a new account';
     $('aPass').autocomplete = su ? 'new-password' : 'current-password';
   }
-
   async function submitAuth(e) {
     e.preventDefault();
     const su = S.mode === 'signup';
@@ -1114,14 +1389,12 @@
     } catch (err) { $('authErr').textContent = err.message; }
     finally { btn.disabled = false; }
   }
-
   function logout(silent) {
     S.token = null; S.user = null; S.offers = []; S.category = '';
     localStorage.removeItem('token');
     renderAuth(); setCategory(''); renderProfs(); renderOfferList(); resetDashboard(); goStep(0);
     if (silent !== true) notify('You have been logged out.');
   }
-
   async function afterLogin() {
     renderAuth();
     const u = S.user;
@@ -1133,26 +1406,10 @@
     try { const d = await api('/api/offers'); S.offers = d.offers; } catch (e) {}
     renderPreview(); renderOfferList();
     if (u.published && u.siteUrl) showLive();
-    if ($('dashboard').classList.contains('active')) loadDashboard();
+    if (currentPage === 'dashboard') loadDashboard();
   }
 
-  async function init() {
-    initMenu(); initStage();
-    buildPickers(); renderProfs(); renderMarquee(); paintPhotos(); loadProfPhotos(); renderAuth(); renderPreview();
-    if (S.token) {
-      try { const d = await api('/api/auth/me'); S.user = d.user; await afterLogin(); } catch (e) { renderAuth(); }
-    }
-    if (new URLSearchParams(location.search).get('paid')) notify('Thank you. Your subscription is being activated.', 'Payment received');
-  }
-
-  // ---------- Views and steps ----------
-  function switchView(v) {
-    $('builder').style.display = v === 'builder' ? 'block' : 'none';
-    $('dashboard').classList.toggle('active', v === 'dashboard');
-    $('tabDash').classList.toggle('active', v === 'dashboard');
-    if (v === 'dashboard') { window.scrollTo(0, 0); loadDashboard(); }
-    else window.dispatchEvent(new Event('resize'));
-  }
+  // ---------- Builder steps ----------
   function goStep(n) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     $('step-' + n).classList.add('active');
@@ -1164,7 +1421,6 @@
     }
   }
   function startWizard() { if (!S.user) { openAuth('signup'); return; } goStep(1); }
-
   function step1Next() {
     if (!$('city').value.trim()) return notify('Please enter your city.');
     if (!S.category) return notify('Please choose a profession from the list or search for yours.');
@@ -1209,10 +1465,8 @@
       if (!d.estimated && d.avgPrice) $('oPrice').value = Number(d.avgPrice).toFixed(2);
       if (d.description && !$('oDesc').value) $('oDesc').value = d.description;
       const r = $('oRange');
-      if (d.estimated) {
-        r.style.display = 'block';
-        r.textContent = d.message;
-      } else if (d.minPrice != null && d.maxPrice != null) {
+      if (d.estimated) { r.style.display = 'block'; r.textContent = d.message; }
+      else if (d.minPrice != null && d.maxPrice != null) {
         r.style.display = 'block';
         r.textContent = 'Market range: EUR ' + money(d.minPrice) + ' to ' + money(d.maxPrice) + ' (average EUR ' + money(d.avgPrice) + ')';
       }
@@ -1254,7 +1508,6 @@
       renderOfferList(); renderPreview();
     } catch (e) { notify(e.message, 'Error'); }
   }
-
   function previewPhoto() {
     const f = $('oImg').files[0];
     if (!f) return clearPhoto();
@@ -1316,6 +1569,7 @@
     $('sRevenue').textContent = '0.00 EUR'; $('sCompleted').textContent = '0'; $('sPending').textContent = '0'; $('sOffers').textContent = '0';
     $('orderRows').innerHTML = '';
     if (S.chart) { S.chart.destroy(); S.chart = null; }
+    if (currentPage === 'dashboard') loadDashboard();
   }
   async function loadDashboard() {
     $('dashGate').style.display = S.user ? 'none' : 'block';
@@ -1349,6 +1603,18 @@
     });
   }
 
+  // ---------- Start ----------
+  async function init() {
+    initMenu();
+    frameFns.push(setNavTheme);
+    initStage(); initScatter(); initReveal();
+    buildPickers(); renderProfs(); renderMarquee(); renderGallery(); paintPhotos(); loadProfPhotos(); renderAuth(); renderPreview();
+    navigate(location.pathname, false);
+    if (S.token) {
+      try { const d = await api('/api/auth/me'); S.user = d.user; await afterLogin(); } catch (e) { renderAuth(); }
+    }
+    if (new URLSearchParams(location.search).get('paid')) notify('Thank you. Your subscription is being activated.', 'Payment received');
+  }
   init();
 </script>
 </body>

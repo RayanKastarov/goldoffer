@@ -31,7 +31,7 @@ app.use(helmet({
     }
   }
 }));
-app.use(cors({ origin: [FRONTEND_URL, 'http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000'] }));
+app.use(cors({ origin: [FRONTEND_URL, PUBLIC_BASE, 'http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000'] }));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -468,62 +468,152 @@ app.get('/api/image/:id', async (req, res) => {
   }
 });
 
-// ---------- Public site ----------
+// ---------- Public customer site (futuristic design, themed with the customer's colors and font) ----------
+function renderSite(user, offers, sent) {
+  const t = THEMES[user.theme] || THEMES.gold;
+  const f = FONTS[user.font] || FONTS.sans;
+  const okImg = (u) => /^https:\/\//.test(u || '');
+  const firstImg = offers.find(o => okImg(o.imageUrl));
+  const heroBg = firstImg ? `<div class="herobg" style="background-image:url('${esc(encodeURI(firstImg.imageUrl))}')"></div>` : '';
+  const names = offers.map(o => `<span>${esc(o.title)}</span>`).join('');
+  const meta = [user.category, user.city].filter(Boolean).map(esc).join(' &middot; ');
+  const cards = offers.length === 0
+    ? '<p class="none">No offers yet. Please check back soon.</p>'
+    : offers.map((o, i) => `
+<article class="card rv" style="--d:${(i % 6) * 70}ms">
+  <div class="pic">${okImg(o.imageUrl)
+    ? `<img src="${esc(o.imageUrl)}" alt="${esc(o.title)}" loading="lazy">`
+    : `<div class="ph">${esc(String(o.title || '?').charAt(0).toUpperCase())}</div>`}
+    <span class="tag">&euro;${Number(o.price || 0).toFixed(2)}</span></div>
+  <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p>
+    <details class="req"><summary>Request this offer</summary>
+      <form method="POST" action="/site/${esc(user.slug)}/order">
+        <input type="hidden" name="offerId" value="${o._id}">
+        <input name="customerName" placeholder="Your name" required maxlength="80">
+        <input name="customerContact" placeholder="Phone or email" required maxlength="120">
+        <button type="submit">Send request</button>
+      </form></details></div>
+</article>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(user.siteName)}</title>
+<meta name="description" content="${esc(user.siteName)} - ${esc(user.category)} in ${esc(user.city)}">
+<meta name="theme-color" content="#070a10">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
+<style>
+:root{--a:${t.a};--b:${t.b};--ink:${t.ink};--on:${t.on}}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:${f.css};background:#f2f2ef;color:#10131a;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.bar{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 28px;color:#fff;background:rgba(7,10,16,.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.1)}
+.bar b{font-size:1.05rem;letter-spacing:-.01em}
+.bar a{color:#fff;text-decoration:none;font-size:.92rem;padding:9px 18px;border-radius:99px;border:1px solid rgba(255,255,255,.28);transition:background .2s}
+.bar a:hover{background:rgba(255,255,255,.12)}
+.hero{position:relative;min-height:100vh;min-height:100svh;background:#070a10;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:120px 24px 90px}
+.herobg{position:absolute;inset:-8%;background-size:cover;background-position:center;filter:blur(30px) saturate(1.3);opacity:.32;transform:scale(1.1)}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;animation:drift 18s ease-in-out infinite alternate;will-change:transform}
+.b1{width:560px;height:560px;background:var(--a);left:-10%;top:-14%}
+.b2{width:640px;height:640px;background:var(--b);right:-14%;bottom:-20%;animation-delay:-7s}
+.gridbg{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);background-size:56px 56px;-webkit-mask-image:radial-gradient(ellipse at center,#000 25%,transparent 72%);mask-image:radial-gradient(ellipse at center,#000 25%,transparent 72%)}
+.ring{position:absolute;width:min(82vw,760px);aspect-ratio:1;border:1px solid rgba(255,255,255,.14);border-radius:50%;animation:spin 46s linear infinite}
+.ring::after{content:'';position:absolute;top:-6px;left:50%;width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 26px var(--a)}
+.ring.r2{width:min(56vw,520px);animation-direction:reverse;animation-duration:28s;border-color:rgba(255,255,255,.1)}
+.hero-in{position:relative;z-index:2;max-width:920px}
+.chip{display:inline-block;border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:8px 18px;font-size:.86rem;margin-bottom:28px;background:rgba(255,255,255,.07);backdrop-filter:blur(8px);animation:rise .8s both}
+h1{font-size:clamp(2.7rem,9vw,7rem);line-height:1.02;letter-spacing:-.035em;background:linear-gradient(100deg,#fff 15%,var(--a) 50%,var(--b) 80%,#fff);background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:rise .9s .1s both,shine 9s linear infinite;padding-bottom:.08em}
+.lead{color:#c3cad6;font-size:clamp(1rem,1.7vw,1.25rem);margin:22px auto 0;max-width:46ch;animation:rise .9s .25s both}
+.cta{display:inline-block;margin-top:38px;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);text-decoration:none;font-weight:700;padding:16px 34px;border-radius:99px;box-shadow:0 12px 40px color-mix(in srgb,var(--a) 45%,transparent);transition:transform .2s;animation:rise .9s .4s both}
+.cta:hover{transform:translateY(-3px) scale(1.02)}
+.scroll{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:22px;height:36px;border:2px solid rgba(255,255,255,.4);border-radius:12px}
+.scroll::after{content:'';position:absolute;left:50%;top:7px;width:3px;height:7px;margin-left:-1.5px;border-radius:2px;background:#fff;animation:wheel 1.8s ease-in-out infinite}
+.strip{background:#0b0f17;color:#fff;overflow:hidden;border-block:1px solid rgba(255,255,255,.08);padding:20px 0}
+.strip div{display:flex;gap:56px;width:max-content;animation:slide 40s linear infinite}
+.strip span{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;white-space:nowrap;display:flex;align-items:center;gap:56px}
+.strip span::after{content:'';width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b))}
+.offers{max-width:1180px;margin:0 auto;padding:110px 24px 120px}
+.offers h2{font-size:clamp(2rem,5vw,3.6rem);letter-spacing:-.03em;margin-bottom:12px}
+.offers .sub{color:#5a6372;margin-bottom:56px;max-width:52ch}
+.ok{background:#dcfce7;color:#14532d;padding:16px 20px;border-radius:14px;margin-bottom:28px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:22px}
+.card{background:#fff;border:1px solid rgba(10,14,20,.08);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(10,14,20,.06);transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;transform-style:preserve-3d;will-change:transform}
+.card:hover{box-shadow:0 30px 70px rgba(10,14,20,.16)}
+.pic{position:relative;aspect-ratio:4/3;overflow:hidden;background:#e8e8e4}
+.pic img{width:100%;height:100%;object-fit:cover;transition:transform .8s cubic-bezier(.2,.8,.2,1)}
+.card:hover .pic img{transform:scale(1.08)}
+.ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;font-weight:800;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b))}
+.tag{position:absolute;right:14px;top:14px;background:rgba(7,10,16,.78);color:#fff;backdrop-filter:blur(10px);padding:8px 14px;border-radius:99px;font-weight:700;font-size:.95rem;border:1px solid rgba(255,255,255,.18)}
+.in{padding:22px;display:flex;flex-direction:column;flex:1}
+.in h3{font-size:1.2rem;letter-spacing:-.01em;margin-bottom:8px}
+.in p{color:#5a6372;font-size:.94rem;line-height:1.55;margin-bottom:18px;flex:1}
+.req summary{list-style:none;cursor:pointer;text-align:center;font-weight:700;padding:14px;border-radius:14px;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);transition:filter .2s}
+.req summary::-webkit-details-marker{display:none}
+.req summary:hover{filter:brightness(1.06)}
+.req[open] summary{background:#10131a;color:#fff}
+.req form{margin-top:12px;display:grid;gap:8px}
+input{width:100%;padding:13px 14px;border:1px solid #d9dbe2;border-radius:12px;font-family:inherit;font-size:.95rem;background:#fff}
+input:focus{outline:2px solid var(--ink);border-color:transparent}
+button{border:0;border-radius:12px;padding:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#10131a;color:#fff}
+.none{color:#5a6372;padding:30px 0}
+footer{background:#070a10;color:#8b94a5;text-align:center;padding:48px 20px;font-size:.88rem}
+footer b{display:block;color:#fff;font-size:1.2rem;margin-bottom:6px}
+.rv{opacity:0;transform:translateY(34px);transition:opacity .8s var(--d,0ms),transform .8s var(--d,0ms)}
+.rv.in-view{opacity:1;transform:none}
+@keyframes drift{to{transform:translate(70px,50px) scale(1.15)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shine{to{background-position:220% center}}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes wheel{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
+@keyframes slide{to{transform:translateX(-50%)}}
+@media (max-width:600px){.bar{padding:12px 16px}.offers{padding:80px 18px 90px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}
+</style></head><body>
+<header class="bar"><b>${esc(user.siteName)}</b><a href="#offers">View offers</a></header>
+<section class="hero">${heroBg}<div class="blob b1"></div><div class="blob b2"></div><div class="gridbg"></div><div class="ring"></div><div class="ring r2"></div>
+<div class="hero-in">
+${meta ? `<div class="chip">${meta}</div>` : ''}
+<h1>${esc(user.siteName)}</h1>
+<p class="lead">Browse our offers and send a request in seconds. We will get back to you.</p>
+<a class="cta" href="#offers">See what we offer</a></div><div class="scroll" aria-hidden="true"></div></section>
+${offers.length ? `<div class="strip" aria-hidden="true"><div>${names}${names}${names}${names}</div></div>` : ''}
+<main class="offers" id="offers">
+<h2 class="rv">Our offers</h2><p class="sub rv">Pick what you need and send a request. No account needed.</p>
+${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
+<div class="grid">${cards}</div></main>
+<footer><b>${esc(user.siteName)}</b>${meta}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>
+<script>
+(function(){
+  var els=document.querySelectorAll('.rv');
+  if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in-view');io.unobserve(e.target)}})},{threshold:.12});els.forEach(function(e){io.observe(e)})}
+  else els.forEach(function(e){e.classList.add('in-view')});
+  var hero=document.querySelector('.hero'),b1=document.querySelector('.b1'),b2=document.querySelector('.b2');
+  if(hero&&matchMedia('(pointer:fine)').matches){hero.addEventListener('pointermove',function(e){var x=(e.clientX/innerWidth-.5),y=(e.clientY/innerHeight-.5);b1.style.translate=(x*80)+'px '+(y*60)+'px';b2.style.translate=(-x*90)+'px '+(-y*70)+'px'})}
+  if(matchMedia('(pointer:fine)').matches){document.querySelectorAll('.card').forEach(function(c){
+    c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;c.style.transform='perspective(900px) rotateY('+(x*6)+'deg) rotateX('+(-y*6)+'deg) translateY(-6px)'});
+    c.addEventListener('pointerleave',function(){c.style.transform=''})})}
+})();
+</script>
+</body></html>`;
+}
+
 app.get('/site/:slug', async (req, res) => {
   try {
     const user = await User.findOne({ slug: req.params.slug });
     if (!user || !user.published) return res.status(404).send('Site not found.');
     const offers = await Offer.find({ userId: user._id }).sort({ createdAt: -1 });
-    const t = THEMES[user.theme] || THEMES.gold;
-    const f = FONTS[user.font] || FONTS.sans;
-    const sent = req.query.sent === '1';
-
-    res.send(`<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(user.siteName)}</title>
-<meta name="description" content="${esc(user.siteName)} - ${esc(user.category)} in ${esc(user.city)}">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:${f.css};background:#f5f6fa;color:#14161c;min-height:100vh}
-.hero{background:linear-gradient(135deg,${t.a},${t.b});color:${t.on};text-align:center;padding:64px 20px 70px}
-.hero h1{font-size:2.6rem;letter-spacing:-1px;margin-bottom:8px}
-.hero .meta{opacity:.85;font-size:1rem}
-.wrap{max-width:900px;margin:-34px auto 60px;padding:0 16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
-.card{background:#fff;border:1px solid #e6e8ef;border-radius:18px;overflow:hidden;box-shadow:0 12px 30px rgba(20,22,28,.08);display:flex;flex-direction:column}
-.card img{width:100%;height:180px;object-fit:cover}
-.card .in{padding:18px;display:flex;flex-direction:column;flex:1}
-.card h3{font-size:1.1rem;margin-bottom:6px}
-.card p{color:#6b7280;font-size:.9rem;line-height:1.5;margin-bottom:12px;flex:1}
-.price{color:${t.ink};font-size:1.5rem;font-weight:800;margin-bottom:12px}
-input{width:100%;padding:11px 12px;margin-bottom:8px;background:#fff;border:1px solid #e6e8ef;border-radius:10px;font-family:inherit;font-size:.9rem}
-input:focus{outline:2px solid ${t.ink};border-color:transparent}
-button{width:100%;background:linear-gradient(135deg,${t.a},${t.b});color:${t.on};border:0;border-radius:10px;padding:12px;font-weight:700;font-family:inherit;cursor:pointer}
-.ok{background:#dcfce7;color:#15803d;padding:14px;border-radius:12px;margin-bottom:18px;text-align:center;font-weight:600}
-.none{text-align:center;color:#6b7280;padding:40px}
-footer{text-align:center;color:#9aa0ad;font-size:.8rem;padding:0 0 30px}
-</style></head><body>
-<div class="hero"><h1>${esc(user.siteName)}</h1>
-<div class="meta">${esc(user.category)}${user.city ? ' &middot; ' + esc(user.city) : ''}</div></div>
-<div class="wrap">
-${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
-<div class="grid">
-${offers.length === 0 ? '<div class="none">No offers yet.</div>' : offers.map(o => `
-<div class="card">
-${/^https:\/\//.test(o.imageUrl || '') ? `<img src="${esc(o.imageUrl)}" alt="${esc(o.title)}">` : ''}
-<div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p>
-<div class="price">&euro;${Number(o.price || 0).toFixed(2)}</div>
-<form method="POST" action="/site/${esc(user.slug)}/order">
-<input type="hidden" name="offerId" value="${o._id}">
-<input name="customerName" placeholder="Your name" required maxlength="80">
-<input name="customerContact" placeholder="Phone or email" required maxlength="120">
-<button type="submit">Request this offer</button></form></div></div>`).join('')}
-</div></div>
-<footer>Built with GoldOffer Studio</footer>
-</body></html>`);
+    // This page needs one small inline script (scroll animations); everything else stays locked down
+    res.setHeader('Content-Security-Policy', [
+      "default-src 'self'",
+      "script-src 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src https://fonts.gstatic.com",
+      "img-src 'self' data: https:",
+      "form-action 'self'",
+      "base-uri 'self'"
+    ].join('; '));
+    res.send(renderSite(user, offers, req.query.sent === '1'));
   } catch (err) {
     res.status(500).send('Server error');
   }
@@ -558,8 +648,8 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
       client_reference_id: String(user._id),
       customer_email: user.email,
       subscription_data: { trial_period_days: 7 },
-      success_url: `${FRONTEND_URL}/?paid=1`,
-      cancel_url: `${FRONTEND_URL}/`
+      success_url: `${PUBLIC_BASE}/dashboard?paid=1`,
+      cancel_url: `${PUBLIC_BASE}/build`
     });
     res.json({ url: session.url });
   } catch (err) {
@@ -568,16 +658,17 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
   }
 });
 
-// ---------- Serve the builder page itself (so no separate Netlify hosting is needed) ----------
+// ---------- The website itself: one page file, several routes (each route is its own page) ----------
 function findFile(name) {
   const candidates = [path.join(__dirname, name), path.join(__dirname, '..', name), path.join(process.cwd(), name)];
   return candidates.find(p => fs.existsSync(p));
 }
 
-app.get('/', (req, res) => {
+const PAGE_ROUTES = ['/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard'];
+app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
-  // The builder page uses inline scripts and a few external resources (fonts, chart library, photos)
+  // The page uses inline scripts and a few external resources (fonts, chart library, photos)
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
