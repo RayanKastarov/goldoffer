@@ -7,7 +7,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
 const Stripe = require('stripe');
 const axios = require('axios');
 const helmet = require('helmet');
@@ -68,10 +67,11 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 
+// Images are kept in the database (memory storage), so no external service and no disk is needed
 const upload = multer({
-  dest: 'uploads/',
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype))
+  fileFilter: (req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype))
 });
 
 // ---------- Database ----------
@@ -80,25 +80,13 @@ mongoose.connect(process.env.MONGODB_URI)
   .catch(err => console.error('MongoDB error', err.message));
 
 // Open /api/health in the browser to see whether the database is connected
-app.get('/api/health', async (req, res) => {
+app.get('/api/health', (req, res) => {
   const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-  // Checks the Cloudinary keys for real, so a wrong key shows up here instead of during an upload
-  let cloudinaryStatus = 'not set';
-  if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
-    try {
-      await cloudinary.api.ping();
-      cloudinaryStatus = 'ok';
-    } catch (err) {
-      const code = err && (err.http_code || (err.error && err.error.http_code));
-      cloudinaryStatus = 'rejected' + (code ? ' (' + code + ')' : '');
-    }
-  }
   res.json({
     server: 'ok',
     database: states[mongoose.connection.readyState] || 'unknown',
     mongodbUriSet: !!process.env.MONGODB_URI,
-    jwtSecretSet: !!process.env.JWT_SECRET,
-    cloudinary: cloudinaryStatus
+    jwtSecretSet: !!process.env.JWT_SECRET
   });
 });
 
@@ -138,16 +126,17 @@ const OrderSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const ImageSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, index: true },
+  contentType: String,
+  data: Buffer,
+  createdAt: { type: Date, default: Date.now }
+});
+
 const User = mongoose.model('User', UserSchema);
+const Image = mongoose.model('Image', ImageSchema);
 const Offer = mongoose.model('Offer', OfferSchema);
 const Order = mongoose.model('Order', OrderSchema);
-
-// .trim() removes spaces or line breaks that are easy to paste by accident
-cloudinary.config({
-  cloud_name: (process.env.CLOUDINARY_CLOUD_NAME || '').trim(),
-  api_key: (process.env.CLOUDINARY_API_KEY || '').trim(),
-  api_secret: (process.env.CLOUDINARY_API_SECRET || '').trim()
-});
 
 // ---------- Themes and fonts (shared look with the builder) ----------
 // a/b = gradient colors, ink = readable accent on white, on = text color on the gradient
@@ -445,26 +434,37 @@ Return ONLY JSON: {"minPrice": number, "maxPrice": number, "avgPrice": number, "
 });
 
 // ---------- Image upload ----------
-app.post('/api/upload', authenticateToken, upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ message: 'Please choose an image file (JPG or PNG, max 5 MB).' });
-  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-    fs.unlink(req.file.path, () => {});
-    return res.status(500).json({ message: 'Image upload is not set up yet. Add the CLOUDINARY settings in Render, Environment.' });
-  }
-  try {
-    const result = await cloudinary.uploader.upload(req.file.path, { resource_type: 'image', folder: 'goldoffer' });
-    res.json({ url: result.secure_url });
-  } catch (err) {
-    const reason = (err && (err.message || (err.error && err.error.message))) || 'unknown error';
-    const code = (err && (err.http_code || (err.error && err.error.http_code))) || 0;
-    console.error('Upload error:', code, reason);
-    let message = 'Image upload failed: ' + reason;
-    if (code === 401 || code === 403) {
-      message = 'Image storage rejected the keys (' + code + '). Check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in Render, Environment, then redeploy.';
+app.post('/api/upload', authenticateToken, (req, res) => {
+  upload.single('file')(req, res, async (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'The image is too big (max 5 MB).' : 'Image upload failed: ' + err.message;
+      return res.status(400).json({ message: msg });
     }
-    res.status(500).json({ message });
-  } finally {
-    fs.unlink(req.file.path, () => {});
+    if (!req.file) return res.status(400).json({ message: 'Please choose an image file (JPG, PNG, WEBP or GIF, max 5 MB).' });
+    try {
+      const img = await Image.create({ userId: req.user.id, contentType: req.file.mimetype, data: req.file.buffer });
+      res.json({ url: PUBLIC_BASE + '/api/image/' + img._id });
+    } catch (e) {
+      console.error('Upload error:', e.message);
+      res.status(500).json({ message: 'Image upload failed. Please try again.' });
+    }
+  });
+});
+
+// Public: images must load on the public site and on the builder (a different domain)
+app.get('/api/image/:id', async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).end();
+    const img = await Image.findById(req.params.id).lean();
+    if (!img) return res.status(404).end();
+    res.set({
+      'Content-Type': img.contentType || 'image/jpeg',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cross-Origin-Resource-Policy': 'cross-origin'
+    });
+    res.send(img.data.buffer ? Buffer.from(img.data.buffer) : img.data);
+  } catch (e) {
+    res.status(404).end();
   }
 });
 
