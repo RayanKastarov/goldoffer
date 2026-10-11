@@ -130,10 +130,11 @@ const User = mongoose.model('User', UserSchema);
 const Offer = mongoose.model('Offer', OfferSchema);
 const Order = mongoose.model('Order', OrderSchema);
 
+// .trim() removes spaces or line breaks that are easy to paste by accident
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  cloud_name: (process.env.CLOUDINARY_CLOUD_NAME || '').trim(),
+  api_key: (process.env.CLOUDINARY_API_KEY || '').trim(),
+  api_secret: (process.env.CLOUDINARY_API_SECRET || '').trim()
 });
 
 // ---------- Themes and fonts (shared look with the builder) ----------
@@ -425,8 +426,9 @@ app.post('/api/upload', authenticateToken, upload.single('file'), async (req, re
     const result = await cloudinary.uploader.upload(req.file.path);
     res.json({ url: result.secure_url });
   } catch (err) {
-    console.error('Upload error:', err.message || err);
-    res.status(500).json({ message: 'Image upload failed. Check the CLOUDINARY keys in Render.' });
+    const reason = (err && (err.message || (err.error && err.error.message))) || 'unknown error';
+    console.error('Upload error:', reason);
+    res.status(500).json({ message: 'Image upload failed: ' + reason });
   } finally {
     fs.unlink(req.file.path, () => {});
   }
