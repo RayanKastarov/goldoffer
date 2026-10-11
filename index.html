@@ -4,303 +4,742 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="index, follow">
-  <title>GoldOffer Studio - Website Builder and Dashboard</title>
+  <meta name="theme-color" content="#05070b">
+  <title>GoldOffer Studio - Websites for local businesses</title>
+  <meta name="description" content="Pick your profession, add your offers with photos and prices, and publish a real website with its own public link. Free to start.">
+  <meta property="og:title" content="GoldOffer Studio - Websites for local businesses">
+  <meta property="og:description" content="A website your customers will trust. Free to start, live in minutes.">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Comfortaa:wght@600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@400;600;800&family=Oswald:wght@500;700&family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&family=Comfortaa:wght@600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@400;600;800&family=Oswald:wght@500;700&family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --a: #ffd700; --b: #ff8c00; --ink: #b45309; --on: #1a1a1a;
-      --grad: linear-gradient(135deg, var(--a), var(--b));
-      --glow: color-mix(in srgb, var(--ink) 25%, transparent);
-      --bg: #f5f6fa; --card: #ffffff; --border: #e6e8ef; --text: #14161c; --muted: #6b7280; --soft: #f1f3f8;
-      --font: 'Inter', sans-serif;
+      /* interface palette */
+      --ink: #05070b; --deep: #0a0e15; --panel: #10151e; --raise: #171e2a;
+      --line: rgba(255,255,255,.09); --line2: rgba(255,255,255,.17);
+      --paper: #f1eee8; --soft: #c4cad5; --mute: #8b94a5;
+      --iris: #8b7bff; --lagoon: #4fe3cf; --amber: #ffb454; --danger: #ff7a7a;
+      /* customer-site theme (set by the theme picker, used only inside the preview and the chart) */
+      --ta: #ffd700; --tb: #ff8c00; --tink: #b45309; --ton: #1a1a1a;
+      --pfont: 'Inter', sans-serif;
+      --display: 'Bricolage Grotesque', 'Inter', sans-serif;
+      --nav-h: 72px;
     }
-    body.theme-gold { --a:#ffd700; --b:#ff8c00; --ink:#b45309; --on:#1a1a1a; }
-    body.theme-neon-blue { --a:#00f2fe; --b:#4facfe; --ink:#0369a1; --on:#06222e; }
-    body.theme-emerald { --a:#00f5a0; --b:#00d9f5; --ink:#047857; --on:#06281c; }
-    body.theme-ruby { --a:#ff0844; --b:#ff7a59; --ink:#be123c; --on:#ffffff; }
-    body.theme-purple-haze { --a:#b300ff; --b:#7928ca; --ink:#7e22ce; --on:#ffffff; }
-    body.theme-sunset-orange { --a:#ff4e00; --b:#ec9f05; --ink:#c2410c; --on:#ffffff; }
-    body.theme-cyber-pink { --a:#ff007f; --b:#7928ca; --ink:#be185d; --on:#ffffff; }
-    body.theme-midnight-silver { --a:#64748b; --b:#1e293b; --ink:#334155; --on:#ffffff; }
+    body.theme-gold { --ta:#ffd700; --tb:#ff8c00; --tink:#b45309; --ton:#1a1a1a; }
+    body.theme-neon-blue { --ta:#00f2fe; --tb:#4facfe; --tink:#0369a1; --ton:#06222e; }
+    body.theme-emerald { --ta:#00f5a0; --tb:#00d9f5; --tink:#047857; --ton:#06281c; }
+    body.theme-ruby { --ta:#ff0844; --tb:#ff7a59; --tink:#be123c; --ton:#ffffff; }
+    body.theme-purple-haze { --ta:#b300ff; --tb:#7928ca; --tink:#7e22ce; --ton:#ffffff; }
+    body.theme-sunset-orange { --ta:#ff4e00; --tb:#ec9f05; --tink:#c2410c; --ton:#ffffff; }
+    body.theme-cyber-pink { --ta:#ff007f; --tb:#7928ca; --tink:#be185d; --ton:#ffffff; }
+    body.theme-midnight-silver { --ta:#64748b; --tb:#1e293b; --tink:#334155; --ton:#ffffff; }
 
-    body.font-sans { --font: 'Inter', sans-serif; }
-    body.font-serif { --font: 'Playfair Display', serif; }
-    body.font-mono { --font: 'JetBrains Mono', monospace; }
-    body.font-display { --font: 'Oswald', sans-serif; }
-    body.font-script { --font: 'Caveat', cursive; }
-    body.font-rounded { --font: 'Comfortaa', cursive; }
-    body.font-geo { --font: 'Montserrat', sans-serif; }
+    body.font-sans { --pfont: 'Inter', sans-serif; }
+    body.font-serif { --pfont: 'Playfair Display', serif; }
+    body.font-mono { --pfont: 'JetBrains Mono', monospace; }
+    body.font-display { --pfont: 'Oswald', sans-serif; }
+    body.font-script { --pfont: 'Caveat', cursive; }
+    body.font-rounded { --pfont: 'Comfortaa', cursive; }
+    body.font-geo { --pfont: 'Montserrat', sans-serif; }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font); }
-    button, input { font-family: var(--font); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    button, input { font-family: inherit; }
     html { scroll-behavior: smooth; }
-    body {
-      background: color-mix(in srgb, var(--a) 7%, #f7f8fb);
-      background-image:
-        radial-gradient(1000px 520px at 8% -5%, color-mix(in srgb, var(--a) 30%, transparent), transparent 70%),
-        radial-gradient(900px 520px at 98% 8%, color-mix(in srgb, var(--b) 26%, transparent), transparent 70%);
-      background-repeat: no-repeat;
-      color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 0 20px 60px;
-    }
+    body { background: var(--ink); color: var(--paper); font-family: 'Inter', sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    a { color: inherit; }
+    :focus-visible { outline: 2px solid var(--lagoon); outline-offset: 3px; border-radius: 6px; }
+    section[id] { scroll-margin-top: calc(var(--nav-h) + 8px); }
+    h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: -.025em; line-height: 1.06; }
 
-    /* Header */
-    .site-header { position: sticky; top: 0; z-index: 50; width: 100vw; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); border-bottom: 3px solid var(--a); margin-bottom: 40px; display: flex; justify-content: center; padding: 0 20px; }
-    .nav { width: 100%; max-width: 1200px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px 0; }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2rem; letter-spacing: -0.3px; }
-    .brand img, .badge { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; }
-    .badge { background: var(--grad); color: var(--on); display: flex; align-items: center; justify-content: center; font-weight: 800; }
-    .tabs { display: flex; gap: 4px; background: var(--soft); border-radius: 12px; padding: 4px; }
-    .tab { background: none; border: 0; color: var(--muted); padding: 8px 18px; border-radius: 9px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
-    .tab.active { background: #fff; color: var(--text); box-shadow: 0 1px 4px rgba(20,22,28,0.12); }
-    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .support { font-size: 0.8rem; color: var(--muted); }
+    /* ---------- Buttons ---------- */
+    .btn { background: var(--paper); color: #0b0e14; border: 0; border-radius: 10px; padding: 12px 22px; font-weight: 600; font-size: .95rem; cursor: pointer; transition: background .15s, transform .15s; text-decoration: none; display: inline-block; text-align: center; }
+    .btn:hover { background: #fff; transform: translateY(-1px); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-lg { padding: 15px 28px; font-size: 1rem; }
+    .btn-ghost { background: transparent; color: var(--paper); border: 1px solid var(--line2); border-radius: 10px; padding: 11px 18px; font-weight: 500; font-size: .92rem; cursor: pointer; transition: border-color .15s, background .15s; text-decoration: none; display: inline-block; text-align: center; }
+    .btn-ghost:hover { border-color: var(--paper); background: rgba(255,255,255,.05); }
+    .btn-block { width: 100%; margin-top: 12px; display: block; }
+    .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,122,122,.35); border-radius: 8px; padding: 6px 12px; font-size: .8rem; font-weight: 500; cursor: pointer; }
+    .btn-danger:hover { background: rgba(255,122,122,.1); }
+    .link-btn { background: none; border: 0; color: var(--mute); text-decoration: underline; font-size: .88rem; margin-top: 14px; width: 100%; cursor: pointer; }
+    .link-btn:hover { color: var(--paper); }
 
-    .btn { background: var(--grad); color: var(--on); border: 0; border-radius: 12px; padding: 11px 20px; font-weight: 700; font-size: 0.92rem; cursor: pointer; box-shadow: 0 6px 18px var(--glow); transition: transform .15s, filter .15s; }
-    .btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
-    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
-    .btn-lg { padding: 15px 24px; font-size: 1rem; }
-    .btn-ghost { background: #fff; color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 600; font-size: 0.88rem; cursor: pointer; }
-    .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
-    .btn-block { width: 100%; margin-top: 12px; }
-    .btn-danger { background: #fff; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; padding: 6px 11px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
-    .link-btn { background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: 0.88rem; margin-top: 12px; width: 100%; cursor: pointer; }
-    .link-btn:hover { color: var(--text); }
+    /* ---------- Navigation ---------- */
+    .nav:not(.solid):not(.menu-open):not(.open) { background: linear-gradient(180deg, rgba(5,7,11,.9), rgba(5,7,11,0)); }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 80; height: var(--nav-h); transition: background .25s, border-color .25s; border-bottom: 1px solid transparent; }
+    .nav.solid, .nav.menu-open { background: rgba(5,7,11,.82); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom-color: var(--line); }
+    .nav-in { height: 100%; max-width: 1360px; margin: 0 auto; padding: 0 28px; display: flex; align-items: center; gap: 36px; }
+    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; font-family: var(--display); font-weight: 600; font-size: 1.22rem; letter-spacing: -.02em; flex-shrink: 0; }
+    .mark { width: 34px; height: 34px; flex-shrink: 0; }
+    .menu { display: flex; align-self: stretch; align-items: stretch; gap: 4px; }
+    .mi { display: flex; align-items: center; }
+    .mb, .ml { background: none; border: 0; color: var(--soft); font-size: .96rem; font-weight: 500; padding: 0 14px; cursor: pointer; display: flex; align-items: center; text-decoration: none; height: 100%; transition: color .15s; }
+    .mb:hover, .ml:hover, .mi.open .mb, .ml.active { color: #fff; }
+    .mb::after { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); margin-left: 9px; transition: transform .2s; }
+    .mi.open .mb::after { transform: rotate(225deg) translate(-1px, -1px); }
+    .nav-end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .nav-end .who { color: var(--mute); font-size: .88rem; margin-right: 4px; }
+    .nav-end .btn, .nav-end .btn-ghost { padding: 9px 18px; font-size: .9rem; }
+    .burger { display: none; background: none; border: 1px solid var(--line2); border-radius: 10px; width: 42px; height: 42px; cursor: pointer; color: var(--paper); align-items: center; justify-content: center; }
+    .burger span, .burger span::before, .burger span::after { display: block; width: 18px; height: 1.5px; background: currentColor; position: relative; content: ''; }
+    .burger span::before { position: absolute; top: -6px; } .burger span::after { position: absolute; top: 6px; }
 
-    /* Hero */
-    .hero { text-align: center; max-width: 780px; margin-bottom: 34px; }
-    .eyebrow { display: inline-block; background: #fff; border: 1px solid var(--border); color: var(--ink); font-weight: 700; font-size: 0.78rem; letter-spacing: .6px; text-transform: uppercase; padding: 6px 14px; border-radius: 999px; margin-bottom: 18px; }
-    .hero h1 { font-size: 3.1rem; line-height: 1.1; letter-spacing: -1px; margin-bottom: 16px; }
-    .hero h1 em { font-style: normal; background: var(--grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .hero p { color: var(--muted); font-size: 1.1rem; line-height: 1.6; margin-bottom: 22px; }
-    .founder { display: inline-block; font-size: .88rem; color: var(--muted); }
-    .founder b { color: var(--text); }
-    @media (max-width: 640px) { .hero h1 { font-size: 2.2rem; } }
+    .mega { position: absolute; left: 0; right: 0; top: 100%; background: rgba(6,8,13,.97); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--line); opacity: 0; visibility: hidden; transform: translateY(-6px); transition: opacity .18s, transform .18s, visibility .18s; }
+    .mi.open > .mega { opacity: 1; visibility: visible; transform: none; }
+    .mega-in { max-width: 1360px; margin: 0 auto; padding: 38px 28px 46px; display: grid; gap: 48px; }
+    .mega-2 { grid-template-columns: 1fr 1fr 1.3fr; }
+    .mega-4 { grid-template-columns: repeat(4, 1fr) 1.3fr; }
+    .mcol h4 { font-weight: 500; font-size: .85rem; color: var(--mute); margin-bottom: 16px; }
+    .mcol a { display: block; text-decoration: none; padding: 7px 0; font-family: var(--display); font-size: 1.28rem; font-weight: 500; letter-spacing: -.015em; color: var(--paper); cursor: pointer; transition: color .15s, transform .15s; }
+    .mcol a small { display: block; font-family: 'Inter', sans-serif; font-size: .8rem; font-weight: 400; color: var(--mute); letter-spacing: 0; margin-top: 1px; }
+    .mcol a:hover { color: var(--lagoon); transform: translateX(3px); }
+    .mfeat { position: relative; border-radius: 14px; overflow: hidden; min-height: 220px; display: flex; align-items: flex-end; text-decoration: none; cursor: pointer; border: 1px solid var(--line); }
+    .mfeat .ph { position: absolute; inset: 0; transition: transform .6s; }
+    .mfeat:hover .ph { transform: scale(1.05); }
+    .mfeat::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 20%, rgba(5,7,11,.9)); }
+    .mfeat span { position: relative; z-index: 1; padding: 20px; font-family: var(--display); font-size: 1.3rem; font-weight: 500; line-height: 1.15; }
+    .mfeat span small { display: block; font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 400; color: var(--soft); margin-top: 6px; }
 
-    .layout { width: 100%; max-width: 1200px; display: grid; grid-template-columns: 1fr 410px; gap: 28px; align-items: start; }
-    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+    .ph { background: var(--fb, linear-gradient(135deg, #2b3550, #141a2a)); background-size: cover; background-position: center; }
 
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 32px; box-shadow: 0 20px 50px rgba(20,22,28,0.07); position: relative; overflow: hidden; }
-    .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: var(--grad); }
-    h2 { font-size: 1.6rem; letter-spacing: -.4px; margin-bottom: 6px; }
-    .sub { color: var(--muted); margin-bottom: 22px; font-size: .95rem; line-height: 1.5; }
+    /* ---------- Scroll stage (hero) ---------- */
+    .stage-track { height: 340vh; position: relative; background: var(--ink); }
+    .stage-sticky { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; perspective: 1900px;
+      --w: 100vw; --h: 100vh; --cy: 50; --r: 0px; --e: 0; --rx: 0deg;
+      background: radial-gradient(900px 560px at 50% 62%, rgba(139,123,255,.12), transparent 70%), var(--ink); }
+    .ghost { position: absolute; left: 50%; top: calc(var(--cy) * 1%); width: calc(var(--w) + 44px); height: calc(var(--h) + 44px); transform: translate(-50%, -50%) rotate(-1.3deg); border: 1px solid rgba(255,255,255,.3); border-radius: calc(var(--r) + 22px); opacity: calc(var(--e) * .9); pointer-events: none; }
+    .ghost.g2 { width: calc(var(--w) + 84px); height: calc(var(--h) + 70px); transform: translate(-50%, -50%) rotate(1deg); border-color: rgba(255,255,255,.16); border-radius: calc(var(--r) + 40px); }
+    .device { position: absolute; left: 50%; top: calc(var(--cy) * 1%); width: var(--w); height: var(--h); transform: translate(-50%, -50%) rotateX(var(--rx)); border-radius: var(--r); overflow: hidden; background: #0c1017; border: 1px solid rgba(255,255,255, calc(var(--e) * .18)); box-shadow: 0 40px 120px rgba(0,0,0,.65); display: flex; flex-direction: column; will-change: width, height; }
+    .dev-bar { height: calc(var(--e) * 40px); overflow: hidden; display: flex; align-items: center; gap: 7px; padding: 0 16px; background: #131a26; border-bottom: 1px solid var(--line); flex-shrink: 0; opacity: var(--e); }
+    .dev-bar i { width: 10px; height: 10px; border-radius: 50%; background: #2b3447; flex-shrink: 0; }
+    .dev-bar .url { margin-left: 10px; background: #0a0e15; color: var(--mute); border-radius: 7px; padding: 5px 14px; font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dev-screen { position: relative; flex: 1; overflow: hidden; container-type: inline-size; background: #eef2ee; }
+    .shade { position: absolute; inset: 0; z-index: 6; pointer-events: none; background: radial-gradient(75% 65% at 50% 50%, rgba(5,7,11,.95), rgba(5,7,11,.92)); opacity: calc(1 - var(--e) * .97); }
 
-    .nodes { display: flex; justify-content: space-between; position: relative; margin-bottom: 26px; }
-    .nodes::before { content: ''; position: absolute; top: 50%; left: 18px; right: 18px; height: 2px; background: var(--border); transform: translateY(-50%); }
-    .node { width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem; color: var(--muted); position: relative; z-index: 1; }
-    .node.active { background: var(--grad); border-color: transparent; color: var(--on); box-shadow: 0 4px 14px var(--glow); }
-    .node.done { border-color: var(--ink); color: var(--ink); }
+    .stage-copy { position: absolute; z-index: 5; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; padding: 0 24px; will-change: opacity, transform; }
+    .stage-copy h1 { font-size: clamp(2.6rem, 6.6vw, 6rem); letter-spacing: -.04em; max-width: 15ch; margin: 0 auto 22px; }
+    .stage-copy p.lead { color: var(--soft); font-size: clamp(1rem, 1.5vw, 1.25rem); max-width: 52ch; margin: 0 auto 32px; }
+    .stage-copy .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .stage-copy .founder { margin-top: 34px; color: var(--mute); font-size: .88rem; }
+    .stage-copy .founder b { color: var(--soft); font-weight: 600; }
+    .scroll-hint { position: absolute; z-index: 5; bottom: 26px; left: 50%; transform: translateX(-50%); color: var(--mute); font-size: .8rem; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+    .scroll-hint::after { content: ''; width: 1px; height: 30px; background: linear-gradient(var(--mute), transparent); }
 
+    .stage-desc { position: absolute; z-index: 5; left: 50%; bottom: 7vh; transform: translateX(-50%); width: min(960px, 90vw); font-family: var(--display); font-size: clamp(1.45rem, 3vw, 2.7rem); line-height: 1.16; letter-spacing: -.025em; font-weight: 500; text-align: left; opacity: 0; }
+    .stage-desc .w { opacity: .18; }
+
+    /* the mock bakery site that plays inside the device */
+    .mock { opacity: calc(.4 + var(--e) * .6); position: absolute; left: 0; right: 0; top: 0; width: 100%; font-family: 'Inter', sans-serif; color: #1d2a24; animation: browse 26s ease-in-out infinite alternate; will-change: transform; }
+    @keyframes browse { 0%, 8% { transform: translateY(0); } 45%, 52% { transform: translateY(-20%); } 92%, 100% { transform: translateY(-43%); } }
+    .m-nav { opacity: var(--e); height: 7cqw; display: flex; align-items: center; justify-content: space-between; padding: 0 5cqw; background: #eef2ee; }
+    .m-nav b { font-size: 2.1cqw; font-weight: 700; letter-spacing: -.01em; }
+    .m-nav span { display: flex; gap: 3cqw; font-size: 1.5cqw; color: #4b5b52; font-style: normal; }
+    .m-nav i { font-style: normal; }
+    .m-hero { position: relative; height: 46cqw; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 5cqw 5.5cqw; color: #fff; }
+    .m-hero .ph { position: absolute; inset: 0; }
+    .m-hero .ph::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,24,19,.05), rgba(14,24,19,.72)); }
+    .m-hero > *:not(.ph) { position: relative; z-index: 2; opacity: clamp(0, calc(var(--e) * 2.2), 1); }
+    .m-h1 { font-family: 'Inter', sans-serif; font-size: 6.4cqw; font-weight: 800; letter-spacing: -.04em; line-height: 1; width: fit-content; }
+    .m-sub { font-size: 1.9cqw; margin: 1.2cqw 0 2.4cqw; opacity: .9; }
+    .m-cta { width: fit-content; background: #f3c969; color: #1d2a24; font-weight: 700; font-size: 1.7cqw; padding: 1.3cqw 3cqw; border-radius: 99cqw; }
+    .m-title { font-size: 3.4cqw; font-weight: 800; letter-spacing: -.03em; padding: 6cqw 5cqw 2.6cqw; background: #eef2ee; }
+    .m-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.6cqw; padding: 0 5cqw 3cqw; background: #eef2ee; }
+    .m-card { background: #fff; border-radius: 1.6cqw; padding: 0 0 2cqw; position: relative; }
+    .m-card .ph { height: 15cqw; border-radius: 1.6cqw 1.6cqw 0 0; }
+    .m-card h5 { font-size: 2cqw; font-weight: 700; padding: 1.6cqw 1.8cqw 0; }
+    .m-card p { font-size: 1.35cqw; color: #5b6b62; padding: .5cqw 1.8cqw 0; }
+    .m-card .row { display: flex; align-items: center; justify-content: space-between; padding: 1.4cqw 1.8cqw 0; }
+    .m-card .pr { font-size: 2.6cqw; font-weight: 800; color: #1d2a24; }
+    .m-card .rq { font-size: 1.3cqw; font-weight: 700; background: #1d2a24; color: #fff; padding: .9cqw 1.6cqw; border-radius: 99cqw; }
+    .m-foot { background: #16241d; color: #cfe0d6; padding: 5cqw; font-size: 1.7cqw; display: flex; justify-content: space-between; }
+    .m-foot b { color: #fff; font-size: 2.2cqw; }
+
+    /* annotation boxes, like labelled detections: they fade in as the clip shrinks */
+    .ann { position: relative; }
+    .ann::after { content: ''; position: absolute; inset: var(--i, -.9cqw); z-index: 4; border: .22cqw solid var(--c); background: color-mix(in srgb, var(--c) 13%, transparent); border-radius: .5cqw; pointer-events: none; opacity: clamp(0, calc((var(--e) - var(--s)) * 5), 1); }
+    .ann::before { content: attr(data-label); position: absolute; left: var(--i, -.9cqw); top: calc(var(--i, -.9cqw) - 2.3cqw); z-index: 5; background: var(--c); color: #07090d; letter-spacing: 0; text-transform: none; font: 600 1.2cqw/1 'Inter', sans-serif; padding: .55cqw .9cqw; border-radius: .4cqw; white-space: nowrap; pointer-events: none; opacity: clamp(0, calc((var(--e) - var(--s)) * 5), 1); }
+
+    .toast-wrap { position: absolute; inset: 0; z-index: 7; pointer-events: none; opacity: var(--e); }
+    .toast { position: absolute; right: 2.4cqw; bottom: 2.4cqw; background: #0d1219; color: #fff; border-radius: 1.4cqw; padding: 1.5cqw 2.2cqw; font-size: 1.5cqw; box-shadow: 0 2cqw 6cqw rgba(0,0,0,.4); display: flex; gap: 1.4cqw; align-items: center; opacity: 0; animation: toast 13s ease-in-out infinite; }
+    .toast::before { content: ''; width: 1.1cqw; height: 1.1cqw; border-radius: 50%; background: var(--lagoon); flex-shrink: 0; }
+    .toast small { display: block; color: var(--mute); font-size: 1.15cqw; }
+    @keyframes toast { 0%, 56% { opacity: 0; transform: translateY(2cqw); } 62%, 86% { opacity: 1; transform: none; } 92%, 100% { opacity: 0; transform: translateY(2cqw); } }
+
+    /* ---------- Sections ---------- */
+    .section { max-width: 1240px; margin: 0 auto; padding: 130px 28px; }
+    .section-head { max-width: 760px; margin-bottom: 64px; }
+    .section-head h2 { font-size: clamp(2.2rem, 4.8vw, 3.9rem); margin-bottom: 18px; }
+    .section-head p { color: var(--soft); font-size: 1.12rem; max-width: 56ch; }
+    .band { border-top: 1px solid var(--line); }
+
+    /* how it works: a real sequence, so numbered */
+    .how { display: grid; grid-template-columns: 1fr 1.25fr; gap: 80px; align-items: start; }
+    .how .section-head { position: sticky; top: calc(var(--nav-h) + 40px); margin-bottom: 0; }
+    .steps { display: flex; flex-direction: column; }
+    .st { display: grid; grid-template-columns: 56px 1fr; gap: 24px; padding: 34px 0; border-top: 1px solid var(--line); }
+    .st:last-child { border-bottom: 1px solid var(--line); }
+    .st .n { font-family: var(--display); font-size: 1.1rem; color: var(--mute); padding-top: 5px; }
+    .st h3 { font-size: 1.7rem; margin-bottom: 8px; }
+    .st p { color: var(--soft); max-width: 46ch; margin-bottom: 20px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { border: 1px solid var(--line2); border-radius: 99px; padding: 6px 14px; font-size: .86rem; color: var(--soft); }
+    .chip.on { background: var(--paper); color: #0b0e14; border-color: var(--paper); }
+    .dots { display: flex; gap: 8px; }
+    .dots i { width: 34px; height: 34px; border-radius: 10px; border: 2px solid var(--ink); box-shadow: 0 0 0 1px var(--line2); }
+    .dots i.sel { box-shadow: 0 0 0 2px var(--paper); }
+    .mini-row { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: .92rem; max-width: 420px; }
+    .mini-row b { font-weight: 600; } .mini-row span { color: var(--lagoon); font-weight: 600; }
+    .urlpill { display: inline-block; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 11px 18px; font-size: .92rem; color: var(--soft); }
+    .urlpill b { color: var(--paper); font-weight: 600; }
+
+    /* professions marquee */
+    .marq { overflow: hidden; display: flex; flex-direction: column; gap: 16px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+    .marq-row { display: flex; gap: 16px; width: max-content; animation: slide 90s linear infinite; }
+    .marq-row.rev { animation-direction: reverse; animation-duration: 110s; }
+    .marq:hover .marq-row { animation-play-state: paused; }
+    @keyframes slide { to { transform: translateX(-50%); } }
+    .pcard { position: relative; flex: 0 0 auto; width: 250px; height: 320px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); cursor: pointer; background: none; color: var(--paper); text-align: left; padding: 0; }
+    .pcard .ph { position: absolute; inset: 0; transition: transform .6s; }
+    .pcard:hover .ph { transform: scale(1.06); }
+    .pcard::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(5,7,11,.92)); }
+    .pcard span { position: absolute; z-index: 1; left: 18px; right: 18px; bottom: 16px; font-family: var(--display); font-size: 1.3rem; font-weight: 500; line-height: 1.1; }
+    .marq-note { margin-top: 28px; color: var(--mute); font-size: .88rem; }
+
+    /* bento features */
+    .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+    .bx { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 32px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+    .bx h3 { font-size: 1.55rem; margin-bottom: 8px; }
+    .bx p { color: var(--soft); font-size: .98rem; max-width: 40ch; }
+    .bx .vis { margin-top: auto; padding-top: 28px; }
+    .b1 { grid-column: span 4; } .b2 { grid-column: span 2; } .b3 { grid-column: span 2; } .b4 { grid-column: span 2; } .b5 { grid-column: span 2; }
+    .offer-demo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .od { background: var(--raise); border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+    .od .ph { height: 96px; } .od div { padding: 11px 13px; font-size: .85rem; } .od b { display: block; font-weight: 600; } .od span { color: var(--lagoon); font-weight: 600; }
+    .range-demo { background: var(--raise); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+    .range-demo small { color: var(--mute); font-size: .78rem; }
+    .range-bar { height: 8px; border-radius: 9px; background: var(--line); margin: 16px 0 10px; position: relative; }
+    .range-bar i { position: absolute; left: 18%; right: 22%; top: 0; bottom: 0; border-radius: 9px; background: linear-gradient(90deg, var(--iris), var(--lagoon)); }
+    .range-bar u { position: absolute; left: 52%; top: -4px; width: 3px; height: 16px; background: #fff; border-radius: 2px; }
+    .range-nums { display: flex; justify-content: space-between; font-size: .85rem; color: var(--soft); }
+    .bars { display: flex; align-items: flex-end; gap: 8px; height: 92px; }
+    .bars i { flex: 1; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, var(--iris), rgba(139,123,255,.25)); }
+    .look-demo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .look-demo i { height: 38px; border-radius: 10px; }
+
+    /* pricing */
+    .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 920px; }
+    .plan { border: 1px solid var(--line); border-radius: 22px; padding: 38px; background: var(--panel); display: flex; flex-direction: column; }
+    .plan.pro { background: linear-gradient(160deg, #1a1f36, #10151e 60%); border-color: rgba(139,123,255,.45); }
+    .plan h3 { font-size: 1.4rem; margin-bottom: 18px; font-weight: 500; }
+    .plan .price { font-family: var(--display); font-size: 3.6rem; letter-spacing: -.04em; line-height: 1; font-weight: 600; }
+    .plan .price small { font-family: 'Inter', sans-serif; font-size: 1rem; color: var(--mute); letter-spacing: 0; font-weight: 400; }
+    .plan .sub2 { color: var(--mute); font-size: .92rem; margin: 10px 0 26px; min-height: 1.4em; }
+    .plan ul { list-style: none; margin-bottom: 30px; flex: 1; }
+    .plan li { padding: 10px 0; border-top: 1px solid var(--line); color: var(--soft); font-size: .96rem; }
+    .price-note { color: var(--mute); font-size: .88rem; margin-top: 22px; max-width: 70ch; }
+
+    /* about */
+    .about { display: grid; grid-template-columns: 1.1fr 1fr; gap: 72px; align-items: start; }
+    .about h2 { font-size: clamp(2.2rem, 4.6vw, 3.7rem); margin-bottom: 26px; }
+    .about p { color: var(--soft); font-size: 1.12rem; margin-bottom: 18px; max-width: 54ch; }
+    .about blockquote { font-family: var(--display); font-size: clamp(1.4rem, 2.4vw, 2rem); font-weight: 500; line-height: 1.2; letter-spacing: -.02em; margin: 34px 0 0; padding-left: 22px; border-left: 2px solid var(--iris); max-width: 24ch; }
+    .person { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 34px; }
+    .person .top { display: flex; align-items: center; gap: 18px; margin-bottom: 28px; }
+    .avatar { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, var(--iris), var(--lagoon)); color: #07090d; font-family: var(--display); font-weight: 700; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .person .top b { display: block; font-family: var(--display); font-size: 1.5rem; font-weight: 600; letter-spacing: -.02em; }
+    .person .top span { color: var(--mute); font-size: .92rem; }
+    .contact { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+    .contact a { display: flex; justify-content: space-between; align-items: center; gap: 14px; text-decoration: none; padding: 18px 0; border-bottom: 1px solid var(--line); transition: color .15s; }
+    .contact a:hover { color: var(--lagoon); }
+    .contact small { color: var(--mute); font-size: .8rem; display: block; }
+    .contact b { font-weight: 500; font-size: 1.05rem; word-break: break-all; }
+    .contact em { font-style: normal; color: var(--mute); font-size: .85rem; }
+
+    /* studio (the real builder) */
+    .studio { background: var(--deep); border-top: 1px solid var(--line); }
+    .studio .section { padding-top: 110px; padding-bottom: 130px; }
+    .layout { display: grid; grid-template-columns: 1fr 420px; gap: 28px; align-items: start; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 34px; position: relative; }
+    .card h2 { font-size: 1.7rem; margin-bottom: 8px; letter-spacing: -.025em; }
+    .sub { color: var(--soft); margin-bottom: 24px; font-size: .96rem; line-height: 1.55; }
+    .nodes { display: flex; justify-content: space-between; position: relative; margin-bottom: 28px; }
+    .nodes::before { content: ''; position: absolute; top: 50%; left: 18px; right: 18px; height: 1px; background: var(--line2); transform: translateY(-50%); }
+    .node { width: 36px; height: 36px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line2); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: .85rem; color: var(--mute); position: relative; z-index: 1; }
+    .node.active { background: var(--paper); border-color: var(--paper); color: #0b0e14; }
+    .node.done { border-color: var(--lagoon); color: var(--lagoon); }
     .step { display: none; }
-    .step.active { display: block; animation: rise .35s ease; }
-    @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-
-    label { display: block; font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; font-weight: 600; }
-    input[type=text], input[type=email], input[type=password], input[type=number], input[type=file] { width: 100%; padding: 13px 15px; background: #fff; border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .95rem; outline: none; transition: border-color .15s, box-shadow .15s; }
-    input:focus { border-color: var(--ink); box-shadow: 0 0 0 4px var(--glow); }
+    .step.active { display: block; animation: rise .3s ease; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    label { display: block; font-size: .84rem; color: var(--mute); margin-bottom: 7px; font-weight: 500; }
+    input[type=text], input[type=email], input[type=password], input[type=number], input[type=file] { width: 100%; padding: 13px 15px; background: var(--ink); border: 1px solid var(--line2); border-radius: 12px; color: var(--paper); font-size: .95rem; outline: none; transition: border-color .15s, box-shadow .15s; }
+    input::placeholder { color: #5f697a; }
+    input:focus { border-color: var(--iris); box-shadow: 0 0 0 4px rgba(139,123,255,.2); }
+    input[type=file]::file-selector-button { background: var(--raise); color: var(--paper); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 12px; margin-right: 12px; cursor: pointer; }
     .field { margin-bottom: 16px; }
 
-    /* Profession picker */
     .search-wrap { position: relative; margin-bottom: 12px; }
-    .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+    .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--mute); }
     .search-wrap input { padding-left: 42px; }
-    .prof-scroll { max-height: 380px; overflow-y: auto; padding: 4px; margin: 0 -4px 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--soft); padding: 12px; }
+    .prof-scroll { max-height: 380px; overflow-y: auto; margin: 0 0 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--ink); padding: 12px; }
     .prof-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-    .prof { background: #fff; border: 2px solid transparent; border-radius: 14px; overflow: hidden; cursor: pointer; text-align: left; padding: 0; box-shadow: 0 2px 8px rgba(20,22,28,0.06); transition: transform .15s, border-color .15s, box-shadow .15s; }
-    .prof:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,22,28,0.12); }
-    .prof.selected { border-color: var(--ink); box-shadow: 0 0 0 4px var(--glow); }
-    .prof .pic { height: 86px; background: var(--grad); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: var(--on); font-weight: 800; font-size: 1.6rem; }
+    .prof { background: var(--raise); border: 2px solid transparent; border-radius: 14px; overflow: hidden; cursor: pointer; text-align: left; padding: 0; color: var(--paper); transition: transform .15s, border-color .15s; }
+    .prof:hover { transform: translateY(-2px); border-color: var(--line2); }
+    .prof.selected { border-color: var(--lagoon); }
+    .prof .pic { height: 86px; background: linear-gradient(135deg, #2b3550, #141a2a); display: flex; align-items: center; justify-content: center; color: var(--soft); font-weight: 700; font-size: 1.6rem; }
     .prof .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .prof .name { padding: 9px 10px; font-size: .84rem; font-weight: 600; line-height: 1.25; }
-    .no-match { text-align: center; padding: 22px 10px; color: var(--muted); font-size: .9rem; }
-    .selected-line { font-size: .88rem; color: var(--muted); margin-bottom: 8px; }
-    .selected-line b { color: var(--ink); }
+    .prof .name { padding: 9px 11px; font-size: .84rem; font-weight: 500; line-height: 1.25; }
+    .no-match { text-align: center; padding: 22px 10px; color: var(--mute); font-size: .9rem; }
+    .selected-line { font-size: .88rem; color: var(--mute); margin-bottom: 8px; }
+    .selected-line b { color: var(--lagoon); font-weight: 600; }
 
-    .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-bottom: 20px; }
+    .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-bottom: 22px; }
     @media (max-width: 520px) { .swatches { grid-template-columns: repeat(4, 1fr); } }
-    .sw { height: 40px; border-radius: 10px; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--border); cursor: pointer; }
-    .sw.selected { box-shadow: 0 0 0 2px var(--text); }
+    .sw { height: 40px; border-radius: 10px; border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--line2); cursor: pointer; }
+    .sw.selected { box-shadow: 0 0 0 2px var(--paper); }
     .fonts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
-    .fbtn { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; cursor: pointer; text-align: center; }
+    .fbtn { background: var(--ink); border: 1px solid var(--line2); border-radius: 12px; padding: 12px; cursor: pointer; text-align: center; color: var(--paper); }
     .fbtn span { display: block; font-size: 1.15rem; margin-bottom: 2px; }
-    .fbtn small { color: var(--muted); font-size: .74rem; }
-    .fbtn.selected { border-color: var(--ink); box-shadow: 0 0 0 3px var(--glow); }
+    .fbtn small { color: var(--mute); font-size: .74rem; }
+    .fbtn.selected { border-color: var(--paper); }
 
-    .offer-row { background: var(--soft); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
-    .offer-row b { display: block; font-size: .95rem; }
-    .offer-row small { color: var(--ink); font-weight: 600; }
-    .range { font-size: .82rem; color: var(--muted); border-left: 3px solid var(--ink); padding: 4px 10px; margin: 8px 0 12px; display: none; }
-    .add-box { border: 1px dashed #cdd2de; border-radius: 14px; padding: 16px; margin-top: 14px; background: #fcfcfe; }
-
-    /* Preview */
-    .preview { position: sticky; top: 90px; background: #fff; border: 1px solid var(--border); border-radius: 22px; padding: 14px; box-shadow: 0 20px 50px rgba(20,22,28,0.07); }
-    .pbar { display: flex; align-items: center; gap: 6px; padding: 4px 6px 12px; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: #e5e7eb; }
-    .pbar .url { margin-left: 10px; flex: 1; background: var(--soft); border-radius: 8px; font-size: .72rem; color: var(--muted); padding: 5px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .screen { background: #fff; border: 1px solid var(--border); border-radius: 14px; min-height: 380px; overflow: hidden; }
-    .screen .top { background: var(--grad); color: var(--on); padding: 22px 16px; text-align: center; }
-    .screen .top h3 { font-size: 1.3rem; }
-    .screen .top p { font-size: .8rem; opacity: .85; margin-top: 2px; }
-    .screen .body { padding: 14px; max-height: 360px; overflow-y: auto; }
-    .p-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
-    .p-item img { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
-    .p-item h5 { font-size: .92rem; }
-    .p-item .price { color: var(--ink); font-weight: 800; font-size: .95rem; margin: 2px 0; }
-    .p-item p { color: var(--muted); font-size: .78rem; }
-    .empty { color: var(--muted); text-align: center; font-size: .85rem; padding: 50px 10px; line-height: 1.6; }
-
-    .url-box { background: var(--soft); border: 1px solid var(--border); border-radius: 12px; padding: 14px; word-break: break-all; margin: 10px 0 14px; font-weight: 600; }
-    .url-box a { color: var(--ink); }
-    .note { font-size: .82rem; color: var(--muted); line-height: 1.55; margin-top: 12px; }
+    .offer-row { background: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .offer-row b { display: block; font-size: .95rem; font-weight: 600; }
+    .offer-row small { color: var(--lagoon); font-weight: 600; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .range { font-size: .84rem; color: var(--soft); border-left: 2px solid var(--iris); padding: 4px 12px; margin: 10px 0 12px; display: none; }
+    .add-box { border: 1px dashed var(--line2); border-radius: 14px; padding: 18px; margin-top: 14px; background: rgba(255,255,255,.015); }
+    .note { font-size: .84rem; color: var(--mute); line-height: 1.55; margin-top: 12px; }
+    .url-box { background: var(--ink); border: 1px solid var(--line2); border-radius: 12px; padding: 14px; word-break: break-all; margin: 10px 0 14px; font-weight: 600; }
+    .url-box a { color: var(--lagoon); }
     .thumb { position: relative; display: inline-block; margin-top: 8px; }
-    .thumb img { height: 96px; max-width: 220px; border-radius: 10px; display: block; object-fit: cover; border: 1px solid var(--border); }
-    .thumb.sm { margin: 0 12px 0 0; }
-    .thumb.sm img { height: 52px; width: 52px; }
-    .thumb .x { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; background: #dc2626; color: #fff; cursor: pointer; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+    .thumb img { height: 96px; max-width: 220px; border-radius: 10px; display: block; object-fit: cover; border: 1px solid var(--line2); }
+    .thumb.sm { margin: 0 12px 0 0; } .thumb.sm img { height: 52px; width: 52px; }
+    .thumb .x { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); background: #dc2626; color: #fff; cursor: pointer; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
     .thumb .x:hover { background: #b91c1c; }
 
-    /* Dashboard */
-    #dashboard { display: none; width: 100%; max-width: 1200px; }
-    #dashboard.active { display: block; animation: rise .35s ease; }
-    #dashboard h1 { font-size: 1.9rem; letter-spacing: -.5px; margin-bottom: 20px; }
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 20px; }
-    .stat { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 20px; box-shadow: 0 8px 24px rgba(20,22,28,0.05); }
-    .stat h3 { font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; font-weight: 600; }
-    .stat .v { font-size: 1.9rem; font-weight: 800; color: var(--ink); letter-spacing: -.5px; }
+    /* live preview of the customer's site */
+    .preview { position: sticky; top: calc(var(--nav-h) + 24px); background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 14px; }
+    .pbar { display: flex; align-items: center; gap: 6px; padding: 4px 6px 12px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #2b3447; }
+    .pbar .url { margin-left: 10px; flex: 1; background: var(--ink); border-radius: 8px; font-size: .72rem; color: var(--mute); padding: 5px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .screen { background: #0a0c11; border: 1px solid var(--line); border-radius: 14px; min-height: 380px; overflow: hidden; font-family: var(--pfont); color: #fff; }
+    .screen .top { padding: 34px 18px 28px; text-align: center; background: radial-gradient(120% 150% at 12% 0%, color-mix(in srgb, var(--ta) 52%, transparent), transparent 62%), radial-gradient(100% 130% at 100% 15%, color-mix(in srgb, var(--tb) 42%, transparent), transparent 64%), #0a0c11; }
+    .screen .top h3 { font-family: inherit; font-size: 1.5rem; letter-spacing: -.02em; line-height: 1.1; }
+    .screen .top p { font-size: .8rem; color: #c9ced8; margin-top: 6px; }
+    .screen .body { padding: 14px; max-height: 360px; overflow-y: auto; }
+    .p-item { background: #11151d; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+    .p-item img { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
+    .p-item h5 { font-size: .92rem; font-family: inherit; }
+    .p-item .price { color: var(--ta); font-weight: 800; font-size: .98rem; margin: 2px 0; }
+    .p-item p { color: #9aa3b2; font-size: .78rem; }
+    .empty { color: #8b94a5; text-align: center; font-size: .85rem; padding: 50px 10px; line-height: 1.6; }
+
+    /* footer */
+    .foot { border-top: 1px solid var(--line); }
+    .foot-in { max-width: 1240px; margin: 0 auto; padding: 64px 28px 40px; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; }
+    .foot .brand { margin-bottom: 14px; }
+    .foot p { color: var(--mute); font-size: .92rem; max-width: 34ch; }
+    .foot h4 { font-weight: 500; color: var(--mute); font-size: .85rem; margin-bottom: 14px; }
+    .foot a { display: block; text-decoration: none; color: var(--soft); padding: 5px 0; font-size: .95rem; cursor: pointer; }
+    .foot a:hover { color: #fff; }
+    .foot-end { max-width: 1240px; margin: 0 auto; padding: 0 28px 40px; color: var(--mute); font-size: .84rem; }
+
+    /* dashboard */
+    #dashboard { display: none; width: 100%; max-width: 1240px; margin: 0 auto; padding: calc(var(--nav-h) + 56px) 28px 100px; min-height: 100vh; }
+    #dashboard.active { display: block; animation: rise .3s ease; }
+    #dashboard h1 { font-size: 2.6rem; margin-bottom: 28px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
+    .stat h3 { font-family: 'Inter', sans-serif; font-size: .86rem; color: var(--mute); margin-bottom: 12px; font-weight: 500; letter-spacing: 0; }
+    .stat .v { font-family: var(--display); font-size: 2.3rem; font-weight: 600; letter-spacing: -.03em; }
     .dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
     @media (max-width: 900px) { .dash-grid { grid-template-columns: 1fr; } }
-    .panel { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 22px; box-shadow: 0 8px 24px rgba(20,22,28,0.05); }
-    .panel h2 { font-size: 1.05rem; margin-bottom: 14px; }
-    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
-    th, td { text-align: left; padding: 10px 6px; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-size: .72rem; text-transform: uppercase; font-weight: 600; }
-    .pill { padding: 3px 10px; border-radius: 999px; font-size: .72rem; font-weight: 600; background: var(--soft); }
-    .pill.Completed { background: #dcfce7; color: #15803d; }
-    .pill.Pending { background: #fef3c7; color: #b45309; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
+    .panel h2 { font-size: 1.2rem; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { text-align: left; padding: 11px 6px; border-bottom: 1px solid var(--line); }
+    th { color: var(--mute); font-size: .8rem; font-weight: 500; }
+    .pill { padding: 3px 10px; border-radius: 999px; font-size: .74rem; font-weight: 600; background: var(--raise); }
+    .pill.Completed { background: rgba(79,227,207,.14); color: var(--lagoon); }
+    .pill.Pending { background: rgba(255,180,84,.14); color: var(--amber); }
 
-    .modal { display: none; position: fixed; inset: 0; background: rgba(20,22,28,0.55); backdrop-filter: blur(4px); justify-content: center; align-items: center; padding: 20px; z-index: 100; }
-    .modal-box { background: #fff; border-radius: 20px; padding: 30px; width: 100%; max-width: 430px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 30px 80px rgba(0,0,0,0.25); }
-    .modal-box h3 { margin-bottom: 18px; font-size: 1.4rem; }
-    .close { position: absolute; right: 16px; top: 10px; font-size: 1.6rem; color: var(--muted); background: none; border: 0; cursor: pointer; }
-    .err { color: #dc2626; font-size: .85rem; min-height: 1.2em; margin-top: 6px; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(2,3,6,.7); backdrop-filter: blur(6px); justify-content: center; align-items: center; padding: 20px; z-index: 120; }
+    .modal-box { background: var(--panel); border: 1px solid var(--line2); border-radius: 20px; padding: 32px; width: 100%; max-width: 430px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 30px 90px rgba(0,0,0,.6); }
+    .modal-box h3 { margin-bottom: 18px; font-size: 1.6rem; }
+    .close { position: absolute; right: 16px; top: 10px; font-size: 1.6rem; color: var(--mute); background: none; border: 0; cursor: pointer; }
+    .close:hover { color: #fff; }
+    .err { color: var(--danger); font-size: .85rem; min-height: 1.2em; margin-top: 6px; }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 1100px) {
+      .how { grid-template-columns: 1fr; gap: 40px; } .how .section-head { position: static; }
+      .about { grid-template-columns: 1fr; gap: 44px; }
+      .bento { grid-template-columns: repeat(2, 1fr); } .b1 { grid-column: span 2; } .b2, .b3, .b4, .b5 { grid-column: span 1; }
+      .mega-4 { grid-template-columns: repeat(2, 1fr); } .mega-2 { grid-template-columns: 1fr 1fr; } .mfeat { display: none; }
+    }
+    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } .preview { position: static; } }
+    @media (max-width: 900px) {
+      :root { --nav-h: 64px; }
+      .nav-in { padding: 0 18px; gap: 12px; }
+      .burger { display: flex; margin-left: 8px; }
+      .menu { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; background: rgba(5,7,11,.98); border-bottom: 1px solid var(--line); padding: 8px 18px 18px; max-height: calc(100vh - var(--nav-h)); overflow-y: auto; align-self: auto; }
+      .nav.open { background: rgba(5,7,11,.98); }
+      .nav.open .menu { display: flex; }
+      .mi { flex-direction: column; align-items: stretch; }
+      .mb, .ml { height: auto; padding: 14px 4px; font-size: 1.05rem; justify-content: space-between; border-bottom: 1px solid var(--line); }
+      .mega { position: static; opacity: 1; visibility: visible; transform: none; display: none; background: none; border: 0; backdrop-filter: none; }
+      .mi.open > .mega { display: block; }
+      .mega-in { padding: 14px 4px 8px; gap: 8px; grid-template-columns: 1fr !important; }
+      .nav-end .who { display: none; }
+      .section { padding: 84px 20px; }
+      .plans { grid-template-columns: 1fr; }
+      .foot-in { grid-template-columns: 1fr; }
+      .st { grid-template-columns: 40px 1fr; gap: 14px; }
+    }
+    @media (max-width: 700px) { .stage-desc { bottom: auto; top: 49%; } }
+    @media (max-width: 520px) {
+      .brand span { display: none; }
+      .nav-in { gap: 8px; }
+      .nav-end .btn, .nav-end .btn-ghost { padding: 8px 12px; font-size: .84rem; white-space: nowrap; }
+      .nav-end #authArea { gap: 6px; }
+      .burger { margin-left: 4px; width: 40px; height: 40px; flex-shrink: 0; }
+    }
+    @media (max-width: 640px) {
+      .offer-demo { grid-template-columns: 1fr 1fr; } .offer-demo .od:nth-child(3) { display: none; }
+      .card { padding: 24px; } .stage-track { height: 300vh; }
+      .pcard { width: 200px; height: 270px; }
+      .bx { padding: 24px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .mock, .toast, .marq-row { animation: none !important; }
+      .toast { opacity: 1; }
+      html { scroll-behavior: auto; }
+    }
   </style>
 </head>
-<body class="theme-gold font-sans">
+<body class="theme-gold font-sans" id="top">
 
-<div class="site-header">
-  <div class="nav">
-    <div class="brand">
-      <img src="logo.jpg" alt="GoldOffer" onerror="this.outerHTML='<div class=&quot;badge&quot;>G</div>'">
+<header class="nav" id="nav">
+  <div class="nav-in">
+    <a class="brand" id="tabBuilder" href="#top" onclick="goHome(event)" aria-label="GoldOffer Studio, home">
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b7bff"/><stop offset="1" stop-color="#4fe3cf"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#bg1)"/><text x="32" y="47" font-size="40" font-weight="800" text-anchor="middle" fill="#07090d" font-family="Arial, Helvetica, sans-serif">G</text></svg>
       <span>GoldOffer Studio</span>
-    </div>
-    <div class="tabs">
-      <button class="tab active" id="tabBuilder" onclick="switchView('builder')">Builder</button>
-      <button class="tab" id="tabDash" onclick="switchView('dashboard')">Dashboard</button>
-    </div>
-    <div class="row">
-      <span class="support">Support: rayankatsarov2013@gmail.com</span>
-      <span id="authArea" class="row"></span>
-    </div>
-  </div>
-</div>
+    </a>
 
-<div id="builder" style="width:100%;display:flex;flex-direction:column;align-items:center;">
-  <section class="hero">
-    <span class="eyebrow">Website builder for local business</span>
-    <h1>Build a website that <em>sells for you</em></h1>
-    <p>Pick your profession, choose a look, add your offers and publish a real website in minutes. Free to start, with a public link anyone can open.</p>
-    <span class="founder"><b>Founder Rayan Katsarov</b> &nbsp;|&nbsp; "A real website should bring customers, not headaches."</span>
+    <nav class="menu" id="menu" aria-label="Main">
+      <div class="mi" data-menu>
+        <button class="mb" type="button" aria-expanded="false" aria-haspopup="true">Product</button>
+        <div class="mega"><div class="mega-in mega-2">
+          <div class="mcol"><h4>Build</h4>
+            <a onclick="goSection(event,'studio')">Website builder<small>Profession, look, offers, publish</small></a>
+            <a onclick="goSection(event,'features')">Offers with photos<small>Titles, prices, descriptions</small></a>
+            <a onclick="goSection(event,'features')">Request form<small>Customers contact you from the site</small></a>
+          </div>
+          <div class="mcol"><h4>Run</h4>
+            <a onclick="openDashboard(event)">Dashboard<small>Requests, revenue, status</small></a>
+            <a onclick="goSection(event,'features')">Market price check<small>See what others charge</small></a>
+            <a onclick="goSection(event,'features')">Your own address<small>Choose the name in your link</small></a>
+          </div>
+          <a class="mfeat" onclick="goSection(event,'how')"><div class="ph" data-photo="Bakery"></div><span>Live in four steps<small>See how a site gets built</small></span></a>
+        </div></div>
+      </div>
+
+      <div class="mi" data-menu>
+        <button class="mb" type="button" aria-expanded="false" aria-haspopup="true">Solutions</button>
+        <div class="mega"><div class="mega-in mega-4">
+          <div class="mcol"><h4>Food and drink</h4>
+            <a onclick="pickProf('Bakery')">Bakery</a><a onclick="pickProf('Restaurant')">Restaurant</a><a onclick="pickProf('Cafe')">Cafe</a></div>
+          <div class="mcol"><h4>Beauty</h4>
+            <a onclick="pickProf('Barber')">Barber</a><a onclick="pickProf('Hairdresser')">Hairdresser</a><a onclick="pickProf('Beauty salon')">Beauty salon</a></div>
+          <div class="mcol"><h4>Trades</h4>
+            <a onclick="pickProf('Plumber')">Plumber</a><a onclick="pickProf('Electrician')">Electrician</a><a onclick="pickProf('Auto mechanic')">Auto mechanic</a></div>
+          <div class="mcol"><h4>Health and care</h4>
+            <a onclick="pickProf('Dentist')">Dentist</a><a onclick="pickProf('Medical clinic')">Medical clinic</a><a onclick="pickProf('Veterinarian')">Veterinarian</a></div>
+          <a class="mfeat" onclick="goSection(event,'professions')"><div class="ph" data-photo="Barber"></div><span>All professions<small>Or type your own</small></span></a>
+        </div></div>
+      </div>
+
+      <div class="mi"><a class="ml" href="#pricing" onclick="goSection(event,'pricing')">Pricing</a></div>
+      <div class="mi"><a class="ml" href="#about" onclick="goSection(event,'about')">About</a></div>
+      <div class="mi"><a class="ml" id="tabDash" href="#dashboard" onclick="openDashboard(event)">Dashboard</a></div>
+    </nav>
+
+    <div class="nav-end"><span id="authArea" class="row" style="flex-wrap:nowrap"></span></div>
+    <button class="burger" id="burger" type="button" aria-label="Open menu" onclick="toggleBurger()"><span></span></button>
+  </div>
+</header>
+
+<div id="builder">
+
+  <!-- ===== Scroll stage ===== -->
+  <section class="stage-track" id="stageTrack" aria-label="Introduction">
+    <div class="stage-sticky" id="stageSticky">
+      <div class="ghost"></div><div class="ghost g2"></div>
+
+      <div class="device" id="device" aria-hidden="true">
+        <div class="dev-bar"><i></i><i></i><i></i><span class="url">goldoffer.onrender.com/site/pekarnata-na-emi</span></div>
+        <div class="dev-screen">
+          <div class="mock">
+            <div class="m-nav"><b>Пекарната на Еми</b><span><i>Offers</i><i>About</i><i>Contact</i></span></div>
+            <div class="m-hero ann" style="--c:var(--iris);--s:.22;--i:1.4cqw" data-label="Hero photo">
+              <div class="ph" data-photo="Bakery" style="--fb:linear-gradient(135deg,#8a6a3b,#3a2a17)"></div>
+              <div class="m-h1 ann" style="--c:var(--amber);--s:.4" data-label="Business name">Пекарната на Еми</div>
+              <div class="m-sub">Bakery in Plovdiv. Fresh every morning.</div>
+              <div class="m-cta ann" style="--c:var(--lagoon);--s:.7" data-label="Request button">Request an offer</div>
+            </div>
+            <div class="m-title">Offers</div>
+            <div class="m-grid">
+              <div class="m-card ann" style="--c:var(--lagoon);--s:.55" data-label="Offer with photo and price">
+                <div class="ph" data-photo="Pastry chef" style="--fb:linear-gradient(135deg,#c28d4a,#6b4521)"></div>
+                <h5>Banitsa with cheese</h5><p>Baked in the morning, sold by the piece.</p>
+                <div class="row"><span class="pr">&euro;2.50</span><span class="rq">Request</span></div></div>
+              <div class="m-card"><div class="ph" data-photo="Cafe" style="--fb:linear-gradient(135deg,#7a8f6a,#2f3d29)"></div>
+                <h5>Sourdough loaf</h5><p>Slow-risen, 800 g.</p>
+                <div class="row"><span class="pr">&euro;3.20</span><span class="rq">Request</span></div></div>
+              <div class="m-card"><div class="ph" style="--fb:linear-gradient(135deg,#d9a7a0,#7a3f3a)"></div>
+                <h5>Birthday cake</h5><p>Made to order, ready in two days.</p>
+                <div class="row"><span class="pr">&euro;38.00</span><span class="rq">Request</span></div></div>
+            </div>
+            <div class="m-grid">
+              <div class="m-card"><div class="ph" style="--fb:linear-gradient(135deg,#e2c27a,#8a6425)"></div>
+                <h5>Croissants, box of 6</h5><p>Butter, no shortcuts.</p>
+                <div class="row"><span class="pr">&euro;7.00</span><span class="rq">Request</span></div></div>
+              <div class="m-card"><div class="ph" style="--fb:linear-gradient(135deg,#9db5c4,#3d5463)"></div>
+                <h5>Office breakfast</h5><p>Delivered for teams of 10 or more.</p>
+                <div class="row"><span class="pr">&euro;45.00</span><span class="rq">Request</span></div></div>
+              <div class="m-card"><div class="ph" style="--fb:linear-gradient(135deg,#b8a1d6,#4c3a6b)"></div>
+                <h5>Wedding dessert table</h5><p>Tasting included.</p>
+                <div class="row"><span class="pr">&euro;220.00</span><span class="rq">Request</span></div></div>
+            </div>
+            <div class="m-foot"><div><b>Пекарната на Еми</b><br>Bakery &middot; Plovdiv</div><div>Website made with GoldOffer Studio</div></div>
+          </div>
+          <div class="toast-wrap"><div class="toast"><div>New request<small>Sourdough loaf, from Anna</small></div></div></div>
+          <div class="shade"></div>
+        </div>
+      </div>
+
+      <div class="stage-copy" id="stageCopy">
+        <h1>A website your customers will trust.</h1>
+        <p class="lead">Pick your profession, add your offers with photos and prices, and publish a real website with its own public link. Free to start.</p>
+        <div class="cta-row">
+          <button class="btn btn-lg" type="button" onclick="cta()">Start building</button>
+          <a class="btn-ghost btn-lg" href="#how" onclick="goSection(event,'how')" style="padding:15px 26px;font-size:1rem">See how it works</a>
+        </div>
+        <p class="founder"><b>Rayan Katsarov, founder.</b> &ldquo;A real website should bring customers, not headaches.&rdquo;</p>
+      </div>
+
+      <p class="stage-desc" id="stageDesc">Customers decide in seconds whether a business is real. GoldOffer gives yours real photos, clear prices and a request form that sends every inquiry straight to you.</p>
+      <div class="scroll-hint" id="scrollHint">Scroll</div>
+    </div>
   </section>
 
-  <div class="layout">
-    <div class="card">
-      <div class="nodes" id="nodes" style="display:none">
-        <div class="node" id="n1">1</div><div class="node" id="n2">2</div><div class="node" id="n3">3</div><div class="node" id="n4">4</div>
+  <!-- ===== How it works ===== -->
+  <section class="band" id="how">
+    <div class="section how">
+      <div class="section-head">
+        <h2>From nothing to a live website in four steps.</h2>
+        <p>No designer, no code, no hosting to set up. Your site is public the moment you publish it.</p>
       </div>
-
-      <div id="step-0" class="step active">
-        <h2>Create your unique website</h2>
-        <p class="sub">Answer a few quick questions and customize the look. 7 days free, then EUR 19.99 per month.</p>
-        <button class="btn btn-lg btn-block" onclick="startWizard()">Start the builder</button>
+      <div class="steps">
+        <div class="st"><div class="n">1</div><div><h3>Choose your profession and city</h3><p>Start from a list of professions with real photos, or type your own if yours is not there.</p>
+          <div class="chips"><span class="chip on">Bakery</span><span class="chip">Barber</span><span class="chip">Plumber</span><span class="chip">Dentist</span></div></div></div>
+        <div class="st"><div class="n">2</div><div><h3>Name it and pick a look</h3><p>Eight color themes and seven font styles. The preview updates while you choose.</p>
+          <div class="dots"><i style="background:linear-gradient(135deg,#ffd700,#ff8c00)" class="sel"></i><i style="background:linear-gradient(135deg,#00f2fe,#4facfe)"></i><i style="background:linear-gradient(135deg,#00f5a0,#00d9f5)"></i><i style="background:linear-gradient(135deg,#ff0844,#ff7a59)"></i><i style="background:linear-gradient(135deg,#b300ff,#7928ca)"></i></div></div></div>
+        <div class="st"><div class="n">3</div><div><h3>Add your offers</h3><p>A title, a price, a short description and a photo for each one. Not sure what to charge? Check the market price.</p>
+          <div class="mini-row"><b>Sourdough loaf</b><span>EUR 3.20</span></div></div></div>
+        <div class="st"><div class="n">4</div><div><h3>Publish</h3><p>You get a public link anyone can open, and you can change its name. Requests arrive in your dashboard.</p>
+          <span class="urlpill">goldoffer.onrender.com/site/<b>your-business</b></span></div></div>
       </div>
+    </div>
+  </section>
 
-      <div id="step-1" class="step">
-        <h2>1. Your profession and city</h2>
-        <p class="sub">Scroll through the list or search for your profession.</p>
-        <div class="field"><label>City</label><input type="text" id="city" placeholder="e.g. Sofia, Plovdiv, Varna"></div>
+  <!-- ===== Professions ===== -->
+  <section class="band" id="professions">
+    <div class="section" style="padding-bottom:70px">
+      <div class="section-head" style="margin-bottom:48px">
+        <h2><span id="profCount">50</span> professions to start from.</h2>
+        <p>Pick yours and the builder opens with it selected. If it is not on the list, type it in and use that.</p>
+      </div>
+    </div>
+    <div class="marq" id="marq" style="padding-bottom:130px"></div>
+  </section>
 
-        <label>Profession</label>
-        <div class="search-wrap">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-          <input type="text" id="profSearch" placeholder="Search professions, e.g. barber, plumber, bakery" oninput="renderProfs()">
+  <!-- ===== Features ===== -->
+  <section class="band" id="features">
+    <div class="section">
+      <div class="section-head">
+        <h2>Everything a small business site needs. Nothing it does not.</h2>
+        <p>Each part does one job, and all of it works from the first day.</p>
+      </div>
+      <div class="bento">
+        <div class="bx b1"><h3>Offers with real photos</h3><p>Upload a photo for every offer. Customers see what they are buying before they ask.</p>
+          <div class="vis"><div class="offer-demo">
+            <div class="od"><div class="ph" data-photo="Bakery"></div><div><b>Banitsa</b><span>EUR 2.50</span></div></div>
+            <div class="od"><div class="ph" data-photo="Pastry chef"></div><div><b>Birthday cake</b><span>EUR 38.00</span></div></div>
+            <div class="od"><div class="ph" data-photo="Cafe"></div><div><b>Office breakfast</b><span>EUR 45.00</span></div></div>
+          </div></div></div>
+        <div class="bx b2"><h3>Check the market price</h3><p>Type the offer title and see what others charge. Example shown.</p>
+          <div class="vis"><div class="range-demo"><small>Market range</small><div class="range-bar"><i></i><u></u></div><div class="range-nums"><span>EUR 18</span><span>avg 25</span><span>EUR 32</span></div></div></div></div>
+        <div class="bx b3"><h3>Requests in one place</h3><p>Every request lands in your dashboard. Mark it completed when it is done.</p>
+          <div class="vis"><div class="bars"><i style="height:30%"></i><i style="height:48%"></i><i style="height:40%"></i><i style="height:66%"></i><i style="height:58%"></i><i style="height:92%"></i></div></div></div>
+        <div class="bx b4"><h3>Your own address</h3><p>Choose the name that appears in your link, and change it whenever you like.</p>
+          <div class="vis"><span class="urlpill" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">/site/<b>pekarnata-na-emi</b></span></div></div>
+        <div class="bx b5"><h3>A look that is yours</h3><p>Eight themes, seven fonts. Change them any time and the live site follows.</p>
+          <div class="vis"><div class="look-demo"><i style="background:linear-gradient(135deg,#ffd700,#ff8c00)"></i><i style="background:linear-gradient(135deg,#00f2fe,#4facfe)"></i><i style="background:linear-gradient(135deg,#00f5a0,#00d9f5)"></i><i style="background:linear-gradient(135deg,#ff0844,#ff7a59)"></i><i style="background:linear-gradient(135deg,#b300ff,#7928ca)"></i><i style="background:linear-gradient(135deg,#ff4e00,#ec9f05)"></i><i style="background:linear-gradient(135deg,#ff007f,#7928ca)"></i><i style="background:linear-gradient(135deg,#64748b,#1e293b)"></i></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Pricing ===== -->
+  <section class="band" id="pricing">
+    <div class="section">
+      <div class="section-head">
+        <h2>Start free. Pay when you grow.</h2>
+        <p>The free plan is a complete website. Upgrade when you need more offers.</p>
+      </div>
+      <div class="plans">
+        <div class="plan"><h3>Free</h3><div class="price">EUR 0</div><div class="sub2">No card needed</div>
+          <ul><li>Public website with its own link</li><li>Up to 10 offers with photos</li><li>Request form and dashboard</li></ul>
+          <button class="btn btn-block" style="margin-top:0" type="button" onclick="cta()">Start building</button></div>
+        <div class="plan pro"><h3>Pro</h3><div class="price">EUR 19.99 <small>/ month</small></div><div class="sub2">First 7 days free</div>
+          <ul><li>Everything in Free</li><li>Up to 500 offers</li><li>Cancel any time</li></ul>
+          <button class="btn btn-block" style="margin-top:0" type="button" onclick="proCta()">Start 7-day free trial</button></div>
+      </div>
+      <p class="price-note">Your site is hosted for free on this platform's domain. Connecting your own domain, for example yourbusiness.com, can be added later.</p>
+    </div>
+  </section>
+
+  <!-- ===== About ===== -->
+  <section class="band" id="about">
+    <div class="section about">
+      <div>
+        <h2>Built by one person who wants small businesses to look as real as they are.</h2>
+        <p>GoldOffer Studio is made by Rayan Katsarov. It is for people who run a bakery, a barbershop, a workshop or a clinic and need a website that earns trust on the first look.</p>
+        <p>Something not working, or an idea for what the builder should do next? Write or call directly.</p>
+        <blockquote>A real website should bring customers, not headaches.</blockquote>
+      </div>
+      <div class="person">
+        <div class="top"><div class="avatar" aria-hidden="true">RK</div><div><b>Rayan Katsarov</b><span>Founder, GoldOffer Studio</span></div></div>
+        <div class="contact">
+          <a href="mailto:rayankatsarov2013@gmail.com"><div><small>Email</small><b>rayankatsarov2013@gmail.com</b></div><em>Write</em></a>
+          <a href="tel:+359896255898"><div><small>Phone</small><b>0896 255 898</b></div><em>Call</em></a>
         </div>
-        <div class="prof-scroll"><div class="prof-grid" id="profGrid"></div></div>
-        <p class="note" style="margin:0 0 8px">Photos are loaded from Wikipedia.</p>
-        <div class="selected-line" id="selLine">No profession selected yet.</div>
-        <button class="btn btn-block" onclick="step1Next()">Continue</button>
-        <button class="link-btn" onclick="goStep(0)">Back</button>
       </div>
+    </div>
+  </section>
 
-      <div id="step-2" class="step">
-        <h2>2. Brand and style</h2>
-        <p class="sub">Name your site and pick how it looks.</p>
-        <div class="field"><label>Site name</label><input type="text" id="siteName" placeholder="e.g. AutoFix Express" oninput="renderPreview()"></div>
-        <label>Color theme</label>
-        <div class="swatches" id="swatches"></div>
-        <label>Font style</label>
-        <div class="fonts" id="fonts"></div>
-        <button class="btn btn-block" onclick="step2Next()">Continue</button>
-        <button class="link-btn" onclick="goStep(1)">Back</button>
+  <!-- ===== Studio (the real builder) ===== -->
+  <section class="studio" id="studio">
+    <div class="section">
+      <div class="section-head" style="margin-bottom:44px">
+        <h2>Build your website.</h2>
+        <p>Answer a few questions and watch the site take shape on the right.</p>
       </div>
-
-      <div id="step-3" class="step">
-        <h2>3. Your offers</h2>
-        <p class="sub">Each offer is saved to your account as soon as you add it.</p>
-        <div class="note" id="offerLimit" style="margin:0 0 12px"></div>
-        <div id="offerList"></div>
-        <div class="add-box">
-          <div class="field"><label>Title</label><input type="text" id="oTitle" placeholder="e.g. Oil change"></div>
-          <button class="btn-ghost" id="aiBtn" onclick="lookupPrice()">Check market price</button>
-          <div class="range" id="oRange"></div>
-          <div class="field" style="margin-top:12px"><label>Price (EUR)</label><input type="number" id="oPrice" min="0" step="0.01" placeholder="e.g. 25"></div>
-          <div class="field"><label>Description</label><input type="text" id="oDesc" placeholder="Short description"></div>
-          <div class="field"><label>Photo (optional)</label><input type="file" id="oImg" accept="image/*" onchange="previewPhoto()">
-            <div class="thumb" id="oImgPrev" style="display:none"><img id="oImgPrevImg" alt="Selected photo"><button type="button" class="x" title="Remove photo" onclick="clearPhoto()">&times;</button></div>
+      <div class="layout">
+        <div class="card">
+          <div class="nodes" id="nodes" style="display:none">
+            <div class="node" id="n1">1</div><div class="node" id="n2">2</div><div class="node" id="n3">3</div><div class="node" id="n4">4</div>
           </div>
-          <button class="btn btn-block" id="addOfferBtn" onclick="addOffer()">Add offer</button>
-        </div>
-        <button class="btn btn-lg btn-block" style="margin-top:20px" onclick="publishSite()">Publish website</button>
-        <button class="link-btn" onclick="goStep(2)">Back</button>
-      </div>
 
-      <div id="step-4" class="step">
-        <h2>Your website is live</h2>
-        <p class="sub">Anyone can open it with this link:</p>
-        <div class="url-box" id="siteUrlBox"></div>
-        <div class="row">
-          <button class="btn-ghost" onclick="copyUrl()">Copy link</button>
-          <button class="btn-ghost" onclick="goStep(3)">Edit offers</button>
+          <div id="step-0" class="step active">
+            <h2>Create your unique website</h2>
+            <p class="sub">Answer a few quick questions and customize the look. 7 days free, then EUR 19.99 per month.</p>
+            <button class="btn btn-lg btn-block" style="margin-top:0" onclick="startWizard()">Start the builder</button>
+          </div>
+
+          <div id="step-1" class="step">
+            <h2>1. Your profession and city</h2>
+            <p class="sub">Scroll through the list or search for your profession.</p>
+            <div class="field"><label>City</label><input type="text" id="city" placeholder="e.g. Sofia, Plovdiv, Varna"></div>
+            <label>Profession</label>
+            <div class="search-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input type="text" id="profSearch" placeholder="Search professions, e.g. barber, plumber, bakery" oninput="renderProfs()">
+            </div>
+            <div class="prof-scroll"><div class="prof-grid" id="profGrid"></div></div>
+            <p class="note" style="margin:0 0 8px">Photos are loaded from Wikipedia.</p>
+            <div class="selected-line" id="selLine">No profession selected yet.</div>
+            <button class="btn btn-block" onclick="step1Next()">Continue</button>
+            <button class="link-btn" onclick="goStep(0)">Back</button>
+          </div>
+
+          <div id="step-2" class="step">
+            <h2>2. Brand and style</h2>
+            <p class="sub">Name your site and pick how it looks.</p>
+            <div class="field"><label>Site name</label><input type="text" id="siteName" placeholder="e.g. AutoFix Express" oninput="renderPreview()"></div>
+            <label>Color theme</label>
+            <div class="swatches" id="swatches"></div>
+            <label>Font style</label>
+            <div class="fonts" id="fonts"></div>
+            <button class="btn btn-block" onclick="step2Next()">Continue</button>
+            <button class="link-btn" onclick="goStep(1)">Back</button>
+          </div>
+
+          <div id="step-3" class="step">
+            <h2>3. Your offers</h2>
+            <p class="sub">Each offer is saved to your account as soon as you add it.</p>
+            <div class="note" id="offerLimit" style="margin:0 0 12px"></div>
+            <div id="offerList"></div>
+            <div class="add-box">
+              <div class="field"><label>Title</label><input type="text" id="oTitle" placeholder="e.g. Oil change"></div>
+              <button class="btn-ghost" id="aiBtn" onclick="lookupPrice()">Check market price</button>
+              <div class="range" id="oRange"></div>
+              <div class="field" style="margin-top:12px"><label>Price (EUR)</label><input type="number" id="oPrice" min="0" step="0.01" placeholder="e.g. 25"></div>
+              <div class="field"><label>Description</label><input type="text" id="oDesc" placeholder="Short description"></div>
+              <div class="field"><label>Photo (optional)</label><input type="file" id="oImg" accept="image/*" onchange="previewPhoto()">
+                <div class="thumb" id="oImgPrev" style="display:none"><img id="oImgPrevImg" alt="Selected photo"><button type="button" class="x" title="Remove photo" onclick="clearPhoto()">&times;</button></div>
+              </div>
+              <button class="btn btn-block" id="addOfferBtn" onclick="addOffer()">Add offer</button>
+            </div>
+            <button class="btn btn-lg btn-block" style="margin-top:22px" onclick="publishSite()">Publish website</button>
+            <button class="link-btn" onclick="goStep(2)">Back</button>
+          </div>
+
+          <div id="step-4" class="step">
+            <h2>Your website is live</h2>
+            <p class="sub">Anyone can open it with this link:</p>
+            <div class="url-box" id="siteUrlBox"></div>
+            <div class="row">
+              <button class="btn-ghost" onclick="copyUrl()">Copy link</button>
+              <button class="btn-ghost" onclick="goStep(3)">Edit offers</button>
+            </div>
+            <div class="field" style="margin-top:22px">
+              <label>Change the address name</label>
+              <div class="row" style="flex-wrap:nowrap"><input type="text" id="slugInput" placeholder="my-business"><button class="btn" onclick="changeSlug()">Save</button></div>
+            </div>
+            <button class="btn btn-block" onclick="payNow()">Start 7-day free trial (EUR 19.99 per month after)</button>
+            <p class="note">Your site is hosted for free on this platform's domain. Connecting your own domain (for example yourbusiness.com) can be added later.</p>
+          </div>
         </div>
-        <div class="field" style="margin-top:20px">
-          <label>Change the address name</label>
-          <div class="row" style="flex-wrap:nowrap"><input type="text" id="slugInput" placeholder="my-business"><button class="btn" onclick="changeSlug()">Save</button></div>
+
+        <div class="preview">
+          <div class="pbar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url" id="pvUrl">your-site</span></div>
+          <div class="screen">
+            <div class="top"><h3 id="pvName">Your brand</h3><p id="pvCat">Business category</p></div>
+            <div class="body" id="pvOffers"></div>
+          </div>
         </div>
-        <button class="btn btn-block" onclick="payNow()">Start 7-day free trial (EUR 19.99 per month after)</button>
-        <p class="note">Your site is hosted for free on this platform's domain. Connecting your own domain (for example yourbusiness.com) can be added later.</p>
       </div>
     </div>
+  </section>
 
-    <div class="preview">
-      <div class="pbar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url" id="pvUrl">your-site</span></div>
-      <div class="screen">
-        <div class="top"><h3 id="pvName">Your brand</h3><p id="pvCat">Business category</p></div>
-        <div class="body" id="pvOffers"></div>
+  <footer class="foot">
+    <div class="foot-in">
+      <div>
+        <a class="brand" href="#top" onclick="goHome(event)" style="padding:0">
+          <svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="url(#bg1)"/><text x="32" y="47" font-size="40" font-weight="800" text-anchor="middle" fill="#07090d" font-family="Arial, Helvetica, sans-serif">G</text></svg>
+          <span>GoldOffer Studio</span></a>
+        <p>Websites for local businesses. Free to start.</p>
       </div>
+      <div><h4>Product</h4>
+        <a onclick="goSection(event,'how')">How it works</a><a onclick="goSection(event,'features')">Features</a><a onclick="goSection(event,'pricing')">Pricing</a><a onclick="goSection(event,'studio')">Website builder</a></div>
+      <div><h4>Contact</h4>
+        <a onclick="goSection(event,'about')">About</a><a href="mailto:rayankatsarov2013@gmail.com">rayankatsarov2013@gmail.com</a><a href="tel:+359896255898">0896 255 898</a></div>
     </div>
-  </div>
+    <div class="foot-end">&copy; 2026 GoldOffer Studio. Founded by Rayan Katsarov.</div>
+  </footer>
 </div>
 
 <div id="dashboard">
@@ -324,7 +763,7 @@
 
 <div id="authModal" class="modal">
   <div class="modal-box">
-    <button class="close" onclick="closeAuth()">&times;</button>
+    <button class="close" onclick="closeAuth()" aria-label="Close">&times;</button>
     <h3 id="authTitle">Sign up</h3>
     <form id="authForm" onsubmit="submitAuth(event)">
       <div id="nameFields">
@@ -344,7 +783,7 @@
 <div id="alertModal" class="modal">
   <div class="modal-box" style="text-align:center">
     <h3 id="alertTitle">Notice</h3>
-    <p id="alertMsg" style="color:var(--muted)"></p>
+    <p id="alertMsg" style="color:var(--soft)"></p>
     <button class="btn btn-block" onclick="document.getElementById('alertModal').style.display='none'">OK</button>
   </div>
 </div>
@@ -430,6 +869,123 @@
     return data;
   }
 
+  // ---------- Navigation helpers ----------
+  function closeMenus() {
+    document.querySelectorAll('[data-menu]').forEach(i => { i.classList.remove('open'); i.querySelector('.mb').setAttribute('aria-expanded', 'false'); });
+    $('nav').classList.remove('menu-open');
+  }
+  function toggleBurger() {
+    const n = $('nav'); const open = !n.classList.contains('open');
+    n.classList.toggle('open', open); $('burger').setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  }
+  function goHome(e) { if (e) e.preventDefault(); closeMenus(); $('nav').classList.remove('open'); switchView('builder'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function goSection(e, id) {
+    if (e) e.preventDefault();
+    closeMenus(); $('nav').classList.remove('open');
+    if (!$('dashboard').classList.contains('active')) { const el = $(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    switchView('builder');
+    setTimeout(() => { const el = $(id); if (el) el.scrollIntoView({ block: 'start' }); }, 30);
+  }
+  function openDashboard(e) { if (e) e.preventDefault(); closeMenus(); $('nav').classList.remove('open'); switchView('dashboard'); }
+  function cta() {
+    if (!S.user) { openAuth('signup'); return; }
+    goSection(null, 'studio');
+    if ($('step-0').classList.contains('active')) goStep(1);
+  }
+  function proCta() { if (!S.user) { openAuth('signup'); return; } payNow(); }
+  function pickProf(name) {
+    setCategory(name); renderProfs(); closeMenus(); $('nav').classList.remove('open');
+    if (!S.user) { openAuth('signup'); return; }
+    goSection(null, 'studio');
+    if ($('step-0').classList.contains('active')) goStep(1);
+  }
+
+  function initMenu() {
+    const items = [...document.querySelectorAll('[data-menu]')];
+    const canHover = () => window.matchMedia('(hover: hover) and (min-width: 901px)').matches;
+    const open = (it) => { closeMenus(); it.classList.add('open'); it.querySelector('.mb').setAttribute('aria-expanded', 'true'); $('nav').classList.add('menu-open'); };
+    items.forEach(it => {
+      const b = it.querySelector('.mb');
+      it.addEventListener('mouseenter', () => { if (canHover()) open(it); });
+      it.addEventListener('mouseleave', () => { if (canHover()) closeMenus(); });
+      b.addEventListener('click', (e) => { e.stopPropagation(); if (it.classList.contains('open')) closeMenus(); else open(it); });
+    });
+    document.addEventListener('click', (e) => { if (!e.target.closest('[data-menu]')) closeMenus(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMenus(); $('nav').classList.remove('open'); } });
+    const onScroll = () => $('nav').classList.toggle('solid', window.scrollY > 24);
+    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  }
+
+  // ---------- Scroll stage: the clip shrinks as you scroll, then the description lights up ----------
+  function initStage() {
+    const track = $('stageTrack'), st = $('stageSticky'), copy = $('stageCopy'), desc = $('stageDesc'), hint = $('scrollHint');
+    desc.innerHTML = desc.textContent.trim().split(/\s+/).map(w => '<span class="w">' + esc(w) + '</span>').join(' ');
+    const words = [...desc.querySelectorAll('.w')];
+    const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const ease = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    let queued = false;
+
+    function update() {
+      queued = false;
+      if (track.offsetParent === null) return;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const total = track.offsetHeight - vh;
+      const p = clamp(-track.getBoundingClientRect().top / total);
+      const mobile = vw < 700;
+      const tw = Math.min(1120, vw * (mobile ? .92 : .84));
+      const th = Math.min(vh * .62, tw * .58);
+      const th2 = Math.min(vh * .40, tw * .5);
+      const e1 = ease(clamp(p / .42));
+      const e2 = ease(clamp((p - .5) / .34));
+      const w = lerp(lerp(vw, tw, e1), tw * .9, e2);
+      const h = lerp(lerp(vh, th, e1), th2, e2);
+      st.style.setProperty('--w', w + 'px');
+      st.style.setProperty('--h', h + 'px');
+      st.style.setProperty('--cy', lerp(50, mobile ? 31 : 34, e2));
+      st.style.setProperty('--r', (30 * e1) + 'px');
+      st.style.setProperty('--e', e1.toFixed(3));
+      st.style.setProperty('--rx', (7 * e1 * (1 - e2)).toFixed(2) + 'deg');
+
+      const co = 1 - clamp(p / .2);
+      copy.style.opacity = co; copy.style.transform = 'translateY(calc(-50% - ' + (p * 90) + 'px))';
+      copy.style.visibility = co <= 0.01 ? 'hidden' : 'visible';
+      hint.style.opacity = 1 - clamp(p / .06);
+
+      desc.style.opacity = clamp((p - .6) / .08);
+      const prog = clamp((p - .66) / .3) * words.length;
+      for (let i = 0; i < words.length; i++) words[i].style.opacity = (.18 + .82 * clamp(prog - i)).toFixed(2);
+    }
+    const queue = () => { if (!queued) { queued = true; requestAnimationFrame(update); } };
+    window.addEventListener('scroll', queue, { passive: true });
+    window.addEventListener('resize', queue);
+    update();
+  }
+
+  // ---------- Photos from Wikipedia: painted into the page wherever data-photo is used ----------
+  function paintPhotos() {
+    document.querySelectorAll('[data-photo]').forEach(el => {
+      const u = S.photos[el.dataset.photo];
+      if (u) el.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '"), var(--fb, linear-gradient(135deg,#2b3550,#141a2a))';
+    });
+  }
+  function renderMarquee() {
+    const box = $('marq'); if (!box) return;
+    $('profCount').textContent = PROFESSIONS.length;
+    const card = (p, i) => {
+      const hue = (i * 47) % 360;
+      const fb = 'linear-gradient(135deg,hsl(' + hue + ' 40% 30%),hsl(' + ((hue + 50) % 360) + ' 45% 13%))';
+      const u = S.photos[p[0]];
+      const bg = u ? 'url(&quot;' + esc(u) + '&quot;),' + fb : fb;
+      return '<button type="button" class="pcard" data-n="' + esc(p[0]) + '"><div class="ph" style="--fb:' + fb + ';background-image:' + bg + '"></div><span>' + esc(p[0]) + '</span></button>';
+    };
+    const half = Math.ceil(PROFESSIONS.length / 2);
+    const rowA = PROFESSIONS.slice(0, half).map((p, i) => card(p, i)).join('');
+    const rowB = PROFESSIONS.slice(half).map((p, i) => card(p, i + half)).join('');
+    box.innerHTML = '<div class="marq-row">' + rowA + rowA + '</div><div class="marq-row rev">' + rowB + rowB + '</div>';
+  }
+  $('marq').addEventListener('click', (e) => { const b = e.target.closest('.pcard'); if (b) pickProf(b.dataset.n); });
+
   // ---------- Theme and font pickers ----------
   function buildPickers() {
     $('swatches').innerHTML = THEMES.map(t =>
@@ -458,7 +1014,7 @@
   async function loadProfPhotos() {
     try {
       const cached = JSON.parse(localStorage.getItem('profPhotos_v1') || 'null');
-      if (cached && Object.keys(cached).length > 10) { S.photos = cached; renderProfs(); return; }
+      if (cached && Object.keys(cached).length > 10) { S.photos = cached; renderProfs(); renderMarquee(); paintPhotos(); return; }
     } catch (e) {}
     const names = Object.keys(WIKI);
     const found = {};
@@ -481,7 +1037,7 @@
     }
     S.photos = found;
     if (Object.keys(found).length) { try { localStorage.setItem('profPhotos_v1', JSON.stringify(found)); } catch (e) {} }
-    renderProfs();
+    renderProfs(); renderMarquee(); paintPhotos();
   }
   function renderProfs() {
     const q = $('profSearch').value.trim().toLowerCase();
@@ -500,7 +1056,7 @@
         : esc(p.name.charAt(0))) + '</div>' +
       '<div class="name">' + esc(p.name) + '</div></button>').join('');
   }
-  $ ('profGrid').addEventListener('click', (e) => {
+  $('profGrid').addEventListener('click', (e) => {
     const b = e.target.closest('.prof'); if (!b) return;
     setCategory(b.dataset.n);
     document.querySelectorAll('#profGrid .prof').forEach(x => x.classList.toggle('selected', x === b));
@@ -519,12 +1075,12 @@
   function renderAuth() {
     const a = $('authArea');
     if (S.user) {
-      a.innerHTML = '<span class="support">' + esc(S.user.firstName || S.user.email) + '</span><button class="btn-ghost" onclick="logout()">Log out</button>';
+      a.innerHTML = '<span class="who">' + esc(S.user.firstName || S.user.email) + '</span><button class="btn-ghost" onclick="logout()">Log out</button>';
     } else {
-      a.innerHTML = '<button class="btn" onclick="openAuth(\'signup\')">Sign up</button><button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button>';
+      a.innerHTML = '<button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button><button class="btn" onclick="openAuth(\'signup\')">Get started</button>';
     }
   }
-  function openAuth(mode) { S.mode = mode; applyAuthMode(); $('authErr').textContent = ''; $('authModal').style.display = 'flex'; }
+  function openAuth(mode) { closeMenus(); $('nav').classList.remove('open'); S.mode = mode; applyAuthMode(); $('authErr').textContent = ''; $('authModal').style.display = 'flex'; }
   function closeAuth() { $('authModal').style.display = 'none'; }
   function toggleAuthMode() { S.mode = S.mode === 'signup' ? 'login' : 'signup'; applyAuthMode(); }
   function applyAuthMode() {
@@ -581,7 +1137,8 @@
   }
 
   async function init() {
-    buildPickers(); renderProfs(); loadProfPhotos(); renderAuth(); renderPreview();
+    initMenu(); initStage();
+    buildPickers(); renderProfs(); renderMarquee(); paintPhotos(); loadProfPhotos(); renderAuth(); renderPreview();
     if (S.token) {
       try { const d = await api('/api/auth/me'); S.user = d.user; await afterLogin(); } catch (e) { renderAuth(); }
     }
@@ -590,11 +1147,11 @@
 
   // ---------- Views and steps ----------
   function switchView(v) {
-    $('builder').style.display = v === 'builder' ? 'flex' : 'none';
+    $('builder').style.display = v === 'builder' ? 'block' : 'none';
     $('dashboard').classList.toggle('active', v === 'dashboard');
-    $('tabBuilder').classList.toggle('active', v === 'builder');
     $('tabDash').classList.toggle('active', v === 'dashboard');
-    if (v === 'dashboard') loadDashboard();
+    if (v === 'dashboard') { window.scrollTo(0, 0); loadDashboard(); }
+    else window.dispatchEvent(new Event('resize'));
   }
   function goStep(n) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
@@ -772,10 +1329,10 @@
       $('sOffers').textContent = d.offersCount;
       S.lastMonthly = d.monthly; drawChart(d.monthly);
       $('orderRows').innerHTML = d.recentOrders.length ? d.recentOrders.map(o =>
-        '<tr><td>' + esc(o.offerTitle) + '<br><small style="color:var(--muted)">' + esc(o.customerName) + ' ' + esc(o.customerContact) + '</small></td>' +
+        '<tr><td>' + esc(o.offerTitle) + '<br><small style="color:var(--mute)">' + esc(o.customerName) + ' ' + esc(o.customerContact) + '</small></td>' +
         '<td>' + money(o.amount) + '</td><td><span class="pill ' + esc(o.status) + '">' + esc(o.status) + '</span></td>' +
         '<td>' + (o.status === 'Pending' ? '<button class="btn-ghost" style="padding:5px 10px;font-size:.75rem" onclick="setOrder(\'' + esc(o._id) + '\',\'Completed\')">Complete</button>' : '') + '</td></tr>'
-      ).join('') : '<tr><td colspan="4" style="color:var(--muted);text-align:center">No orders yet.</td></tr>';
+      ).join('') : '<tr><td colspan="4" style="color:var(--mute);text-align:center">No orders yet.</td></tr>';
     } catch (e) { notify(e.message, 'Dashboard'); }
   }
   async function setOrder(id, status) {
@@ -784,11 +1341,11 @@
   }
   function drawChart(monthly) {
     if (S.chart) S.chart.destroy();
-    const ink = getComputedStyle(document.body).getPropertyValue('--ink').trim() || '#b45309';
+    const line = getComputedStyle(document.body).getPropertyValue('--ta').trim() || '#4fe3cf';
     S.chart = new Chart($('chart').getContext('2d'), {
       type: 'line',
-      data: { labels: monthly.map(m => m.label), datasets: [{ label: 'Revenue (EUR)', data: monthly.map(m => m.revenue), borderColor: ink, backgroundColor: 'transparent', tension: 0.35, borderWidth: 3 }] },
-      options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#eef0f5' }, ticks: { color: '#6b7280' } }, y: { beginAtZero: true, grid: { color: '#eef0f5' }, ticks: { color: '#6b7280' } } } }
+      data: { labels: monthly.map(m => m.label), datasets: [{ label: 'Revenue (EUR)', data: monthly.map(m => m.revenue), borderColor: line, backgroundColor: 'transparent', tension: 0.35, borderWidth: 3, pointBackgroundColor: line }] },
+      options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: '#8b94a5' } }, y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: '#8b94a5' } } } }
     });
   }
 
