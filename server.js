@@ -1,5 +1,6 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -487,7 +488,34 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => res.send('GoldOffer API is running.'));
+// ---------- Serve the builder page itself (so no separate Netlify hosting is needed) ----------
+function findFile(name) {
+  const candidates = [path.join(__dirname, name), path.join(__dirname, '..', name), path.join(process.cwd(), name)];
+  return candidates.find(p => fs.existsSync(p));
+}
+
+app.get('/', (req, res) => {
+  const file = findFile('index.html');
+  if (!file) return res.send('GoldOffer API is running.');
+  // The builder page uses inline scripts and a few external resources (fonts, chart library, photos)
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+    "script-src-attr 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https: blob:",
+    "connect-src 'self'",
+    "form-action 'self'"
+  ].join('; '));
+  res.sendFile(file);
+});
+
+app.get('/logo.jpg', (req, res) => {
+  const file = findFile('logo.jpg');
+  if (!file) return res.status(404).end();
+  res.sendFile(file);
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));

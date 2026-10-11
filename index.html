@@ -341,7 +341,8 @@
 
 <script>
   const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-    ? 'http://localhost:5000' : 'https://goldoffer.onrender.com';
+    ? 'http://localhost:5000'
+    : (location.hostname.endsWith('onrender.com') ? location.origin : 'https://goldoffer.onrender.com');
 
   const THEMES = [
     ['gold', 'Gold', 'linear-gradient(135deg,#ffd700,#ff8c00)'],
