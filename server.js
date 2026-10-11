@@ -438,6 +438,7 @@ app.get('/site/:slug', async (req, res) => {
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(user.siteName)}</title>
 <meta name="description" content="${esc(user.siteName)} - ${esc(user.category)} in ${esc(user.city)}">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
 <style>
@@ -545,6 +546,16 @@ app.get('/', (req, res) => {
   ].join('; '));
   res.sendFile(file);
 });
+
+// Site icon: gold gradient square with a dark "G"
+const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd700"/><stop offset="1" stop-color="#ff8c00"/></linearGradient></defs>
+<rect width="64" height="64" rx="14" fill="url(#g)"/>
+<text x="32" y="46" font-size="38" font-weight="800" text-anchor="middle" fill="#1a1a1a" font-family="Arial, Helvetica, sans-serif">G</text></svg>`;
+app.get('/favicon.svg', (req, res) => {
+  res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(FAVICON_SVG);
+});
+app.get('/favicon.ico', (req, res) => res.redirect(301, '/favicon.svg'));
 
 app.get('/logo.jpg', (req, res) => {
   const file = findFile('logo.jpg');
