@@ -440,6 +440,24 @@
     .close:hover { color: #fff; }
     .err { color: var(--danger); font-size: .85rem; min-height: 1.2em; margin-top: 6px; }
 
+    /* checkbox, forgot link, light-page forms, legal pages */
+    .check { display: flex; gap: 10px; align-items: flex-start; font-size: .86rem; color: var(--soft); margin: 4px 0 10px; line-height: 1.45; cursor: pointer; }
+    .check input { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; accent-color: var(--lagoon); cursor: pointer; }
+    .check a { color: var(--lagoon); }
+    .forgot { text-align: right; margin: -4px 0 8px; width: auto; display: block; margin-left: auto; font-size: .84rem; }
+    .light input[type=text], .light input[type=email], .light input[type=password] { background: #fff; color: #0b0e14; border-color: var(--lline); }
+    .light label { color: var(--lmute); }
+    .resetbox { max-width: 460px; background: #fff; border: 1px solid var(--lline); border-radius: 22px; padding: 32px; }
+    .legal { max-width: 800px; }
+    .legal h2 { font-size: 1.5rem; margin: 34px 0 10px; }
+    .legal p, .legal li { color: var(--lmute); font-size: 1.02rem; margin-bottom: 10px; }
+    .legal ul { padding-left: 22px; margin-bottom: 10px; }
+    .legal a { color: #3b2fd6; }
+    .lsw { display: flex; gap: 8px; margin-top: 22px; }
+    .lsw button { background: transparent; border: 1px solid rgba(10,14,20,.25); border-radius: 99px; padding: 7px 16px; cursor: pointer; font-weight: 500; color: var(--ltext); }
+    body[data-lang=bg] .lsw button:first-child, body[data-lang=en] .lsw button:last-child { background: #0b0e14; color: #fff; border-color: #0b0e14; }
+    body[data-lang=bg] [data-l=en], body[data-lang=en] [data-l=bg] { display: none; }
+
     /* ---------- Responsive ---------- */
     @media (max-width: 1100px) {
       .about { grid-template-columns: 1fr; gap: 44px; }
@@ -864,6 +882,151 @@
   </div>
 </main>
 
+<!-- =================== RESET PASSWORD =================== -->
+<main class="view" id="v-reset">
+  <div class="light" data-nav="light" style="min-height:100vh">
+    <div class="page-head" style="padding-bottom:24px"><h1>Set a new password.</h1><p>Choose a new password for your account.</p></div>
+    <div class="section" style="padding-top:10px">
+      <form class="resetbox" onsubmit="submitReset(event)">
+        <div class="field"><label>New password (min. 8 characters)</label><input type="password" id="rPass" autocomplete="new-password" required></div>
+        <div class="field"><label>Repeat new password</label><input type="password" id="rPass2" autocomplete="new-password" required></div>
+        <div class="err" id="resetErr"></div>
+        <button class="btn btn-dark btn-block" type="submit" id="resetBtn">Save new password</button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<!-- =================== PRIVACY POLICY =================== -->
+<main class="view" id="v-privacy">
+  <div class="light" data-nav="light" style="min-height:100vh">
+    <div class="page-head" style="padding-bottom:30px">
+      <h1 data-l="bg">Политика за поверителност</h1><h1 data-l="en">Privacy Policy</h1>
+      <p data-l="bg">Последна промяна: 12 октомври 2026 г.</p><p data-l="en">Last updated: 12 October 2026.</p>
+      <div class="lsw"><button type="button" onclick="setLegalLang('bg')">Български</button><button type="button" onclick="setLegalLang('en')">English</button></div>
+    </div>
+    <div class="section legal" style="padding-top:0">
+      <div data-l="bg">
+        <h2>1. Кои сме ние</h2>
+        <p>GoldOffer Studio е услуга за създаване на сайтове на малки бизнеси. Администратор на данните е Раян Кацаров. За въпроси: rayankatsarov2013@gmail.com, тел. 0896 255 898.</p>
+        <h2>2. Какви данни събираме</h2>
+        <ul>
+          <li><b>Акаунт:</b> име, фамилия, имейл и парола (паролата се съхранява само в криптиран вид).</li>
+          <li><b>Съдържание на сайта:</b> име на бизнеса, град, оферти, цени, снимки, както и контактите, които сами въведете (телефон, адрес, работно време, връзки към социални мрежи).</li>
+          <li><b>Заявки от ваши клиенти:</b> име и телефон или имейл, които клиентът въвежда във формата, и избраната оферта.</li>
+          <li><b>В браузъра:</b> пазим само токена за вход и избрания език. Не използваме рекламни бисквитки и не следим посетителите.</li>
+        </ul>
+        <h2>3. За какво използваме данните</h2>
+        <ul>
+          <li>За да предоставяме услугата: акаунт, публикуване на сайта, показване на офертите.</li>
+          <li>За да ви изпращаме имейл при нова заявка и връзка за нова парола.</li>
+          <li>За плащане на абонамента, което се извършва през Stripe. Не виждаме и не пазим данните на вашата карта.</li>
+          <li>За сигурност и предотвратяване на злоупотреби.</li>
+        </ul>
+        <h2>4. Основание</h2>
+        <p>Изпълнение на договор (предоставяне на услугата), вашето съгласие (формата за заявка и регистрацията) и законен интерес (сигурност).</p>
+        <h2>5. Кой още получава данни</h2>
+        <p>Ползваме доставчици, които обработват данни от наше име: хостинг (Render), база данни (MongoDB Atlas), изпращане на имейли (Brevo или Resend), плащания (Stripe). Страниците зареждат шрифтове от Google Fonts, а конструкторът показва снимки от Уикипедия. Ако сайт показва карта, тя се зарежда от Google Maps. Не продаваме данни.</p>
+        <h2>6. Данни на ваши клиенти</h2>
+        <p>Когато клиент изпрати заявка през вашия сайт, вие сте администратор на тези данни, а GoldOffer Studio ги обработва само за да ви ги предостави. Отговорни сте да ги използвате законно.</p>
+        <h2>7. Колко време ги пазим</h2>
+        <p>Докато имате акаунт. Когато изтриете акаунта си или поискате това, изтриваме данните, освен ако закон ни задължава да ги пазим.</p>
+        <h2>8. Вашите права</h2>
+        <p>Можете да поискате достъп, поправка, изтриване, ограничаване, пренос на данните си и да възразите срещу обработването. Пишете ни на rayankatsarov2013@gmail.com. Имате право и на жалба до Комисията за защита на личните данни (www.cpdp.bg).</p>
+        <h2>9. Промени</h2>
+        <p>Ако променим тази политика, ще обновим датата отгоре.</p>
+      </div>
+      <div data-l="en">
+        <h2>1. Who we are</h2>
+        <p>GoldOffer Studio is a service for building websites for small businesses. The data controller is Rayan Katsarov. Questions: rayankatsarov2013@gmail.com, phone 0896 255 898.</p>
+        <h2>2. What data we collect</h2>
+        <ul>
+          <li><b>Account:</b> first name, last name, email and password (the password is stored only in hashed form).</li>
+          <li><b>Site content:</b> business name, city, offers, prices, photos, and the contact details you choose to enter (phone, address, opening hours, social links).</li>
+          <li><b>Requests from your customers:</b> the name and phone or email the customer types in the form, and the chosen offer.</li>
+          <li><b>In your browser:</b> we store only your login token and your language choice. We do not use advertising cookies and we do not track visitors.</li>
+        </ul>
+        <h2>3. Why we use the data</h2>
+        <ul>
+          <li>To provide the service: your account, publishing your site, showing your offers.</li>
+          <li>To email you when a new request arrives and to send a password reset link.</li>
+          <li>To take payment for the subscription, which is handled by Stripe. We never see or store your card details.</li>
+          <li>For security and to prevent abuse.</li>
+        </ul>
+        <h2>4. Legal basis</h2>
+        <p>Performance of a contract (providing the service), your consent (the request form and registration) and legitimate interest (security).</p>
+        <h2>5. Who else receives data</h2>
+        <p>We use providers that process data on our behalf: hosting (Render), database (MongoDB Atlas), email sending (Brevo or Resend) and payments (Stripe). Pages load fonts from Google Fonts and the builder shows photos from Wikipedia. If a site shows a map, it loads from Google Maps. We do not sell data.</p>
+        <h2>6. Your customers' data</h2>
+        <p>When a customer sends a request through your site, you are the controller of that data and GoldOffer Studio only processes it to pass it to you. You are responsible for using it lawfully.</p>
+        <h2>7. How long we keep it</h2>
+        <p>As long as you have an account. When you delete your account or ask us to, we delete the data unless the law requires us to keep it.</p>
+        <h2>8. Your rights</h2>
+        <p>You can ask for access, correction, deletion, restriction or portability of your data, and object to processing. Write to rayankatsarov2013@gmail.com. You also have the right to complain to the Bulgarian Commission for Personal Data Protection (www.cpdp.bg).</p>
+        <h2>9. Changes</h2>
+        <p>If we change this policy, we will update the date at the top.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- =================== TERMS OF USE =================== -->
+<main class="view" id="v-terms">
+  <div class="light" data-nav="light" style="min-height:100vh">
+    <div class="page-head" style="padding-bottom:30px">
+      <h1 data-l="bg">Условия за ползване</h1><h1 data-l="en">Terms of Use</h1>
+      <p data-l="bg">Последна промяна: 12 октомври 2026 г.</p><p data-l="en">Last updated: 12 October 2026.</p>
+      <div class="lsw"><button type="button" onclick="setLegalLang('bg')">Български</button><button type="button" onclick="setLegalLang('en')">English</button></div>
+    </div>
+    <div class="section legal" style="padding-top:0">
+      <div data-l="bg">
+        <h2>1. Услугата</h2>
+        <p>GoldOffer Studio ви позволява да създадете и публикувате сайт с оферти и форма за заявки. Като се регистрирате, приемате тези условия и Политиката за поверителност.</p>
+        <h2>2. Акаунт</h2>
+        <p>Давате верни данни и пазите паролата си. Вие отговаряте за всичко, което се случва през вашия акаунт.</p>
+        <h2>3. Безплатен и платен план</h2>
+        <p>Безплатният план включва публичен сайт и до 10 оферти. Планът Pro струва 19.99 евро на месец, с първите 7 дни безплатно, и позволява повече оферти. Можете да го прекратите по всяко време. Плащането се обработва от Stripe.</p>
+        <h2>4. Вашето съдържание</h2>
+        <p>Вие отговаряте за текстовете, цените и снимките, които качвате. Не качвайте незаконно, подвеждащо или чуждо защитено с авторски права съдържание. Цените и офертите са ваши и ние не ги проверяваме.</p>
+        <h2>5. Забранени действия</h2>
+        <p>Не използвайте услугата за измами, спам, незаконни стоки или услуги, нито за да затруднявате работата на системата. Можем да спрем сайт, който нарушава тези правила.</p>
+        <h2>6. Наличност</h2>
+        <p>Правим всичко възможно сайтът да работи, но услугата се предоставя във вида, в който е. Безплатната инфраструктура може да е бавна след период без посещения и понякога да е недостъпна.</p>
+        <h2>7. Отговорност</h2>
+        <p>В рамките, разрешени от закона, не носим отговорност за пропуснати ползи, загубени клиенти или непреки щети, свързани с ползването на услугата.</p>
+        <h2>8. Прекратяване</h2>
+        <p>Можете да спрете да ползвате услугата и да поискате изтриване на акаунта си по всяко време. Можем да прекратим акаунт при нарушение на условията.</p>
+        <h2>9. Промени и приложимо право</h2>
+        <p>Можем да променим условията, като обновим датата отгоре. Прилага се българското право.</p>
+        <h2>10. Контакт</h2>
+        <p>Раян Кацаров, rayankatsarov2013@gmail.com, тел. 0896 255 898.</p>
+      </div>
+      <div data-l="en">
+        <h2>1. The service</h2>
+        <p>GoldOffer Studio lets you create and publish a website with offers and a request form. By registering, you accept these terms and the Privacy Policy.</p>
+        <h2>2. Account</h2>
+        <p>You provide correct details and keep your password safe. You are responsible for everything that happens through your account.</p>
+        <h2>3. Free and paid plan</h2>
+        <p>The free plan includes a public website and up to 10 offers. The Pro plan costs EUR 19.99 per month, with the first 7 days free, and allows more offers. You can cancel at any time. Payment is handled by Stripe.</p>
+        <h2>4. Your content</h2>
+        <p>You are responsible for the text, prices and photos you upload. Do not upload unlawful, misleading or other people's copyrighted content. Offers and prices are yours and we do not check them.</p>
+        <h2>5. What is not allowed</h2>
+        <p>Do not use the service for fraud, spam, illegal goods or services, or to disrupt the system. We may suspend a site that breaks these rules.</p>
+        <h2>6. Availability</h2>
+        <p>We do our best to keep sites running, but the service is provided as is. Free infrastructure can be slow after a period without visits and may sometimes be unavailable.</p>
+        <h2>7. Liability</h2>
+        <p>To the extent the law allows, we are not liable for lost profits, lost customers or indirect damages related to using the service.</p>
+        <h2>8. Ending use</h2>
+        <p>You can stop using the service and ask us to delete your account at any time. We may close an account that breaks these terms.</p>
+        <h2>9. Changes and governing law</h2>
+        <p>We may change these terms by updating the date at the top. Bulgarian law applies.</p>
+        <h2>10. Contact</h2>
+        <p>Rayan Katsarov, rayankatsarov2013@gmail.com, phone 0896 255 898.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
 <!-- =================== DASHBOARD =================== -->
 <main class="view" id="v-dashboard">
   <div class="dash" data-nav="dark">
@@ -896,7 +1059,7 @@
     </div>
     <div><h4>Product</h4><a href="/how-it-works" data-link>How it works</a><a href="/features" data-link>Features</a><a href="/pricing" data-link>Pricing</a><a href="/build" data-link>Website builder</a></div>
     <div><h4>Explore</h4><a href="/professions" data-link>Professions</a><a href="/dashboard" data-link>Dashboard</a></div>
-    <div><h4>Company</h4><a href="/about" data-link>About</a><a href="/contact" data-link>Contact</a><a href="mailto:rayankatsarov2013@gmail.com">rayankatsarov2013@gmail.com</a><a href="tel:+359896255898">0896 255 898</a></div>
+    <div><h4>Company</h4><a href="/about" data-link>About</a><a href="/contact" data-link>Contact</a><a href="/privacy" data-link>Privacy Policy</a><a href="/terms" data-link>Terms of use</a><a href="mailto:rayankatsarov2013@gmail.com">rayankatsarov2013@gmail.com</a><a href="tel:+359896255898">0896 255 898</a></div>
   </div>
   <div class="foot-end">&copy; 2026 GoldOffer Studio. Founded by Rayan Katsarov.</div>
 </footer>
@@ -911,8 +1074,10 @@
         <div class="field"><label>Last name</label><input type="text" id="aLast" autocomplete="family-name"></div>
       </div>
       <div class="field"><label>Email</label><input type="email" id="aEmail" required autocomplete="email"></div>
-      <div class="field"><label>Password (min. 8 characters)</label><input type="password" id="aPass" required autocomplete="current-password"></div>
+      <div class="field" id="passField"><label>Password (min. 8 characters)</label><input type="password" id="aPass" required autocomplete="current-password"></div>
       <div class="field" id="confirmField"><label>Repeat password</label><input type="password" id="aPass2" autocomplete="new-password"></div>
+      <label class="check" id="consentField"><input type="checkbox" id="aConsent"><span>I agree to the <a href="/terms" data-link>Terms of use</a> and the <a href="/privacy" data-link>Privacy Policy</a>.</span></label>
+      <button type="button" class="link-btn forgot" id="forgotLink" onclick="openForgot()">Forgot your password?</button>
       <div class="err" id="authErr"></div>
       <button class="btn btn-block" type="submit" id="authSubmit">Create account</button>
     </form>
@@ -1032,8 +1197,9 @@
   }
 
   // ---------- Router: every route is its own page ----------
-  const ROUTES = { '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard' };
+  const ROUTES = { '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset' };
   const TITLES = {
+    privacy: 'Privacy Policy - GoldOffer Studio', terms: 'Terms of use - GoldOffer Studio', reset: 'New password - GoldOffer Studio',
     home: 'GoldOffer Studio - Websites for local businesses', how: 'How it works - GoldOffer Studio', features: 'Features - GoldOffer Studio',
     professions: 'Professions - GoldOffer Studio', pricing: 'Pricing - GoldOffer Studio', about: 'About - GoldOffer Studio',
     contact: 'Contact - GoldOffer Studio', build: 'Website builder - GoldOffer Studio', dashboard: 'Dashboard - GoldOffer Studio'
@@ -1044,7 +1210,7 @@
     const clean = (String(path).split('?')[0].split('#')[0].replace(/\/+$/, '')) || '/';
     const name = ROUTES[clean] || 'home';
     const finalPath = ROUTES[clean] ? clean : '/';
-    closeMenus(); $('nav').classList.remove('open');
+    closeMenus(); $('nav').classList.remove('open'); closeAuth();
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + name));
     if (push !== false && location.pathname !== finalPath) history.pushState({}, '', finalPath);
     document.title = TITLES[name];
@@ -1053,6 +1219,7 @@
     window.scrollTo(0, 0);
     document.querySelectorAll('.menu a.ml').forEach(a => a.classList.toggle('active', a.getAttribute('href') === finalPath));
     if (name === 'dashboard') loadDashboard();
+    if (name === 'reset') prepareReset();
     if (name === 'professions') { renderMarquee(); renderGallery(); }
     window.dispatchEvent(new Event('resize'));
     frame();
@@ -1358,14 +1525,19 @@
   }
   function openAuth(mode) { closeMenus(); $('nav').classList.remove('open'); S.mode = mode; applyAuthMode(); $('authErr').textContent = ''; $('authModal').style.display = 'flex'; }
   function closeAuth() { $('authModal').style.display = 'none'; }
-  function toggleAuthMode() { S.mode = S.mode === 'signup' ? 'login' : 'signup'; applyAuthMode(); }
+  function toggleAuthMode() { S.mode = S.mode === 'login' ? 'signup' : (S.mode === 'forgot' ? 'login' : 'login'); $('authErr').textContent = ''; applyAuthMode(); }
+  function openForgot() { S.mode = 'forgot'; $('authErr').textContent = ''; applyAuthMode(); }
   function applyAuthMode() {
-    const su = S.mode === 'signup';
-    $('authTitle').textContent = su ? 'Sign up' : 'Log in';
+    const su = S.mode === 'signup', fg = S.mode === 'forgot';
+    $('authTitle').textContent = su ? 'Sign up' : (fg ? 'Reset password' : 'Log in');
     $('nameFields').style.display = su ? 'block' : 'none';
     $('confirmField').style.display = su ? 'block' : 'none';
-    $('authSubmit').textContent = su ? 'Create account' : 'Log in';
-    $('authSwitch').textContent = su ? 'I already have an account' : 'Create a new account';
+    $('consentField').style.display = su ? 'flex' : 'none';
+    $('passField').style.display = fg ? 'none' : 'block';
+    $('aPass').required = !fg;
+    $('forgotLink').style.display = S.mode === 'login' ? 'block' : 'none';
+    $('authSubmit').textContent = su ? 'Create account' : (fg ? 'Send reset link' : 'Log in');
+    $('authSwitch').textContent = su ? 'I already have an account' : (fg ? 'Back to log in' : 'Create a new account');
     $('aPass').autocomplete = su ? 'new-password' : 'current-password';
   }
   async function submitAuth(e) {
@@ -1374,14 +1546,24 @@
     const email = $('aEmail').value.trim();
     const password = $('aPass').value;
     $('authErr').textContent = '';
+    if (S.mode === 'forgot') {
+      if (!email) { $('authErr').textContent = 'Please enter your email.'; return; }
+      const fb = $('authSubmit'); fb.disabled = true;
+      try {
+        const d = await api('/api/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) });
+        closeAuth(); $('authForm').reset(); notify(d.message, 'Reset password');
+      } catch (err) { $('authErr').textContent = err.message; }
+      fb.disabled = false; return;
+    }
     if (su) {
+      if (!$('aConsent').checked) { $('authErr').textContent = 'Please accept the Terms and the Privacy Policy.'; return; }
       if (!$('aFirst').value.trim()) { $('authErr').textContent = 'Please enter your first name.'; return; }
       if (password.length < 8) { $('authErr').textContent = 'Password must be at least 8 characters.'; return; }
       if (password !== $('aPass2').value) { $('authErr').textContent = 'Passwords do not match.'; return; }
     }
     const btn = $('authSubmit'); btn.disabled = true;
     try {
-      const body = su ? { firstName: $('aFirst').value.trim(), lastName: $('aLast').value.trim(), email, password } : { email, password };
+      const body = su ? { firstName: $('aFirst').value.trim(), lastName: $('aLast').value.trim(), email, password, acceptTerms: true } : { email, password };
       const data = await api(su ? '/api/auth/register' : '/api/auth/login', { method: 'POST', body: JSON.stringify(body) });
       S.token = data.token; localStorage.setItem('token', data.token); S.user = data.user;
       closeAuth(); $('authForm').reset();
@@ -1602,6 +1784,35 @@
       options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: '#8b94a5' } }, y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: '#8b94a5' } } } }
     });
   }
+
+  // ---------- Reset password (link from the email: /reset?token=...) ----------
+  function prepareReset() {
+    const token = new URLSearchParams(location.search).get('token');
+    $('resetErr').textContent = token ? '' : 'This reset link is invalid or has expired.';
+    $('resetBtn').disabled = !token;
+  }
+  async function submitReset(e) {
+    e.preventDefault();
+    const token = new URLSearchParams(location.search).get('token');
+    const p = $('rPass').value;
+    $('resetErr').textContent = '';
+    if (p.length < 8) { $('resetErr').textContent = 'Password must be at least 8 characters.'; return; }
+    if (p !== $('rPass2').value) { $('resetErr').textContent = 'Passwords do not match.'; return; }
+    const btn = $('resetBtn'); btn.disabled = true;
+    try {
+      const d = await api('/api/auth/reset', { method: 'POST', body: JSON.stringify({ token, password: p }) });
+      S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user;
+      $('rPass').value = ''; $('rPass2').value = '';
+      await afterLogin();
+      navigate('/build');
+      notify('Your password was changed. You are logged in.', 'Done');
+    } catch (err) { $('resetErr').textContent = err.message; }
+    btn.disabled = false;
+  }
+
+  // ---------- Language of the legal pages (the Privacy Policy and Terms exist in Bulgarian and English) ----------
+  function setLegalLang(l) { try { localStorage.setItem('lang', l); } catch (e) {} document.body.dataset.lang = l; }
+  (function () { let l = 'bg'; try { l = localStorage.getItem('lang') || 'bg'; } catch (e) {} document.body.dataset.lang = l === 'en' ? 'en' : 'bg'; })();
 
   // ---------- Start ----------
   async function init() {
