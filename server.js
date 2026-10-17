@@ -383,6 +383,9 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
     const user = await User.findOne({ email: String(email || '').toLowerCase().trim() });
+    if (user && typeof user.password !== 'string') {
+      return res.status(400).json({ message: 'This account has no password yet. Press "Forgot your password?" to set one.' });
+    }
     if (!user || !(await bcrypt.compare(String(password || ''), user.password))) {
       return res.status(400).json({ message: 'Invalid email or password.' });
     }
@@ -415,9 +418,11 @@ app.post('/api/auth/forgot', authLimiter, async (req, res) => {
     const user = await User.findOne({ email });
     if (user) {
       const token = crypto.randomBytes(32).toString('hex');
-      user.resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
-      user.resetExpires = new Date(Date.now() + 60 * 60 * 1000);
-      await user.save();
+      // updateOne skips full-document validation, so old accounts without a password field can still get a reset link
+      await User.updateOne({ _id: user._id }, { $set: {
+        resetTokenHash: crypto.createHash('sha256').update(token).digest('hex'),
+        resetExpires: new Date(Date.now() + 60 * 60 * 1000)
+      } });
       const link = `${PUBLIC_BASE}/reset?token=${token}`;
       sendMail({
         to: user.email,
