@@ -224,11 +224,63 @@ async function issueVerifyCode(user) {
     to: user.email,
     subject: `${code} е вашият код за GoldOffer / ${code} is your GoldOffer code`,
     text: `Здравейте,\nВашият код за потвърждение е: ${code}\nВалиден е ${VERIFY_MINUTES} минути.\n\nHello,\nYour confirmation code is: ${code}\nIt is valid for ${VERIFY_MINUTES} minutes.\n\nАко не сте се регистрирали, игнорирайте писмото. / If you did not sign up, ignore this email.`,
-    html: `<p>Здравейте,</p><p>Вашият код за потвърждение:</p><p style="font-size:34px;font-weight:700;letter-spacing:10px;margin:8px 0">${code}</p><p>Валиден е ${VERIFY_MINUTES} минути.</p><hr><p>Hello,</p><p>Your confirmation code:</p><p style="font-size:34px;font-weight:700;letter-spacing:10px;margin:8px 0">${code}</p><p>It is valid for ${VERIFY_MINUTES} minutes.</p><p style="color:#777">Ако не сте се регистрирали, игнорирайте писмото. / If you did not sign up, ignore this email.</p>`
+    html: emailShell({
+      icon: '&#9993;',
+      preheader: `${code} е вашият код / is your code`,
+      heading: ['Потвърдете имейла си', 'Confirm your email'],
+      intro: [`Здравейте! Въведете този код, за да завършите регистрацията си. Валиден е ${VERIFY_MINUTES} минути.`, `Hello! Enter this code to finish creating your account. It is valid for ${VERIFY_MINUTES} minutes.`],
+      code,
+      footnote: ['Ако не сте се регистрирали, просто игнорирайте писмото.', 'If you did not sign up, simply ignore this email.']
+    })
   });
 }
 const canResend = (user) => !user.verifySentAt || Date.now() - new Date(user.verifySentAt).getTime() >= VERIFY_COOLDOWN_MS;
-const nowSofia = () => new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia', dateStyle: 'medium', timeStyle: 'short' });
+const nowSofia = () => new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia', dateStyle: 'medium', timeStyle: 'short' }) + ' (София / Sofia)';
+
+// Short description of the browser that made the request (no IP address is stored or sent)
+function deviceOf(req) {
+  const ua = String((req && req.get && req.get('user-agent')) || '');
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Unknown browser';
+  const os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad|iOS/.test(ua) ? 'iOS' : /Mac OS X|Macintosh/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'unknown system';
+  return `${browser} / ${os}`;
+}
+
+// One modern layout for every email: dark card, gradient accent, round icon, optional code / details / button.
+// heading, intro, buttonText and footnote are [Bulgarian, English]; details rows are [labelBg, labelEn, value].
+function emailShell({ icon, preheader, heading, intro, code, details, buttonText, link, footnote }) {
+  const l = link ? esc(link) : '';
+  const rows = (details || []).map(([kb, ke, v], i, all) => {
+    const line = i < all.length - 1 ? 'border-bottom:1px solid #232c3b;' : '';
+    return `<tr><td style="padding:11px 16px;font-size:13px;color:#8b94a5;width:36%;${line}">${esc(kb)} / ${esc(ke)}</td><td style="padding:11px 16px;font-size:14px;color:#f1eee8;font-weight:600;${line}">${esc(v)}</td></tr>`;
+  }).join('');
+  const detailsBlock = rows ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 26px;background:#0a0e15;border:1px solid #232c3b;border-radius:12px;">${rows}</table>` : '';
+  const codeBlock = code ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 26px;"><tr><td align="center" style="padding:20px 10px 20px 22px;background:#0a0e15;border:1px solid #2d3850;border-radius:14px;font-family:'Courier New',Courier,monospace;font-size:38px;line-height:1;font-weight:700;letter-spacing:12px;color:#ffffff;">${esc(code)}</td></tr></table>` : '';
+  const button = l && buttonText ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="border-radius:11px;background:#7f8cf2;background-image:linear-gradient(135deg,#8b7bff,#4fe3cf);"><a href="${l}" style="display:inline-block;padding:15px 30px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#07090d;text-decoration:none;border-radius:11px;">${buttonText[0]} / ${buttonText[1]}</a></td></tr></table>` : '';
+  const fallback = l && buttonText ? `<p style="margin:0 0 24px;font-size:12px;line-height:1.6;color:#6f7889;">Не работи бутонът? Копирайте връзката / Button not working? Copy this link:<br><a href="${l}" style="color:#4fe3cf;word-break:break-all;text-decoration:none;">${l}</a></p>` : '';
+  return `<!doctype html><html lang="bg"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"><title>GoldOffer Studio</title></head>
+<body style="margin:0;padding:0;background:#05070b;font-family:Arial,Helvetica,sans-serif;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#05070b;">${preheader || ''}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#05070b;"><tr><td align="center" style="padding:34px 12px;">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;">
+<tr><td align="center" style="padding:0 0 22px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>
+<td align="center" width="34" height="34" style="width:34px;height:34px;border-radius:9px;background:#7f8cf2;background-image:linear-gradient(135deg,#8b7bff,#4fe3cf);font-size:20px;line-height:34px;font-weight:800;color:#07090d;">G</td>
+<td style="padding-left:11px;font-size:19px;font-weight:700;color:#f1eee8;letter-spacing:-.01em;">GoldOffer Studio</td></tr></table></td></tr>
+<tr><td style="background:#10151e;border:1px solid #232c3b;border-radius:18px;overflow:hidden;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+<tr><td style="height:4px;line-height:4px;font-size:0;background:#7f8cf2;background-image:linear-gradient(90deg,#8b7bff,#4fe3cf);">&nbsp;</td></tr>
+<tr><td style="padding:38px 34px 30px;color:#c4cad5;font-size:15px;line-height:1.65;">
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px;"><tr><td align="center" width="58" height="58" style="width:58px;height:58px;border-radius:50%;background:#171e2a;border:1px solid #2d3850;font-size:26px;line-height:58px;color:#4fe3cf;">${icon || '&#10003;'}</td></tr></table>
+<h1 style="margin:0 0 4px;font-size:25px;line-height:1.25;color:#ffffff;font-weight:700;">${heading[0]}</h1>
+<p style="margin:0 0 16px;font-size:15px;color:#8b94a5;">${heading[1]}</p>
+<p style="margin:0 0 8px;color:#c4cad5;">${intro[0]}</p>
+<p style="margin:0 0 26px;color:#8b94a5;font-size:14px;">${intro[1]}</p>
+${codeBlock}${detailsBlock}${button}${fallback}
+<p style="margin:0;padding-top:20px;border-top:1px solid #232c3b;font-size:13px;line-height:1.6;color:#8b94a5;">${footnote[0]}<br>${footnote[1]}</p>
+</td></tr></table>
+</td></tr>
+<tr><td align="center" style="padding:22px 10px 0;font-size:12px;line-height:1.6;color:#5f697a;">GoldOffer Studio &middot; Автоматично съобщение, моля не отговаряйте. / This is an automated message, please do not reply.</td></tr>
+</table></td></tr></table></body></html>`;
+}
 
 // Sends an email through Brevo or Resend (plain HTTPS, because free Render blocks SMTP ports)
 async function sendMail({ to, subject, html, text }) {
@@ -398,7 +450,15 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
       to: user.email,
       subject: 'Вход в профила ви / New login to your GoldOffer account',
       text: `Здравейте,\nВлязохте в профила си в GoldOffer Studio на ${nowSofia()}.\nАко не сте вие, сменете паролата си веднага от "Forgot your password?" и ни пишете на rayankatsarov2013@gmail.com.\n\nHello,\nYou signed in to your GoldOffer Studio account on ${nowSofia()}.\nIf this was not you, reset your password right away with "Forgot your password?" and write to rayankatsarov2013@gmail.com.`,
-      html: `<p>Здравейте,</p><p>Влязохте в профила си в GoldOffer Studio на <b>${esc(nowSofia())}</b>.</p><p>Ако не сте вие, сменете паролата си веднага от „Forgot your password?“ и ни пишете на rayankatsarov2013@gmail.com.</p><hr><p>Hello,</p><p>You signed in to your GoldOffer Studio account on <b>${esc(nowSofia())}</b>.</p><p>If this was not you, reset your password right away with “Forgot your password?” and write to rayankatsarov2013@gmail.com.</p>`
+      html: emailShell({
+        icon: '&#128274;',
+        preheader: 'Нов вход в профила ви / New sign-in to your account',
+        heading: ['Нов вход в профила ви', 'New sign-in to your account'],
+        intro: ['Забелязахме вход в профила ви в GoldOffer Studio. Ако това сте вие, не е нужно да правите нищо.', 'We noticed a sign-in to your GoldOffer Studio account. If this was you, there is nothing to do.'],
+        details: [['Кога', 'When', nowSofia()], ['Устройство', 'Device', deviceOf(req)]],
+        buttonText: ['Не бях аз', 'This was not me'], link: `${PUBLIC_BASE}/?forgot=1`,
+        footnote: ['Ако не разпознавате този вход, сменете паролата си веднага.', 'If you do not recognise this sign-in, reset your password right away.']
+      })
     });
     res.json({ token: signToken(user), user: publicUser(user) });
   } catch (err) {
@@ -428,7 +488,14 @@ app.post('/api/auth/forgot', authLimiter, async (req, res) => {
         to: user.email,
         subject: 'Нова парола за GoldOffer / Reset your GoldOffer password',
         text: `Здравейте,\nНатиснете връзката, за да зададете нова парола (валидна 1 час):\n${link}\n\nHello,\nOpen this link to set a new password (valid for 1 hour):\n${link}\n\nАко не сте поискали това, игнорирайте писмото. / If you did not ask for this, ignore this email.`,
-        html: `<p>Здравейте,</p><p><a href="${link}">Задайте нова парола</a> (валидна 1 час).</p><hr><p>Hello,</p><p><a href="${link}">Set a new password</a> (valid for 1 hour).</p><p style="color:#777">Ако не сте поискали това, игнорирайте писмото. / If you did not ask for this, ignore this email.</p>`
+        html: emailShell({
+          icon: '&#128273;',
+          preheader: 'Задайте нова парола / Set a new password',
+          heading: ['Нова парола', 'Reset your password'],
+          intro: ['Получихме заявка за нова парола за профила ви. Натиснете бутона и изберете нова. Връзката важи 1 час.', 'We received a request to reset your password. Press the button and choose a new one. The link is valid for 1 hour.'],
+          buttonText: ['Задайте нова парола', 'Set a new password'], link,
+          footnote: ['Връзката работи само веднъж. Ако не сте я поискали, игнорирайте писмото и паролата ви няма да се промени.', 'The link works only once. If you did not ask for it, ignore this email and your password will not change.']
+        })
       });
     }
   } catch (err) {
@@ -454,7 +521,15 @@ app.post('/api/auth/reset', authLimiter, async (req, res) => {
       to: user.email,
       subject: 'Паролата ви е сменена / Your GoldOffer password was changed',
       text: `Здравейте,\nПаролата на профила ви в GoldOffer Studio беше сменена на ${nowSofia()}.\nАко не сте вие, поискайте нова парола веднага и ни пишете на rayankatsarov2013@gmail.com.\n\nHello,\nThe password of your GoldOffer Studio account was changed on ${nowSofia()}.\nIf this was not you, request a new password right away and write to rayankatsarov2013@gmail.com.`,
-      html: `<p>Здравейте,</p><p>Паролата на профила ви в GoldOffer Studio беше сменена на <b>${esc(nowSofia())}</b>.</p><p>Ако не сте вие, поискайте нова парола веднага и ни пишете на rayankatsarov2013@gmail.com.</p><hr><p>Hello,</p><p>The password of your GoldOffer Studio account was changed on <b>${esc(nowSofia())}</b>.</p><p>If this was not you, request a new password right away and write to rayankatsarov2013@gmail.com.</p>`
+      html: emailShell({
+        icon: '&#10003;',
+        preheader: 'Паролата ви е сменена / Your password was changed',
+        heading: ['Паролата ви е сменена', 'Your password was changed'],
+        intro: ['Паролата на профила ви в GoldOffer Studio току-що беше сменена.', 'The password of your GoldOffer Studio account was just changed.'],
+        details: [['Кога', 'When', nowSofia()], ['Устройство', 'Device', deviceOf(req)]],
+        buttonText: ['Не го направих аз', 'I did not do this'], link: `${PUBLIC_BASE}/?forgot=1`,
+        footnote: ['Ако сте я сменили вие, игнорирайте писмото. Ако не, поискайте нова парола веднага и ни пишете.', 'If you changed it yourself, ignore this email. If not, reset it again right now and write to us.']
+      })
     });
     res.json({ token: signToken(user), user: publicUser(user) });
   } catch (err) {
@@ -902,7 +977,15 @@ app.post('/site/:slug/order', publicLimiter, async (req, res) => {
         to: user.notifyEmail || user.email,
         subject: `Нова заявка / New request: ${offer.title}`,
         text: `Нова заявка за "${offer.title}" (EUR ${Number(offer.price || 0).toFixed(2)})\nИме: ${name}\nКонтакт: ${contact}\n\nNew request for "${offer.title}"\nName: ${name}\nContact: ${contact}\n\n${PUBLIC_BASE}/dashboard`,
-        html: `<h3>Нова заявка / New request</h3><p><b>${esc(offer.title)}</b> (EUR ${Number(offer.price || 0).toFixed(2)})</p><p>Име / Name: <b>${esc(name)}</b><br>Контакт / Contact: <b>${esc(contact)}</b></p><p><a href="${PUBLIC_BASE}/dashboard">Отвори таблото / Open dashboard</a></p>`
+        html: emailShell({
+          icon: '&#128276;',
+          preheader: `${esc(offer.title)} - ${esc(name)}`,
+          heading: ['Нова заявка', 'New request'],
+          intro: [`Клиент поиска „${esc(offer.title)}“ през вашия сайт.`, `A customer requested “${esc(offer.title)}” through your site.`],
+          details: [['Оферта', 'Offer', offer.title], ['Цена', 'Price', `EUR ${Number(offer.price || 0).toFixed(2)}`], ['Име', 'Name', name], ['Контакт', 'Contact', contact]],
+          buttonText: ['Отвори таблото', 'Open dashboard'], link: `${PUBLIC_BASE}/dashboard`,
+          footnote: ['Свържете се с клиента възможно най-бързо.', 'Contact the customer as soon as you can.']
+        })
       });
     }
     res.redirect(303, `/site/${user.slug}?sent=1`);
