@@ -119,6 +119,11 @@ const UserSchema = new mongoose.Schema({
   termsAcceptedAt: Date,
   resetTokenHash: String,
   resetExpires: Date,
+  emailVerified: { type: Boolean, default: true }, // old accounts count as verified; new sign-ups are saved with false
+  verifyCodeHash: String,
+  verifyExpires: Date,
+  verifyAttempts: { type: Number, default: 0 },
+  verifySentAt: Date,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -203,6 +208,28 @@ function cleanSocial(value, host) {
 }
 const isEmail = (v) => /^\S+@\S+\.\S+$/.test(String(v || ''));
 
+// ---------- Email confirmation code (6 digits, valid 15 minutes, max 5 wrong tries) ----------
+const VERIFY_MINUTES = 15;
+const VERIFY_MAX_TRIES = 5;
+const VERIFY_COOLDOWN_MS = 60 * 1000;
+const hashCode = (email, code) => crypto.createHash('sha256').update(`${String(email).toLowerCase()}:${code}:${process.env.JWT_SECRET}`).digest('hex');
+async function issueVerifyCode(user) {
+  const code = String(crypto.randomInt(100000, 1000000));
+  user.verifyCodeHash = hashCode(user.email, code);
+  user.verifyExpires = new Date(Date.now() + VERIFY_MINUTES * 60 * 1000);
+  user.verifyAttempts = 0;
+  user.verifySentAt = new Date();
+  await user.save();
+  return sendMail({
+    to: user.email,
+    subject: `${code} е вашият код за GoldOffer / ${code} is your GoldOffer code`,
+    text: `Здравейте,\nВашият код за потвърждение е: ${code}\nВалиден е ${VERIFY_MINUTES} минути.\n\nHello,\nYour confirmation code is: ${code}\nIt is valid for ${VERIFY_MINUTES} minutes.\n\nАко не сте се регистрирали, игнорирайте писмото. / If you did not sign up, ignore this email.`,
+    html: `<p>Здравейте,</p><p>Вашият код за потвърждение:</p><p style="font-size:34px;font-weight:700;letter-spacing:10px;margin:8px 0">${code}</p><p>Валиден е ${VERIFY_MINUTES} минути.</p><hr><p>Hello,</p><p>Your confirmation code:</p><p style="font-size:34px;font-weight:700;letter-spacing:10px;margin:8px 0">${code}</p><p>It is valid for ${VERIFY_MINUTES} minutes.</p><p style="color:#777">Ако не сте се регистрирали, игнорирайте писмото. / If you did not sign up, ignore this email.</p>`
+  });
+}
+const canResend = (user) => !user.verifySentAt || Date.now() - new Date(user.verifySentAt).getTime() >= VERIFY_COOLDOWN_MS;
+const nowSofia = () => new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia', dateStyle: 'medium', timeStyle: 'short' });
+
 // Sends an email through Brevo or Resend (plain HTTPS, because free Render blocks SMTP ports)
 async function sendMail({ to, subject, html, text }) {
   const from = process.env.MAIL_FROM || '';
@@ -264,17 +291,36 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: 'Invalid email address.' });
     if (String(password).length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
 
-    const existing = await User.findOne({ email: String(email).toLowerCase().trim() });
-    if (existing) return res.status(400).json({ message: 'This email is already registered.' });
+    const cleanEmail = String(email).toLowerCase().trim();
+    let user = await User.findOne({ email: cleanEmail });
+    if (user && user.emailVerified !== false) return res.status(400).json({ message: 'This email is already registered.' });
+    if (user && !canResend(user)) {
+      return res.status(429).json({ message: 'A code was just sent. Please wait a minute before trying again.', needsVerification: true, email: user.email });
+    }
 
-    const user = await User.create({
-      firstName: String(firstName).trim(),
-      lastName: String(lastName || '').trim(),
-      email,
-      password: await bcrypt.hash(password, 10),
-      termsAcceptedAt: new Date()
-    });
-    res.json({ token: signToken(user), user: publicUser(user) });
+    const hashed = await bcrypt.hash(password, 10);
+    if (user) {
+      // The email signed up before but never confirmed it: refresh the details and send a new code
+      user.firstName = String(firstName).trim();
+      user.lastName = String(lastName || '').trim();
+      user.password = hashed;
+      user.termsAcceptedAt = new Date();
+    } else {
+      user = new User({
+        firstName: String(firstName).trim(),
+        lastName: String(lastName || '').trim(),
+        email: cleanEmail,
+        password: hashed,
+        termsAcceptedAt: new Date(),
+        emailVerified: false
+      });
+    }
+    const sent = await issueVerifyCode(user);
+    if (!sent) {
+      await User.deleteOne({ _id: user._id });
+      return res.status(503).json({ message: 'We could not send the confirmation email. Please check the address and try again later.' });
+    }
+    res.json({ needsVerification: true, email: user.email });
   } catch (err) {
     console.error('Register error', err.message);
     if (!process.env.JWT_SECRET) {
@@ -287,6 +333,52 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   }
 });
 
+// Confirm the email with the 6-digit code, then sign the user in
+app.post('/api/auth/verify', authLimiter, async (req, res) => {
+  try {
+    const email = String((req.body || {}).email || '').toLowerCase().trim();
+    const code = String((req.body || {}).code || '').replace(/\D/g, '');
+    const user = await User.findOne({ email });
+    if (!user || user.emailVerified !== false || !user.verifyCodeHash) {
+      return res.status(400).json({ message: 'This code is not valid. Please request a new one.' });
+    }
+    if (!user.verifyExpires || user.verifyExpires < new Date()) {
+      return res.status(400).json({ message: 'This code has expired. Please request a new one.' });
+    }
+    if ((user.verifyAttempts || 0) >= VERIFY_MAX_TRIES) {
+      return res.status(429).json({ message: 'Too many wrong attempts. Please request a new code.' });
+    }
+    const a = Buffer.from(hashCode(email, code), 'hex');
+    const b = Buffer.from(user.verifyCodeHash, 'hex');
+    if (code.length !== 6 || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      user.verifyAttempts = (user.verifyAttempts || 0) + 1;
+      await user.save();
+      return res.status(400).json({ message: 'Wrong code. Please check it and try again.' });
+    }
+    user.emailVerified = true;
+    user.verifyCodeHash = undefined;
+    user.verifyExpires = undefined;
+    user.verifyAttempts = 0;
+    await user.save();
+    res.json({ token: signToken(user), user: publicUser(user) });
+  } catch (err) {
+    console.error('Verify error', err.message);
+    res.status(500).json({ message: 'Could not confirm the email. Please try again.' });
+  }
+});
+
+// Send a new code (same answer whether or not the account exists, so emails cannot be probed)
+app.post('/api/auth/resend', authLimiter, async (req, res) => {
+  const email = String((req.body || {}).email || '').toLowerCase().trim();
+  try {
+    const user = await User.findOne({ email });
+    if (user && user.emailVerified === false && canResend(user)) await issueVerifyCode(user);
+  } catch (err) {
+    console.error('Resend error', err.message);
+  }
+  res.json({ message: 'If this account is waiting for confirmation, we sent a new code.' });
+});
+
 app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -294,6 +386,17 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     if (!user || !(await bcrypt.compare(String(password || ''), user.password))) {
       return res.status(400).json({ message: 'Invalid email or password.' });
     }
+    if (user.emailVerified === false) {
+      if (canResend(user)) await issueVerifyCode(user);
+      return res.status(403).json({ message: 'Please confirm your email first. Enter the code we sent you.', needsVerification: true, email: user.email });
+    }
+    // Security notice (not awaited, so login never waits for email)
+    sendMail({
+      to: user.email,
+      subject: 'Вход в профила ви / New login to your GoldOffer account',
+      text: `Здравейте,\nВлязохте в профила си в GoldOffer Studio на ${nowSofia()}.\nАко не сте вие, сменете паролата си веднага от "Forgot your password?" и ни пишете на rayankatsarov2013@gmail.com.\n\nHello,\nYou signed in to your GoldOffer Studio account on ${nowSofia()}.\nIf this was not you, reset your password right away with "Forgot your password?" and write to rayankatsarov2013@gmail.com.`,
+      html: `<p>Здравейте,</p><p>Влязохте в профила си в GoldOffer Studio на <b>${esc(nowSofia())}</b>.</p><p>Ако не сте вие, сменете паролата си веднага от „Forgot your password?“ и ни пишете на rayankatsarov2013@gmail.com.</p><hr><p>Hello,</p><p>You signed in to your GoldOffer Studio account on <b>${esc(nowSofia())}</b>.</p><p>If this was not you, reset your password right away with “Forgot your password?” and write to rayankatsarov2013@gmail.com.</p>`
+    });
     res.json({ token: signToken(user), user: publicUser(user) });
   } catch (err) {
     console.error('Login error', err.message);
@@ -339,7 +442,15 @@ app.post('/api/auth/reset', authLimiter, async (req, res) => {
     user.password = await bcrypt.hash(password, 10);
     user.resetTokenHash = undefined;
     user.resetExpires = undefined;
+    user.emailVerified = true; // the reset link arrived in their inbox, so the email is proven
+    user.verifyCodeHash = undefined;
     await user.save();
+    sendMail({
+      to: user.email,
+      subject: 'Паролата ви е сменена / Your GoldOffer password was changed',
+      text: `Здравейте,\nПаролата на профила ви в GoldOffer Studio беше сменена на ${nowSofia()}.\nАко не сте вие, поискайте нова парола веднага и ни пишете на rayankatsarov2013@gmail.com.\n\nHello,\nThe password of your GoldOffer Studio account was changed on ${nowSofia()}.\nIf this was not you, request a new password right away and write to rayankatsarov2013@gmail.com.`,
+      html: `<p>Здравейте,</p><p>Паролата на профила ви в GoldOffer Studio беше сменена на <b>${esc(nowSofia())}</b>.</p><p>Ако не сте вие, поискайте нова парола веднага и ни пишете на rayankatsarov2013@gmail.com.</p><hr><p>Hello,</p><p>The password of your GoldOffer Studio account was changed on <b>${esc(nowSofia())}</b>.</p><p>If this was not you, request a new password right away and write to rayankatsarov2013@gmail.com.</p>`
+    });
     res.json({ token: signToken(user), user: publicUser(user) });
   } catch (err) {
     res.status(500).json({ message: 'Could not reset the password.' });

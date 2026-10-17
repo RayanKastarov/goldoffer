@@ -439,6 +439,9 @@
     .close { position: absolute; right: 16px; top: 10px; font-size: 1.6rem; color: var(--mute); background: none; border: 0; cursor: pointer; }
     .close:hover { color: #fff; }
     .err { color: var(--danger); font-size: .85rem; min-height: 1.2em; margin-top: 6px; }
+    .code-input { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 600; letter-spacing: .45em; padding: 14px 10px 14px calc(10px + .45em); }
+    .vmail-ico { width: 54px; height: 54px; margin: 0 auto 14px; border-radius: 16px; background: linear-gradient(135deg, var(--iris), var(--lagoon)); display: flex; align-items: center; justify-content: center; color: #07090d; }
+    .link-btn:disabled { opacity: .55; cursor: not-allowed; text-decoration: none; }
 
     /* checkbox, forgot link, light-page forms, legal pages */
     .check { display: flex; gap: 10px; align-items: flex-start; font-size: .86rem; color: var(--soft); margin: 4px 0 10px; line-height: 1.45; cursor: pointer; }
@@ -1085,6 +1088,22 @@
   </div>
 </div>
 
+<div id="verifyModal" class="modal">
+  <div class="modal-box" style="text-align:center">
+    <button class="close" onclick="closeVerify()" aria-label="Close">&times;</button>
+    <div class="vmail-ico" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 8l9 6 9-6"/></svg></div>
+    <h3>Confirm your email</h3>
+    <p class="sub" style="margin-bottom:20px">We sent a 6-digit code to <b id="verifyEmail" style="color:var(--paper);word-break:break-all"></b>. Enter it below. It is valid for 15 minutes.</p>
+    <form onsubmit="submitVerify(event)">
+      <input type="text" id="verifyCode" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" aria-label="6-digit code" oninput="this.value=this.value.replace(/\D/g,'')">
+      <div class="err" id="verifyErr" style="margin-bottom:4px"></div>
+      <button class="btn btn-block" type="submit" id="verifyBtn">Confirm</button>
+    </form>
+    <button class="link-btn" type="button" id="resendBtn" onclick="resendCode()">Send a new code</button>
+    <p class="note">Check the spam folder if you do not see the email.</p>
+  </div>
+</div>
+
 <div id="alertModal" class="modal">
   <div class="modal-box" style="text-align:center">
     <h3 id="alertTitle">Notice</h3>
@@ -1191,7 +1210,9 @@
     try { data = await res.json(); } catch (e) {}
     if (!res.ok) {
       if ((res.status === 401 || res.status === 403) && S.token) logout(true);
-      throw new Error(data.message || 'Request failed');
+      const er = new Error(data.message || 'Request failed');
+      er.data = data; er.status = res.status;
+      throw er;
     }
     return data;
   }
@@ -1565,12 +1586,65 @@
     try {
       const body = su ? { firstName: $('aFirst').value.trim(), lastName: $('aLast').value.trim(), email, password, acceptTerms: true } : { email, password };
       const data = await api(su ? '/api/auth/register' : '/api/auth/login', { method: 'POST', body: JSON.stringify(body) });
+      if (data.needsVerification) { closeAuth(); $('authForm').reset(); openVerify(data.email || email); return; }
       S.token = data.token; localStorage.setItem('token', data.token); S.user = data.user;
       closeAuth(); $('authForm').reset();
       await afterLogin();
-    } catch (err) { $('authErr').textContent = err.message; }
+    } catch (err) {
+      if (err.data && err.data.needsVerification) { closeAuth(); $('authForm').reset(); openVerify(err.data.email || email, err.status === 429); }
+      else $('authErr').textContent = err.message;
+    }
     finally { btn.disabled = false; }
   }
+  // ---------- Email confirmation code ----------
+  let resendTimer = null;
+  function openVerify(email, justSent) {
+    S.verifyEmail = email;
+    $('verifyEmail').textContent = email;
+    $('verifyCode').value = ''; $('verifyErr').textContent = '';
+    $('verifyModal').style.display = 'flex';
+    startResendCooldown(60);
+    setTimeout(() => $('verifyCode').focus(), 50);
+  }
+  function closeVerify() { $('verifyModal').style.display = 'none'; clearInterval(resendTimer); }
+  function startResendCooldown(sec) {
+    const b = $('resendBtn');
+    clearInterval(resendTimer);
+    b.disabled = true;
+    let left = sec;
+    b.textContent = 'Send a new code (' + left + 's)';
+    resendTimer = setInterval(() => {
+      left--;
+      if (left <= 0) { clearInterval(resendTimer); b.disabled = false; b.textContent = 'Send a new code'; }
+      else b.textContent = 'Send a new code (' + left + 's)';
+    }, 1000);
+  }
+  async function submitVerify(e) {
+    e.preventDefault();
+    const code = $('verifyCode').value.replace(/\D/g, '');
+    $('verifyErr').textContent = '';
+    if (code.length !== 6) { $('verifyErr').textContent = 'Please enter the 6-digit code.'; return; }
+    const btn = $('verifyBtn'); btn.disabled = true;
+    try {
+      const d = await api('/api/auth/verify', { method: 'POST', body: JSON.stringify({ email: S.verifyEmail, code }) });
+      S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user;
+      closeVerify();
+      await afterLogin();
+      notify('Your email is confirmed. Welcome to GoldOffer Studio!', 'Welcome');
+    } catch (err) { $('verifyErr').textContent = err.message; $('verifyCode').select(); }
+    btn.disabled = false;
+  }
+  async function resendCode() {
+    $('verifyErr').textContent = '';
+    try {
+      await api('/api/auth/resend', { method: 'POST', body: JSON.stringify({ email: S.verifyEmail }) });
+      $('verifyCode').value = ''; $('verifyCode').focus();
+      startResendCooldown(60);
+      $('verifyErr').style.color = 'var(--lagoon)'; $('verifyErr').textContent = 'A new code was sent.';
+      setTimeout(() => { $('verifyErr').style.color = ''; if ($('verifyErr').textContent === 'A new code was sent.') $('verifyErr').textContent = ''; }, 4000);
+    } catch (err) { $('verifyErr').textContent = err.message; }
+  }
+
   function logout(silent) {
     S.token = null; S.user = null; S.offers = []; S.category = '';
     localStorage.removeItem('token');
