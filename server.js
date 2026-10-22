@@ -132,7 +132,9 @@ const OfferSchema = new mongoose.Schema({
   title: String,
   price: Number,
   description: String,
-  imageUrl: String,
+  imageUrl: String,                      // cover photo (always the first gallery image)
+  images: { type: [String], default: [] }, // gallery: links to /api/image/<id> (the bytes live in the Image collection)
+  longDescription: String,
   order: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
@@ -206,6 +208,8 @@ function cleanSocial(value, host) {
   if (!/^https?:\/\//i.test(v)) v = /^[A-Za-z0-9._-]+$/.test(v) ? `https://www.${host}/${v}` : `https://${v}`;
   try { const u = new URL(v); return /^https?:$/.test(u.protocol) ? u.toString() : ''; } catch (e) { return ''; }
 }
+const MAX_GALLERY = 8;
+const cleanImages = (arr) => (Array.isArray(arr) ? arr : []).filter(u => /^https:\/\//.test(u || '')).map(String).slice(0, MAX_GALLERY);
 const isEmail = (v) => /^\S+@\S+\.\S+$/.test(String(v || ''));
 
 // ---------- Email confirmation code (6 digits, valid 15 minutes, max 5 wrong tries) ----------
@@ -610,7 +614,9 @@ app.post('/api/offers', authenticateToken, async (req, res) => {
         limitReached: true
       });
     }
-    const { title, price, description, imageUrl } = req.body || {};
+    const { title, price, description, imageUrl, longDescription } = req.body || {};
+    const gallery = cleanImages(req.body && req.body.images);
+    if (!gallery.length && /^https:\/\//.test(imageUrl || '')) gallery.push(imageUrl);
     if (!title || !String(title).trim()) return res.status(400).json({ message: 'Title is required.' });
     const p = Number(price);
     if (!isFinite(p) || p < 0) return res.status(400).json({ message: 'Invalid price.' });
@@ -619,7 +625,9 @@ app.post('/api/offers', authenticateToken, async (req, res) => {
       title: String(title).trim().slice(0, 120),
       price: p,
       description: String(description || '').slice(0, 500),
-      imageUrl: /^https:\/\//.test(imageUrl || '') ? imageUrl : null,
+      longDescription: String(longDescription || '').slice(0, 4000),
+      images: gallery,
+      imageUrl: gallery[0] || null,
       order: existing
     });
     res.json({ offer });
@@ -658,7 +666,9 @@ app.put('/api/offers/:id', authenticateToken, async (req, res) => {
       set.price = p;
     }
     if (b.description !== undefined) set.description = String(b.description).slice(0, 500);
-    if (b.imageUrl !== undefined) set.imageUrl = /^https:\/\//.test(b.imageUrl || '') ? b.imageUrl : null;
+    if (b.longDescription !== undefined) set.longDescription = String(b.longDescription).slice(0, 4000);
+    if (b.images !== undefined) { set.images = cleanImages(b.images); set.imageUrl = set.images[0] || null; }
+    else if (b.imageUrl !== undefined) set.imageUrl = /^https:\/\//.test(b.imageUrl || '') ? b.imageUrl : null;
     const offer = await Offer.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { $set: set }, { new: true });
     if (!offer) return res.status(404).json({ message: 'Offer not found' });
     res.json({ offer });
@@ -667,11 +677,16 @@ app.put('/api/offers/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Remove only the photo of an offer (the offer itself stays)
+// Remove one photo of an offer (?url=...) or all photos when no url is given. The offer itself stays.
 app.delete('/api/offers/:id/image', authenticateToken, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
-  const offer = await Offer.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { imageUrl: null }, { new: true });
+  const offer = await Offer.findOne({ _id: req.params.id, userId: req.user.id });
   if (!offer) return res.status(404).json({ message: 'Offer not found' });
+  const url = String(req.query.url || '');
+  const all = (offer.images && offer.images.length) ? offer.images : (offer.imageUrl ? [offer.imageUrl] : []);
+  offer.images = url ? all.filter(u => u !== url) : [];
+  offer.imageUrl = offer.images[0] || null;
+  await offer.save();
   res.json({ offer });
 });
 
@@ -731,38 +746,103 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   }
 });
 
-// ---------- AI market price ----------
-app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
-  const { query, category, city } = req.body || {};
-  try {
-    const response = await axios.post(
-      'https://api.openai.com/v1/responses',
-      {
-        model: 'gpt-4o-mini',
-        tools: [{ type: 'web_search' }],
-        input: `You are a price analyst for Bulgaria. Find current real prices for: "${query}". Category: "${category}". Region: "${city}".
-Use web search and only real offers found. Do not invent prices. Prices must be in EUR (convert from BGN at 1.95583 if needed).
-Return ONLY JSON: {"minPrice": number, "maxPrice": number, "avgPrice": number, "description": "short description in English", "sources": [{"name": "", "price": number, "url": ""}]}`
-      },
-      { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' } }
-    );
-    let text = response.data.output_text;
-    if (!text && Array.isArray(response.data.output)) {
-      const msg = response.data.output.find(o => o.type === 'message');
-      text = msg && msg.content && msg.content[0] && msg.content[0].text;
+// ---------- Market price: real Google results for the product in the user's city ----------
+// Needs ONE of these in Render, Environment:
+//   SERPAPI_KEY                       (serpapi.com, real Google results incl. Google Shopping, location aware)
+//   GOOGLE_API_KEY + GOOGLE_CX        (Google Programmable Search JSON API, 100 free searches per day)
+// Prices are only ever read from real results. Nothing is invented.
+const BGN_PER_EUR = 1.95583;
+function extractPrices(text) {
+  const out = [];
+  const t = String(text || '').replace(/\u00a0/g, ' ');
+  const num = '(\\d{1,3}(?:[ .]\\d{3})+(?:[.,]\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?)';
+  const patterns = [
+    { re: new RegExp(num + '\\s*(?:лв\\.?|лева|BGN)', 'gi'), cur: 'BGN' },
+    { re: new RegExp(num + '\\s*(?:€|EUR|eur|евро)', 'g'), cur: 'EUR' },
+    { re: new RegExp('(?:€|EUR)\\s*' + num, 'g'), cur: 'EUR' }
+  ];
+  patterns.forEach(({ re, cur }) => {
+    let m;
+    while ((m = re.exec(t))) {
+      let raw = m[1].replace(/ /g, '');
+      // "1.200,50" or "1,200.50" or "1.200" (thousands) or "12,50" (decimal)
+      if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(raw)) raw = raw.replace(/\./g, '').replace(',', '.');
+      else raw = raw.replace(',', '.');
+      let v = parseFloat(raw);
+      if (!isFinite(v) || v <= 0) continue;
+      if (cur === 'BGN') v = v / BGN_PER_EUR;
+      if (v < 100000) out.push(Math.round(v * 100) / 100);
     }
-    const match = String(text || '').match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON in AI response');
-    res.json({ ...JSON.parse(match[0]), estimated: false });
-  } catch (err) {
-    console.error('AI price error:', err.response ? JSON.stringify(err.response.data) : err.message);
-    // No live price data: fill in a description only, never invent prices
-    const where = city ? ` in ${city}` : '';
-    res.json({
-      estimated: true,
-      description: `Professional ${query}${where}. Quality work, fair prices and reliable service.`,
-      message: 'Live market prices are unavailable right now. Please enter the price manually.'
+  });
+  return out;
+}
+const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
+
+async function googleResults(query, city) {
+  const q = `${query} цена ${city}`.trim();
+  const items = []; // { name, url, texts: [], price?: number }
+  if (process.env.SERPAPI_KEY) {
+    const r = await axios.get('https://serpapi.com/search.json', {
+      timeout: 20000,
+      params: { engine: 'google', q, location: `${city}, Bulgaria`, google_domain: 'google.bg', gl: 'bg', hl: 'bg', num: 20, api_key: process.env.SERPAPI_KEY }
     });
+    const d = r.data || {};
+    (d.shopping_results || []).forEach(x => items.push({ name: x.source || x.title, url: x.link || x.product_link, texts: [x.price || ''], price: x.extracted_price }));
+    (d.inline_shopping_results || []).forEach(x => items.push({ name: x.source || x.title, url: x.link, texts: [x.price || ''], price: x.extracted_price }));
+    (d.local_results && d.local_results.places || []).forEach(x => items.push({ name: x.title, url: x.links && x.links.website, texts: [x.price || '', x.description || ''] }));
+    (d.organic_results || []).forEach(x => items.push({ name: x.source || hostOf(x.link), url: x.link, texts: [x.title, x.snippet, ...(x.rich_snippet && x.rich_snippet.top && x.rich_snippet.top.detected_extensions ? [String(x.rich_snippet.top.detected_extensions.price || '')] : [])] }));
+    return items;
+  }
+  if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_CX) {
+    const r = await axios.get('https://www.googleapis.com/customsearch/v1', {
+      timeout: 20000,
+      params: { key: process.env.GOOGLE_API_KEY, cx: process.env.GOOGLE_CX, q, gl: 'bg', hl: 'bg', lr: 'lang_bg', num: 10 }
+    });
+    (r.data.items || []).forEach(x => {
+      const og = (x.pagemap && x.pagemap.offer) || [];
+      items.push({ name: x.displayLink, url: x.link, texts: [x.title, x.snippet, ...og.map(o => `${o.price || ''} ${o.pricecurrency || ''}`)] });
+    });
+    return items;
+  }
+  return null; // no Google access configured
+}
+
+app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
+  const query = String((req.body && req.body.query) || '').trim().slice(0, 120);
+  const city = String((req.body && req.body.city) || '').trim().slice(0, 80) || 'Bulgaria';
+  if (!query) return res.status(400).json({ message: 'Enter a title first.' });
+  const fallbackDesc = `Professional ${query} in ${city}. Quality work, fair prices and reliable service.`;
+  try {
+    const items = await googleResults(query, city);
+    if (items === null) {
+      return res.json({ estimated: true, description: fallbackDesc, message: 'Live price search is not set up on the server yet (SERPAPI_KEY or GOOGLE_API_KEY + GOOGLE_CX is missing). Please enter the price manually.' });
+    }
+    const found = []; // { price, name, url }
+    items.forEach(it => {
+      const prices = it.price != null && isFinite(it.price) ? [it.price] : extractPrices((it.texts || []).join(' | '));
+      // a result counts once, with its first price, so one page with many prices cannot skew the range
+      if (prices.length) found.push({ price: Number(prices[0]), name: it.name || hostOf(it.url), url: it.url });
+    });
+    if (found.length < 2) {
+      return res.json({ estimated: true, description: fallbackDesc, message: `Google did not show enough prices for "${query}" in ${city}. Please enter the price manually.` });
+    }
+    // drop outliers: keep prices within 0.33x to 3x of the median
+    const sorted = found.map(f => f.price).sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const kept = found.filter(f => f.price >= median / 3 && f.price <= median * 3);
+    const ps = kept.map(f => f.price);
+    const avg = ps.reduce((a, b) => a + b, 0) / ps.length;
+    res.json({
+      estimated: false,
+      minPrice: Math.min(...ps), maxPrice: Math.max(...ps), avgPrice: Math.round(avg * 100) / 100,
+      description: fallbackDesc,
+      city,
+      sampleSize: kept.length,
+      sources: kept.slice(0, 6).map(f => ({ name: f.name, price: f.price, url: f.url }))
+    });
+  } catch (err) {
+    console.error('Market price error:', err.response ? JSON.stringify(err.response.data).slice(0, 400) : err.message);
+    res.json({ estimated: true, description: fallbackDesc, message: 'The Google price search failed just now. Please try again or enter the price manually.' });
   }
 });
 
@@ -801,156 +881,293 @@ app.get('/api/image/:id', async (req, res) => {
   }
 });
 
-// ---------- Public customer site (futuristic design, themed with the customer's colors and font) ----------
-function renderSite(user, offers, sent) {
-  const t = THEMES[user.theme] || THEMES.gold;
-  const f = FONTS[user.font] || FONTS.sans;
-  const okImg = (u) => /^https:\/\//.test(u || '');
-  const firstImg = offers.find(o => okImg(o.imageUrl));
-  const heroBg = firstImg ? `<div class="herobg" style="background-image:url('${esc(encodeURI(firstImg.imageUrl))}')"></div>` : '';
-  const names = offers.map(o => `<span>${esc(o.title)}</span>`).join('');
-  const meta = [user.category, user.city].filter(Boolean).map(esc).join(' &middot; ');
-  const cards = offers.length === 0
-    ? '<p class="none">No offers yet. Please check back soon.</p>'
-    : offers.map((o, i) => `
-<article class="card rv" style="--d:${(i % 6) * 70}ms">
-  <div class="pic">${okImg(o.imageUrl)
-    ? `<img src="${esc(o.imageUrl)}" alt="${esc(o.title)}" loading="lazy">`
-    : `<div class="ph">${esc(String(o.title || '?').charAt(0).toUpperCase())}</div>`}
-    <span class="tag">&euro;${Number(o.price || 0).toFixed(2)}</span></div>
-  <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p>
-    <details class="req"><summary>Request this offer</summary>
-      <form method="POST" action="/site/${esc(user.slug)}/order">
-        <input type="hidden" name="offerId" value="${o._id}">
-        <input name="customerName" placeholder="Your name" required maxlength="80">
-        <input name="customerContact" placeholder="Phone or email" required maxlength="120">
-        <label class="consent"><input type="checkbox" name="consent" value="1" required> <span>I agree that my details are used to answer my request. <a href="${PUBLIC_BASE}/privacy" target="_blank" rel="noopener">Privacy Policy</a></span></label>
-        <button type="submit">Send request</button>
-      </form></details></div>
-</article>`).join('');
+// ---------- Public customer site: dark luxury design, neon cards, 3D parallax ----------
+const okImg = (u) => /^https:\/\//.test(u || '');
+const galleryOf = (o) => {
+  const list = (o.images && o.images.length ? o.images : (o.imageUrl ? [o.imageUrl] : [])).filter(okImg);
+  return list.slice(0, MAX_GALLERY);
+};
+const eur = (n) => `&euro;${Number(n || 0).toFixed(2)}`;
 
-  return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(user.siteName)}</title>
-<meta name="description" content="${esc(user.siteName)} - ${esc(user.category)} in ${esc(user.city)}">
-<meta name="theme-color" content="#070a10">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>
-:root{--a:${t.a};--b:${t.b};--ink:${t.ink};--on:${t.on}}
+function siteCss(t, f) {
+  return `:root{--a:${t.a};--b:${t.b};--ink:${t.ink};--on:${t.on};--bg:#05070b;--panel:#0d121b;--line:rgba(255,255,255,.09);--mute:#8b94a5;--soft:#c3cad6}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:${f.css};background:#f2f2ef;color:#10131a;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-.bar{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 28px;color:#fff;background:rgba(7,10,16,.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.1)}
-.bar b{font-size:1.05rem;letter-spacing:-.01em}
-.bar a{color:#fff;text-decoration:none;font-size:.92rem;padding:9px 18px;border-radius:99px;border:1px solid rgba(255,255,255,.28);transition:background .2s}
-.bar a:hover{background:rgba(255,255,255,.12)}
-.hero{position:relative;min-height:100vh;min-height:100svh;background:#070a10;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:120px 24px 90px}
-.herobg{position:absolute;inset:-8%;background-size:cover;background-position:center;filter:blur(30px) saturate(1.3);opacity:.32;transform:scale(1.1)}
-.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;animation:drift 18s ease-in-out infinite alternate;will-change:transform}
+body{font-family:${f.css};background:var(--bg);color:#f1eee8;-webkit-font-smoothing:antialiased;overflow-x:hidden;line-height:1.5}
+a{color:inherit}
+.bar{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 28px;color:#fff;background:rgba(5,7,11,.6);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.bar b{font-size:1.05rem;letter-spacing:-.01em;text-decoration:none}
+.bar nav{display:flex;gap:10px}
+.bar nav a{text-decoration:none;font-size:.9rem;padding:9px 18px;border-radius:99px;border:1px solid rgba(255,255,255,.2);transition:background .2s,border-color .2s}
+.bar nav a:hover{background:rgba(255,255,255,.08);border-color:var(--a)}
+.hero{position:relative;min-height:100vh;min-height:100svh;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:120px 24px 90px;perspective:1200px}
+.layer{position:absolute;will-change:transform}
+.herobg{inset:-8%;background-size:cover;background-position:center;filter:blur(34px) saturate(1.4);opacity:.28}
+.blob{border-radius:50%;filter:blur(100px);opacity:.42}
 .b1{width:560px;height:560px;background:var(--a);left:-10%;top:-14%}
-.b2{width:640px;height:640px;background:var(--b);right:-14%;bottom:-20%;animation-delay:-7s}
-.gridbg{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);background-size:56px 56px;-webkit-mask-image:radial-gradient(ellipse at center,#000 25%,transparent 72%);mask-image:radial-gradient(ellipse at center,#000 25%,transparent 72%)}
-.ring{position:absolute;width:min(82vw,760px);aspect-ratio:1;border:1px solid rgba(255,255,255,.14);border-radius:50%;animation:spin 46s linear infinite}
-.ring::after{content:'';position:absolute;top:-6px;left:50%;width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 26px var(--a)}
-.ring.r2{width:min(56vw,520px);animation-direction:reverse;animation-duration:28s;border-color:rgba(255,255,255,.1)}
-.hero-in{position:relative;z-index:2;max-width:920px}
-.chip{display:inline-block;border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:8px 18px;font-size:.86rem;margin-bottom:28px;background:rgba(255,255,255,.07);backdrop-filter:blur(8px);animation:rise .8s both}
+.b2{width:640px;height:640px;background:var(--b);right:-14%;bottom:-22%}
+.gridbg{inset:-10% 0 0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:56px 56px;-webkit-mask-image:radial-gradient(ellipse at center,#000 22%,transparent 72%);mask-image:radial-gradient(ellipse at center,#000 22%,transparent 72%)}
+.ring{width:min(82vw,760px);aspect-ratio:1;border:1px solid rgba(255,255,255,.12);border-radius:50%;animation:spin 46s linear infinite}
+.ring::after{content:'';position:absolute;top:-6px;left:50%;width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 28px var(--a)}
+.ring.r2{width:min(56vw,520px);animation-direction:reverse;animation-duration:28s}
+.hero-in{position:relative;z-index:2;max-width:920px;transform-style:preserve-3d;transition:transform .15s ease-out}
+.chip{display:inline-block;border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:8px 18px;font-size:.86rem;margin-bottom:28px;background:rgba(255,255,255,.06);backdrop-filter:blur(8px);animation:rise .8s both}
 h1{font-size:clamp(2.7rem,9vw,7rem);line-height:1.02;letter-spacing:-.035em;background:linear-gradient(100deg,#fff 15%,var(--a) 50%,var(--b) 80%,#fff);background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:rise .9s .1s both,shine 9s linear infinite;padding-bottom:.08em}
-.lead{color:#c3cad6;font-size:clamp(1rem,1.7vw,1.25rem);margin:22px auto 0;max-width:46ch;animation:rise .9s .25s both}
-.cta{display:inline-block;margin-top:38px;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);text-decoration:none;font-weight:700;padding:16px 34px;border-radius:99px;box-shadow:0 12px 40px color-mix(in srgb,var(--a) 45%,transparent);transition:transform .2s;animation:rise .9s .4s both}
-.cta:hover{transform:translateY(-3px) scale(1.02)}
+.lead{color:var(--soft);font-size:clamp(1rem,1.7vw,1.25rem);margin:22px auto 0;max-width:46ch;animation:rise .9s .25s both}
+.cta{display:inline-block;margin-top:38px;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);text-decoration:none;font-weight:700;padding:16px 34px;border-radius:99px;box-shadow:0 0 40px color-mix(in srgb,var(--a) 45%,transparent);transition:transform .2s;animation:rise .9s .4s both}
+.cta:hover{transform:translateY(-3px) scale(1.03)}
 .scroll{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:22px;height:36px;border:2px solid rgba(255,255,255,.4);border-radius:12px}
 .scroll::after{content:'';position:absolute;left:50%;top:7px;width:3px;height:7px;margin-left:-1.5px;border-radius:2px;background:#fff;animation:wheel 1.8s ease-in-out infinite}
-.strip{background:#0b0f17;color:#fff;overflow:hidden;border-block:1px solid rgba(255,255,255,.08);padding:20px 0}
+.strip{background:#080b11;overflow:hidden;border-block:1px solid var(--line);padding:20px 0}
 .strip div{display:flex;gap:56px;width:max-content;animation:slide 40s linear infinite}
-.strip span{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;white-space:nowrap;display:flex;align-items:center;gap:56px}
-.strip span::after{content:'';width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b))}
-.offers{max-width:1180px;margin:0 auto;padding:110px 24px 120px}
-.offers h2{font-size:clamp(2rem,5vw,3.6rem);letter-spacing:-.03em;margin-bottom:12px}
-.offers .sub{color:#5a6372;margin-bottom:56px;max-width:52ch}
-.ok{background:#dcfce7;color:#14532d;padding:16px 20px;border-radius:14px;margin-bottom:28px;font-weight:600}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:22px}
-.card{background:#fff;border:1px solid rgba(10,14,20,.08);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(10,14,20,.06);transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s;transform-style:preserve-3d;will-change:transform}
-.card:hover{box-shadow:0 30px 70px rgba(10,14,20,.16)}
-.pic{position:relative;aspect-ratio:4/3;overflow:hidden;background:#e8e8e4}
+.strip span{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;white-space:nowrap;display:flex;align-items:center;gap:56px;color:#dfe3ea}
+.strip span::after{content:'';width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 14px var(--a)}
+.wrap{max-width:1180px;margin:0 auto;padding:110px 24px 60px}
+.wrap h2{font-size:clamp(2rem,5vw,3.6rem);letter-spacing:-.03em;margin-bottom:12px}
+.sub{color:var(--mute);margin-bottom:56px;max-width:52ch}
+.ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#86efac;padding:16px 20px;border-radius:14px;margin-bottom:28px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:26px;perspective:1400px}
+/* neon card: gradient edge, glow that follows the cursor, 3D tilt */
+.card{position:relative;display:flex;flex-direction:column;text-decoration:none;background:var(--panel);border-radius:22px;overflow:hidden;transform-style:preserve-3d;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .35s;box-shadow:0 0 0 1px var(--line),0 18px 50px rgba(0,0,0,.45);will-change:transform}
+.card::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:linear-gradient(135deg,var(--a),transparent 40%,transparent 60%,var(--b));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.55;transition:opacity .3s;pointer-events:none;z-index:3}
+.card::after{content:'';position:absolute;inset:0;background:radial-gradient(420px circle at var(--mx,50%) var(--my,0%),color-mix(in srgb,var(--a) 22%,transparent),transparent 60%);opacity:0;transition:opacity .3s;pointer-events:none;z-index:2}
+.card:hover{box-shadow:0 0 0 1px color-mix(in srgb,var(--a) 50%,transparent),0 0 46px color-mix(in srgb,var(--a) 30%,transparent),0 30px 70px rgba(0,0,0,.6)}
+.card:hover::before{opacity:1}.card:hover::after{opacity:1}
+.pic{position:relative;aspect-ratio:4/3;overflow:hidden;background:#111722}
 .pic img{width:100%;height:100%;object-fit:cover;transition:transform .8s cubic-bezier(.2,.8,.2,1)}
-.card:hover .pic img{transform:scale(1.08)}
+.card:hover .pic img{transform:scale(1.09)}
 .ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;font-weight:800;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b))}
-.tag{position:absolute;right:14px;top:14px;background:rgba(7,10,16,.78);color:#fff;backdrop-filter:blur(10px);padding:8px 14px;border-radius:99px;font-weight:700;font-size:.95rem;border:1px solid rgba(255,255,255,.18)}
-.in{padding:22px;display:flex;flex-direction:column;flex:1}
+.tag{position:absolute;right:14px;top:14px;z-index:4;background:rgba(5,7,11,.78);color:#fff;backdrop-filter:blur(10px);padding:8px 14px;border-radius:99px;font-weight:700;font-size:.95rem;border:1px solid color-mix(in srgb,var(--a) 55%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--a) 35%,transparent)}
+.count{position:absolute;left:14px;top:14px;z-index:4;background:rgba(5,7,11,.7);backdrop-filter:blur(10px);padding:6px 11px;border-radius:99px;font-size:.78rem;border:1px solid var(--line)}
+.in{padding:22px;display:flex;flex-direction:column;flex:1;transform:translateZ(30px)}
 .in h3{font-size:1.2rem;letter-spacing:-.01em;margin-bottom:8px}
-.in p{color:#5a6372;font-size:.94rem;line-height:1.55;margin-bottom:18px;flex:1}
-.req summary{list-style:none;cursor:pointer;text-align:center;font-weight:700;padding:14px;border-radius:14px;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);transition:filter .2s}
-.req summary::-webkit-details-marker{display:none}
-.req summary:hover{filter:brightness(1.06)}
-.req[open] summary{background:#10131a;color:#fff}
-.req form{margin-top:12px;display:grid;gap:8px}
-input{width:100%;padding:13px 14px;border:1px solid #d9dbe2;border-radius:12px;font-family:inherit;font-size:.95rem;background:#fff}
-input:focus{outline:2px solid var(--ink);border-color:transparent}
-button{border:0;border-radius:12px;padding:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#10131a;color:#fff}
-.none{color:#5a6372;padding:30px 0}
-.consent{display:flex;gap:10px;align-items:flex-start;font-size:.8rem;color:#5a6372;line-height:1.4;text-align:left}
+.in p{color:var(--mute);font-size:.94rem;line-height:1.55;margin-bottom:18px;flex:1}
+.more{font-weight:700;color:var(--a);display:flex;align-items:center;gap:8px}
+.more::after{content:'\\2192';transition:transform .25s}
+.card:hover .more::after{transform:translateX(6px)}
+.none{color:var(--mute);padding:30px 0}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:22px;padding:30px;backdrop-filter:blur(10px)}
+.about{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.about h3{font-size:1.5rem;letter-spacing:-.02em;margin-bottom:4px}
+.about .cat{color:var(--mute);margin-bottom:20px}
+.row{display:flex;gap:14px;padding:13px 0;border-top:1px solid var(--line)}
+.row small{width:96px;flex-shrink:0;color:var(--mute);font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+.row div,.row a{color:#f1eee8;white-space:pre-line}
+.row a{text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--a) 60%,transparent)}
+.map{border-radius:18px;overflow:hidden;border:1px solid var(--line);min-height:300px;background:#0a0e15}
+.map iframe{width:100%;height:100%;min-height:300px;border:0;display:block;filter:invert(.92) hue-rotate(180deg) saturate(.8)}
+.mapbtn{display:inline-block;margin-top:12px;font-size:.9rem;color:var(--a);text-decoration:none}
+/* offer page */
+.crumb{display:inline-flex;align-items:center;gap:8px;color:var(--soft);text-decoration:none;font-size:.92rem;margin-bottom:26px}
+.crumb:hover{color:var(--a)}
+.detail{display:grid;grid-template-columns:1.15fr 1fr;gap:44px;align-items:start}
+.gal{position:sticky;top:90px;perspective:1200px}
+.main{position:relative;aspect-ratio:4/3;border-radius:24px;overflow:hidden;background:#111722;box-shadow:0 0 0 1px var(--line),0 0 60px color-mix(in srgb,var(--a) 22%,transparent),0 30px 80px rgba(0,0,0,.6);transition:transform .2s ease-out;transform-style:preserve-3d}
+.main img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.main .ph{font-size:7rem}
+.nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(5,7,11,.7);color:#fff;font-size:1.3rem;cursor:pointer;backdrop-filter:blur(8px);z-index:5}
+.nav:hover{border-color:var(--a)}
+.nav.p{left:14px}.nav.n{right:14px}
+.thumbs{display:flex;gap:10px;margin-top:14px;overflow-x:auto;padding:4px}
+.thumbs button{flex:0 0 84px;height:64px;border-radius:12px;overflow:hidden;border:2px solid transparent;background:#111722;padding:0;cursor:pointer;opacity:.6;transition:opacity .2s,border-color .2s}
+.thumbs button.on{border-color:var(--a);opacity:1;box-shadow:0 0 16px color-mix(in srgb,var(--a) 45%,transparent)}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.info h1{font-size:clamp(2rem,4.5vw,3.4rem);animation:none;margin-bottom:14px;line-height:1.08}
+.price{display:inline-block;font-size:1.5rem;font-weight:800;padding:8px 20px;border-radius:99px;margin-bottom:20px;background:rgba(5,7,11,.8);border:1px solid color-mix(in srgb,var(--a) 60%,transparent);box-shadow:0 0 28px color-mix(in srgb,var(--a) 35%,transparent)}
+.short{color:var(--soft);font-size:1.08rem;margin-bottom:18px}
+.long{color:var(--mute);white-space:pre-line;margin-bottom:28px}
+.req h2{font-size:1.3rem;margin-bottom:14px;letter-spacing:-.01em}
+.req form{display:grid;gap:10px}
+input{width:100%;padding:14px;border:1px solid rgba(255,255,255,.14);border-radius:12px;font-family:inherit;font-size:.95rem;background:rgba(255,255,255,.04);color:#fff}
+input::placeholder{color:#6f7889}
+input:focus{outline:2px solid var(--a);border-color:transparent}
+.btn{border:0;border-radius:14px;padding:15px;font-weight:700;font-family:inherit;font-size:1rem;cursor:pointer;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);box-shadow:0 0 30px color-mix(in srgb,var(--a) 35%,transparent);transition:transform .2s}
+.btn:hover{transform:translateY(-2px)}
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:.8rem;color:var(--mute);line-height:1.4}
 .consent input{width:auto;margin:2px 0 0;flex-shrink:0}
-.consent a{color:var(--ink)}
-footer{background:#070a10;color:#8b94a5;text-align:center;padding:48px 20px;font-size:.88rem}
+.consent a{color:var(--a)}
+.lb{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:24px}
+.lb.open{display:flex}.lb img{max-width:100%;max-height:100%;border-radius:12px}
+footer{border-top:1px solid var(--line);color:var(--mute);text-align:center;padding:48px 20px;font-size:.88rem;margin-top:60px}
 footer b{display:block;color:#fff;font-size:1.2rem;margin-bottom:6px}
 .rv{opacity:0;transform:translateY(34px);transition:opacity .8s var(--d,0ms),transform .8s var(--d,0ms)}
 .rv.in-view{opacity:1;transform:none}
-@keyframes drift{to{transform:translate(70px,50px) scale(1.15)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shine{to{background-position:220% center}}
 @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 @keyframes wheel{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
 @keyframes slide{to{transform:translateX(-50%)}}
-@media (max-width:600px){.bar{padding:12px 16px}.offers{padding:80px 18px 90px}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}
-</style></head><body>
-<header class="bar"><b>${esc(user.siteName)}</b><a href="#offers">View offers</a></header>
-<section class="hero">${heroBg}<div class="blob b1"></div><div class="blob b2"></div><div class="gridbg"></div><div class="ring"></div><div class="ring r2"></div>
+@media (max-width:860px){.detail,.about{grid-template-columns:1fr}.gal{position:static}.bar{padding:12px 16px}.wrap{padding:90px 18px 40px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}`;
+}
+
+// One script for both pages: reveal on scroll, scroll + pointer parallax, card tilt and glow, gallery, lightbox
+const SITE_JS = `(function(){
+  var fine=matchMedia('(pointer:fine)').matches, calm=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var els=document.querySelectorAll('.rv');
+  if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in-view');io.unobserve(e.target)}})},{threshold:.12});els.forEach(function(e){io.observe(e)})}else els.forEach(function(e){e.classList.add('in-view')});
+  var layers=[].slice.call(document.querySelectorAll('[data-depth]'));
+  if(layers.length&&!calm){var tick=false;function par(){tick=false;var y=scrollY;layers.forEach(function(l){var d=parseFloat(l.dataset.depth);l.style.transform='translate3d(0,'+(y*d)+'px,0)'})}
+    addEventListener('scroll',function(){if(!tick){tick=true;requestAnimationFrame(par)}},{passive:true});par()}
+  var hero=document.querySelector('.hero'),hin=document.querySelector('.hero-in');
+  if(hero&&hin&&fine&&!calm){hero.addEventListener('pointermove',function(e){var x=e.clientX/innerWidth-.5,y=e.clientY/innerHeight-.5;hin.style.transform='rotateY('+(x*7)+'deg) rotateX('+(-y*7)+'deg)'});hero.addEventListener('pointerleave',function(){hin.style.transform=''})}
+  if(fine&&!calm){document.querySelectorAll('.card').forEach(function(c){
+    c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;c.style.setProperty('--mx',(x*100)+'%');c.style.setProperty('--my',(y*100)+'%');c.style.transform='perspective(900px) rotateY('+((x-.5)*9)+'deg) rotateX('+((.5-y)*9)+'deg) translateY(-6px)'});
+    c.addEventListener('pointerleave',function(){c.style.transform=''})})}
+  var main=document.getElementById('mainPic');
+  if(main){
+    var imgs=JSON.parse(main.getAttribute('data-imgs')||'[]'),i=0,mi=document.getElementById('mainImg'),th=[].slice.call(document.querySelectorAll('.thumbs button'));
+    function show(n){if(!imgs.length)return;i=(n+imgs.length)%imgs.length;mi.src=imgs[i];th.forEach(function(b,k){b.classList.toggle('on',k===i)})}
+    th.forEach(function(b,k){b.addEventListener('click',function(){show(k)})});
+    var p=document.getElementById('prev'),n=document.getElementById('next');if(p)p.onclick=function(){show(i-1)};if(n)n.onclick=function(){show(i+1)};
+    if(fine&&!calm){main.addEventListener('pointermove',function(e){var r=main.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;main.style.transform='rotateY('+(x*8)+'deg) rotateX('+(-y*8)+'deg)'});main.addEventListener('pointerleave',function(){main.style.transform=''})}
+    var lb=document.getElementById('lb'),lbi=document.getElementById('lbImg');
+    if(mi&&lb){mi.addEventListener('click',function(){lbi.src=imgs[i];lb.classList.add('open')});lb.addEventListener('click',function(){lb.classList.remove('open')})}
+    addEventListener('keydown',function(e){if(e.key==='ArrowLeft')show(i-1);else if(e.key==='ArrowRight')show(i+1);else if(e.key==='Escape'&&lb)lb.classList.remove('open')});
+  }
+})();`;
+
+function pageShell(user, { title, desc, body }) {
+  const t = THEMES[user.theme] || THEMES.gold;
+  const f = FONTS[user.font] || FONTS.sans;
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(desc)}">
+<meta name="theme-color" content="#05070b">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
+<style>${siteCss(t, f)}</style></head><body>
+${body}
+<script>${SITE_JS}</script>
+</body></html>`;
+}
+
+const mapQuery = (user) => [user.address, user.city].filter(Boolean).join(', ');
+
+// Company details + map, shown on the main page and under every offer
+function aboutBlock(user) {
+  const q = mapQuery(user);
+  const phone = String(user.phone || '').trim();
+  const rows = [
+    user.address || user.city ? `<div class="row"><small>Location</small><div>${esc([user.address, user.city].filter(Boolean).join(', '))}</div></div>` : '',
+    phone ? `<div class="row"><small>Phone</small><a href="tel:${esc(phone.replace(/[^\d+]/g, ''))}">${esc(phone)}</a></div>` : '',
+    user.hours ? `<div class="row"><small>Open</small><div>${esc(user.hours)}</div></div>` : '',
+    user.facebook ? `<div class="row"><small>Facebook</small><a href="${esc(user.facebook)}" target="_blank" rel="noopener">${esc(user.facebook.replace(/^https?:\/\/(www\.)?/, ''))}</a></div>` : '',
+    user.instagram ? `<div class="row"><small>Instagram</small><a href="${esc(user.instagram)}" target="_blank" rel="noopener">${esc(user.instagram.replace(/^https?:\/\/(www\.)?/, ''))}</a></div>` : ''
+  ].join('');
+  const cat = [user.categoryLabel || user.category, user.city].filter(Boolean).map(esc).join(' &middot; ');
+  return `<section class="about rv" id="about">
+<div class="glass"><h3>${esc(user.siteName)}</h3><div class="cat">${cat}</div>${rows || '<div class="row"><small>Info</small><div>Contact details will appear here soon.</div></div>'}</div>
+${q ? `<div><div class="map"><iframe title="Map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed"></iframe></div><a class="mapbtn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener">Open in Google Maps &rarr;</a></div>` : ''}
+</section>`;
+}
+
+function offerCard(user, o, i) {
+  const g = galleryOf(o);
+  return `<a class="card rv" style="--d:${(i % 6) * 70}ms" href="/site/${esc(user.slug)}/offer/${o._id}">
+  <div class="pic">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : `<div class="ph">${esc(String(o.title || '?').charAt(0).toUpperCase())}</div>`}
+    <span class="tag">${eur(o.price)}</span>${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
+  <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p><span class="more">View details</span></div>
+</a>`;
+}
+
+function renderSite(user, offers, sent) {
+  const first = offers.map(galleryOf).find(g => g.length);
+  const heroBg = first ? `<div class="layer herobg" data-depth=".15" style="background-image:url('${esc(encodeURI(first[0]))}')"></div>` : '';
+  const names = offers.map(o => `<span>${esc(o.title)}</span>`).join('');
+  const meta = [user.category, user.city].filter(Boolean).map(esc).join(' &middot; ');
+  const cards = offers.length === 0 ? '<p class="none">No offers yet. Please check back soon.</p>' : offers.map((o, i) => offerCard(user, o, i)).join('');
+  const body = `<header class="bar"><b>${esc(user.siteName)}</b><nav><a href="#offers">Offers</a><a href="#about">About</a></nav></header>
+<section class="hero">${heroBg}<div class="layer blob b1" data-depth=".3"></div><div class="layer blob b2" data-depth="-.12"></div><div class="layer gridbg" data-depth=".22"></div><div class="layer ring" data-depth=".08"></div><div class="layer ring r2" data-depth=".12"></div>
 <div class="hero-in">
 ${meta ? `<div class="chip">${meta}</div>` : ''}
 <h1>${esc(user.siteName)}</h1>
-<p class="lead">Browse our offers and send a request in seconds. We will get back to you.</p>
+<p class="lead">Browse our offers, open any of them for photos and details, and send a request in seconds.</p>
 <a class="cta" href="#offers">See what we offer</a></div><div class="scroll" aria-hidden="true"></div></section>
 ${offers.length ? `<div class="strip" aria-hidden="true"><div>${names}${names}${names}${names}</div></div>` : ''}
-<main class="offers" id="offers">
-<h2 class="rv">Our offers</h2><p class="sub rv">Pick what you need and send a request. No account needed.</p>
+<main class="wrap" id="offers">
+<h2 class="rv">Our offers</h2><p class="sub rv">Pick what you need and open it for the full details. No account needed.</p>
 ${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
 <div class="grid">${cards}</div></main>
-<footer><b>${esc(user.siteName)}</b>${meta}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>
-<script>
-(function(){
-  var els=document.querySelectorAll('.rv');
-  if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in-view');io.unobserve(e.target)}})},{threshold:.12});els.forEach(function(e){io.observe(e)})}
-  else els.forEach(function(e){e.classList.add('in-view')});
-  var hero=document.querySelector('.hero'),b1=document.querySelector('.b1'),b2=document.querySelector('.b2');
-  if(hero&&matchMedia('(pointer:fine)').matches){hero.addEventListener('pointermove',function(e){var x=(e.clientX/innerWidth-.5),y=(e.clientY/innerHeight-.5);b1.style.translate=(x*80)+'px '+(y*60)+'px';b2.style.translate=(-x*90)+'px '+(-y*70)+'px'})}
-  if(matchMedia('(pointer:fine)').matches){document.querySelectorAll('.card').forEach(function(c){
-    c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;c.style.transform='perspective(900px) rotateY('+(x*6)+'deg) rotateX('+(-y*6)+'deg) translateY(-6px)'});
-    c.addEventListener('pointerleave',function(){c.style.transform=''})})}
-})();
-</script>
-</body></html>`;
+<div class="wrap" style="padding-top:20px">${aboutBlock(user)}</div>
+<footer><b>${esc(user.siteName)}</b>${meta}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
+  return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body });
 }
+
+function renderOfferPage(user, offer, others, sent) {
+  const g = galleryOf(offer);
+  const thumbs = g.length > 1 ? `<div class="thumbs">${g.map((u, i) => `<button type="button" class="${i === 0 ? 'on' : ''}" aria-label="Photo ${i + 1}"><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('')}</div>` : '';
+  const main = g.length
+    ? `<div class="main" id="mainPic" data-imgs="${esc(JSON.stringify(g))}"><img id="mainImg" src="${esc(g[0])}" alt="${esc(offer.title)}">${g.length > 1 ? '<button class="nav p" id="prev" aria-label="Previous photo">&#8249;</button><button class="nav n" id="next" aria-label="Next photo">&#8250;</button>' : ''}</div>${thumbs}`
+    : `<div class="main"><div class="ph">${esc(String(offer.title || '?').charAt(0).toUpperCase())}</div></div>`;
+  const more = others.length ? `<h2 class="rv" style="font-size:1.8rem;margin:70px 0 26px">More from ${esc(user.siteName)}</h2><div class="grid">${others.map((o, i) => offerCard(user, o, i)).join('')}</div>` : '';
+  const body = `<header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a></nav></header>
+<main class="wrap" style="padding-top:110px">
+<a class="crumb" href="/site/${esc(user.slug)}#offers">&larr; Back to all offers</a>
+<div class="detail">
+  <div class="gal">${main}</div>
+  <div class="info">
+    <h1>${esc(offer.title)}</h1>
+    <div class="price">${eur(offer.price)}</div>
+    ${offer.description ? `<p class="short">${esc(offer.description)}</p>` : ''}
+    ${offer.longDescription ? `<p class="long">${esc(offer.longDescription)}</p>` : ''}
+    <div class="glass req" id="request">
+      <h2>Request this offer</h2>
+      ${sent ? '<div class="ok" style="margin-bottom:14px">Thank you. Your request was sent and the business will contact you.</div>' : ''}
+      <form method="POST" action="/site/${esc(user.slug)}/order">
+        <input type="hidden" name="offerId" value="${offer._id}"><input type="hidden" name="from" value="offer">
+        <input name="customerName" placeholder="Your name" required maxlength="80">
+        <input name="customerContact" placeholder="Phone or email" required maxlength="120">
+        <label class="consent"><input type="checkbox" name="consent" value="1" required> <span>I agree that my details are used to answer my request. <a href="${PUBLIC_BASE}/privacy" target="_blank" rel="noopener">Privacy Policy</a></span></label>
+        <button class="btn" type="submit">Send request</button>
+      </form>
+    </div>
+  </div>
+</div>
+<div style="margin-top:80px">${aboutBlock(user)}</div>
+${more}
+</main>
+<div class="lb" id="lb"><img id="lbImg" alt=""></div>
+<footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
+  return pageShell(user, { title: `${offer.title} - ${user.siteName}`, desc: String(offer.description || offer.title).slice(0, 160), body });
+}
+
+const SITE_CSP = [
+  "default-src 'self'",
+  "script-src 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src 'self' data: https:",
+  "frame-src https://www.google.com",
+  "form-action 'self'",
+  "base-uri 'self'"
+].join('; ');
 
 app.get('/site/:slug', async (req, res) => {
   try {
     const user = await User.findOne({ slug: req.params.slug });
     if (!user || !user.published) return res.status(404).send('Site not found.');
     const offers = await Offer.find({ userId: user._id }).sort({ createdAt: -1 });
-    // This page needs one small inline script (scroll animations); everything else stays locked down
-    res.setHeader('Content-Security-Policy', [
-      "default-src 'self'",
-      "script-src 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src https://fonts.gstatic.com",
-      "img-src 'self' data: https:",
-      "form-action 'self'",
-      "base-uri 'self'"
-    ].join('; '));
+    res.setHeader('Content-Security-Policy', SITE_CSP);
     res.send(renderSite(user, offers, req.query.sent === '1'));
+  } catch (err) {
+    res.status(500).send('Server error');
+  }
+});
+
+// One page per offer: opened by the offer ID from the card link
+app.get('/site/:slug/offer/:id', async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).send('Offer not found.');
+    const user = await User.findOne({ slug: req.params.slug });
+    if (!user || !user.published) return res.status(404).send('Site not found.');
+    const offer = await Offer.findOne({ _id: req.params.id, userId: user._id });
+    if (!offer) return res.status(404).send('Offer not found.');
+    const others = await Offer.find({ userId: user._id, _id: { $ne: offer._id } }).sort({ createdAt: -1 }).limit(3);
+    res.setHeader('Content-Security-Policy', SITE_CSP);
+    res.send(renderOfferPage(user, offer, others, req.query.sent === '1'));
   } catch (err) {
     res.status(500).send('Server error');
   }
@@ -988,6 +1205,7 @@ app.post('/site/:slug/order', publicLimiter, async (req, res) => {
         })
       });
     }
+    if (req.body.from === 'offer') return res.redirect(303, `/site/${user.slug}/offer/${offer._id}?sent=1#request`);
     res.redirect(303, `/site/${user.slug}?sent=1`);
   } catch (err) {
     res.status(500).send('Server error');

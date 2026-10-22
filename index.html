@@ -389,6 +389,10 @@
     .thumb.sm { margin: 0 12px 0 0; } .thumb.sm img { height: 52px; width: 52px; }
     .thumb .x { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); background: #dc2626; color: #fff; cursor: pointer; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
     .thumb .x:hover { background: #b91c1c; }
+    .thumbs-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .field textarea { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line2); background: var(--raise); color: inherit; font: inherit; resize: vertical; }
+    .sources { margin-top: 8px; font-size: .8rem; color: var(--mute); }
+    .sources a { color: var(--soft); }
     .preview { position: sticky; top: calc(var(--nav-h) + 24px); background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 14px; }
     .pbar { display: flex; align-items: center; gap: 6px; padding: 4px 6px 12px; }
     .dot { width: 10px; height: 10px; border-radius: 50%; background: #2b3447; }
@@ -868,9 +872,10 @@
               <button class="btn-ghost" id="aiBtn" onclick="lookupPrice()">Check market price</button>
               <div class="range" id="oRange"></div>
               <div class="field" style="margin-top:12px"><label>Price (EUR)</label><input type="number" id="oPrice" min="0" step="0.01" placeholder="e.g. 25"></div>
-              <div class="field"><label>Description</label><input type="text" id="oDesc" placeholder="Short description"></div>
-              <div class="field"><label>Photo (optional)</label><input type="file" id="oImg" accept="image/*" onchange="previewPhoto()">
-                <div class="thumb" id="oImgPrev" style="display:none"><img id="oImgPrevImg" alt="Selected photo"><button type="button" class="x" title="Remove photo" onclick="clearPhoto()">&times;</button></div>
+              <div class="field"><label>Short description</label><input type="text" id="oDesc" maxlength="500" placeholder="One or two lines shown on the card"></div>
+              <div class="field"><label>Full description (optional)</label><textarea id="oLong" maxlength="4000" rows="5" placeholder="Everything a customer should know: what is included, sizes, materials, how it works..."></textarea></div>
+              <div class="field"><label>Photos (optional, up to 8)</label><input type="file" id="oImg" accept="image/*" multiple onchange="previewPhotos()">
+                <div id="oImgPrev" class="thumbs-row"></div>
               </div>
               <button class="btn btn-block" id="addOfferBtn" onclick="addOffer()">Add offer</button>
             </div>
@@ -1747,14 +1752,15 @@
     el.innerHTML = 'Free plan: <b>' + n + ' of ' + max + '</b> offers used.' +
       (n >= max ? ' <button type="button" class="btn-ghost" style="padding:4px 10px;font-size:.8rem;margin-left:6px" onclick="payNow()">Upgrade for more</button>' : '');
   }
+  function offerImgs(o) { return (o.images && o.images.length) ? o.images : (o.imageUrl ? [o.imageUrl] : []); }
   function renderOfferList() {
     renderLimitInfo();
     const box = $('offerList');
     if (!S.offers.length) { box.innerHTML = '<p class="note" style="margin:0 0 10px">No offers yet. Add your first one below.</p>'; return; }
     box.innerHTML = S.offers.map(o =>
       '<div class="offer-row"><div class="row" style="flex-wrap:nowrap">' +
-      (o.imageUrl ? '<span class="thumb sm"><img src="' + esc(o.imageUrl) + '" alt=""><button type="button" class="x" title="Remove photo" onclick="removeOfferImage(\'' + esc(o._id) + '\')">&times;</button></span>' : '') +
-      '<div><b>' + esc(o.title) + '</b><small>EUR ' + money(o.price) + '</small></div></div>' +
+      offerImgs(o).slice(0, 4).map(u => '<span class="thumb sm"><img src="' + esc(u) + '" alt=""><button type="button" class="x" title="Remove photo" data-id="' + esc(o._id) + '" data-url="' + esc(u) + '" onclick="removeOfferImage(this.dataset.id, this.dataset.url)">&times;</button></span>').join('') +
+      '<div><b>' + esc(o.title) + '</b><small>EUR ' + money(o.price) + (offerImgs(o).length > 1 ? ' &middot; ' + offerImgs(o).length + ' photos' : '') + '</small></div></div>' +
       '<button class="btn-danger" onclick="removeOffer(\'' + esc(o._id) + '\')">Delete</button></div>').join('');
   }
   async function lookupPrice() {
@@ -1769,7 +1775,12 @@
       if (d.estimated) { r.style.display = 'block'; r.textContent = d.message; }
       else if (d.minPrice != null && d.maxPrice != null) {
         r.style.display = 'block';
-        r.textContent = 'Market range: EUR ' + money(d.minPrice) + ' to ' + money(d.maxPrice) + ' (average EUR ' + money(d.avgPrice) + ')';
+        r.textContent = 'Google prices for "' + title + '" in ' + (d.city || 'your area') + ': EUR ' + money(d.minPrice) + ' to ' + money(d.maxPrice) + ' (average EUR ' + money(d.avgPrice) + ', from ' + d.sampleSize + ' results)';
+        if (d.sources && d.sources.length) {
+          const box = document.createElement('div'); box.className = 'sources';
+          box.innerHTML = d.sources.map(x => '<div>EUR ' + money(x.price) + ' &middot; ' + (x.url ? '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name || x.url) + '</a>' : esc(x.name || '')) + '</div>').join('');
+          r.appendChild(box);
+        }
       }
     } catch (e) { notify(e.message, 'Price lookup'); }
     btn.disabled = false; btn.textContent = 'Check market price';
@@ -1784,18 +1795,19 @@
     if (!isFinite(price) || price < 0) return notify('Please enter a valid price.');
     const btn = $('addOfferBtn'); btn.disabled = true; btn.textContent = 'Saving...';
     try {
-      let imageUrl = null;
-      const file = $('oImg').files[0];
-      if (file) {
-        const fd = new FormData(); fd.append('file', file);
+      const images = [];
+      const files = Array.from($('oImg').files).slice(0, 8);
+      for (let i = 0; i < files.length; i++) {
+        btn.textContent = 'Uploading photo ' + (i + 1) + ' of ' + files.length + '...';
+        const fd = new FormData(); fd.append('file', files[i]);
         const res = await fetch(API + '/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + S.token }, body: fd });
         const up = await res.json();
         if (!res.ok) throw new Error(up.message || 'Image upload failed');
-        imageUrl = up.url;
+        images.push(up.url);
       }
-      const d = await api('/api/offers', { method: 'POST', body: JSON.stringify({ title, price, description: $('oDesc').value.trim(), imageUrl }) });
+      const d = await api('/api/offers', { method: 'POST', body: JSON.stringify({ title, price, description: $('oDesc').value.trim(), longDescription: $('oLong').value.trim(), images }) });
       S.offers.unshift(d.offer);
-      ['oTitle', 'oPrice', 'oDesc', 'oImg'].forEach(i => $(i).value = '');
+      ['oTitle', 'oPrice', 'oDesc', 'oLong', 'oImg'].forEach(i => $(i).value = '');
       clearPhoto();
       $('oRange').style.display = 'none';
       renderOfferList(); renderPreview();
@@ -1809,20 +1821,18 @@
       renderOfferList(); renderPreview();
     } catch (e) { notify(e.message, 'Error'); }
   }
-  function previewPhoto() {
-    const f = $('oImg').files[0];
-    if (!f) return clearPhoto();
-    $('oImgPrevImg').src = URL.createObjectURL(f);
-    $('oImgPrev').style.display = 'inline-block';
+  function previewPhotos() {
+    const files = Array.from($('oImg').files);
+    if (files.length > 8) notify('Only the first 8 photos will be used.');
+    $('oImgPrev').innerHTML = files.slice(0, 8).map(f => '<span class="thumb"><img src="' + URL.createObjectURL(f) + '" alt="Selected photo"></span>').join('');
   }
   function clearPhoto() {
     $('oImg').value = '';
-    $('oImgPrevImg').removeAttribute('src');
-    $('oImgPrev').style.display = 'none';
+    $('oImgPrev').innerHTML = '';
   }
-  async function removeOfferImage(id) {
+  async function removeOfferImage(id, url) {
     try {
-      const d = await api('/api/offers/' + id + '/image', { method: 'DELETE' });
+      const d = await api('/api/offers/' + id + '/image' + (url ? '?url=' + encodeURIComponent(url) : ''), { method: 'DELETE' });
       S.offers = S.offers.map(o => o._id === id ? d.offer : o);
       renderOfferList(); renderPreview();
     } catch (e) { notify(e.message, 'Error'); }
