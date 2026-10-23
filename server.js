@@ -144,6 +144,7 @@ const OrderSchema = new mongoose.Schema({
   offerTitle: String,
   customerName: String,
   customerContact: String,
+  contacts: [{ type: { type: String }, value: String, _id: false }],
   amount: Number,
   status: { type: String, default: 'Pending' }, // Pending, Completed, Cancelled
   createdAt: { type: Date, default: Date.now }
@@ -207,6 +208,25 @@ function cleanSocial(value, host) {
   if (!v) return '';
   if (!/^https?:\/\//i.test(v)) v = /^[A-Za-z0-9._-]+$/.test(v) ? `https://www.${host}/${v}` : `https://${v}`;
   try { const u = new URL(v); return /^https?:$/.test(u.protocol) ? u.toString() : ''; } catch (e) { return ''; }
+}
+// Ways a customer can be reached: they pick the type for every contact and can add several
+const CONTACT_TYPES = { phone: 'Phone', email: 'Email', instagram: 'Instagram', facebook: 'Facebook', x: 'X', tiktok: 'TikTok', telegram: 'Telegram', whatsapp: 'WhatsApp', viber: 'Viber', other: 'Other' };
+function parseContacts(body) {
+  const types = [].concat((body && body.ctype) || []);
+  const vals = [].concat((body && body.cvalue) || []);
+  if (!vals.length && body && body.customerContact) vals.push(body.customerContact); // old form
+  const contacts = [];
+  for (let i = 0; i < vals.length && contacts.length < 5; i++) {
+    const value = String(vals[i] || '').trim().slice(0, 120);
+    if (!value) continue;
+    let type = String(types[i] || 'other').toLowerCase();
+    if (!CONTACT_TYPES[type]) type = 'other';
+    if (type === 'email' && !isEmail(value)) return { error: 'Please enter a valid email address.' };
+    if ((type === 'phone' || type === 'whatsapp' || type === 'viber') && value.replace(/\D/g, '').length < 6) return { error: 'Please enter a valid phone number.' };
+    contacts.push({ type, value });
+  }
+  if (!contacts.length) return { error: 'Please leave at least one way to contact you.' };
+  return { contacts, text: contacts.map(c => `${CONTACT_TYPES[c.type]}: ${c.value}`).join(' | ') };
 }
 const MAX_GALLERY = 8;
 const cleanImages = (arr) => (Array.isArray(arr) ? arr : []).filter(u => /^https:\/\//.test(u || '')).map(String).slice(0, MAX_GALLERY);
@@ -545,6 +565,20 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ message: 'User not found' });
   res.json({ user: publicUser(user) });
+});
+
+// Change the name shown in the top bar
+app.put('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const firstName = String(b.firstName || '').trim().slice(0, 40);
+    if (!firstName) return res.status(400).json({ message: 'Please enter your name.' });
+    const user = await User.findByIdAndUpdate(req.user.id, { firstName, lastName: String(b.lastName || '').trim().slice(0, 40) }, { new: true });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    res.status(500).json({ message: 'Could not save your name.' });
+  }
 });
 
 // ---------- Site settings / publishing ----------
@@ -992,6 +1026,25 @@ footer{border-top:1px solid var(--line);color:var(--mute);text-align:center;padd
 footer b{display:block;color:#fff;font-size:1.2rem;margin-bottom:6px}
 .rv{opacity:0;transform:translateY(34px);transition:opacity .8s var(--d,0ms),transform .8s var(--d,0ms)}
 .rv.in-view{opacity:1;transform:none}
+body::after{content:'';position:fixed;inset:0;z-index:100;pointer-events:none;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.prog{position:fixed;top:0;left:0;right:0;height:3px;z-index:50;background:linear-gradient(90deg,var(--a),var(--b));transform-origin:left;transform:scaleX(0);box-shadow:0 0 12px var(--a)}
+.spot{position:absolute;inset:0;pointer-events:none;z-index:1}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:10px}
+.step{position:relative;padding:28px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid var(--line)}
+.step i{font-style:normal;display:inline-flex;width:40px;height:40px;border-radius:12px;align-items:center;justify-content:center;font-weight:800;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 22px color-mix(in srgb,var(--a) 40%,transparent);margin-bottom:16px}
+.step h3{font-size:1.1rem;margin-bottom:6px}.step p{color:var(--mute);font-size:.92rem}
+.fab{position:fixed;right:20px;bottom:20px;z-index:45;display:flex;align-items:center;gap:8px;text-decoration:none;font-weight:700;padding:14px 20px;border-radius:99px;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 34px color-mix(in srgb,var(--a) 45%,transparent),0 10px 30px rgba(0,0,0,.5)}
+.lbl{font-size:.85rem;color:var(--soft);margin-top:4px}
+.crow{display:flex;gap:8px;margin-bottom:8px}
+.crow select{flex:0 0 132px;padding:14px 10px;border:1px solid rgba(255,255,255,.14);border-radius:12px;font-family:inherit;font-size:.92rem;background:#111722;color:#fff}
+.crow input{flex:1;min-width:0}
+.cx{flex:0 0 44px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:transparent;color:#fff;font-size:1.2rem;cursor:pointer}
+.addc{background:none;border:1px dashed color-mix(in srgb,var(--a) 55%,transparent);color:var(--a);border-radius:12px;padding:11px;font-family:inherit;font-weight:600;cursor:pointer}
+.addc:hover{background:color-mix(in srgb,var(--a) 10%,transparent)}
+.share{display:inline-flex;align-items:center;gap:8px;margin:0 0 22px;padding:10px 18px;border-radius:99px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;font-family:inherit;font-size:.9rem;cursor:pointer}
+.share:hover{border-color:var(--a)}
+.stick{display:none}
+@media (max-width:860px){.steps{grid-template-columns:1fr}.stick{position:fixed;left:0;right:0;bottom:0;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(5,7,11,.88);backdrop-filter:blur(16px);border-top:1px solid var(--line)}.stick b{font-size:1.15rem}.stick a{text-decoration:none;font-weight:700;padding:12px 24px;border-radius:99px;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b))}.fab{bottom:78px}footer{padding-bottom:90px}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shine{to{background-position:220% center}}
 @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
@@ -1014,6 +1067,28 @@ const SITE_JS = `(function(){
   if(fine&&!calm){document.querySelectorAll('.card').forEach(function(c){
     c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;c.style.setProperty('--mx',(x*100)+'%');c.style.setProperty('--my',(y*100)+'%');c.style.transform='perspective(900px) rotateY('+((x-.5)*9)+'deg) rotateX('+((.5-y)*9)+'deg) translateY(-6px)'});
     c.addEventListener('pointerleave',function(){c.style.transform=''})})}
+  var pg=document.getElementById('prog');
+  if(pg){addEventListener('scroll',function(){var h=document.documentElement.scrollHeight-innerHeight;pg.style.transform='scaleX('+(h>0?scrollY/h:0)+')'},{passive:true})}
+  var sp=document.querySelector('.spot');
+  if(hero&&sp&&fine&&!calm){hero.addEventListener('pointermove',function(e){var r=hero.getBoundingClientRect();sp.style.background='radial-gradient(520px circle at '+(e.clientX-r.left)+'px '+(e.clientY-r.top)+'px,rgba(255,255,255,.07),transparent 60%)'})}
+  var sh=document.getElementById('shareBtn');
+  if(sh)sh.addEventListener('click',function(){var d={title:document.title,url:location.href.split('#')[0]};if(navigator.share){navigator.share(d).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(d.url);sh.textContent='Link copied'}});
+  var ph={phone:'e.g. +359 88 123 4567',email:'name@example.com',instagram:'@username or profile link',facebook:'Profile name or link',x:'@username or profile link',tiktok:'@username',telegram:'@username or phone',whatsapp:'WhatsApp number',viber:'Viber number',other:'Type your contact details'};
+  var cbox=document.getElementById('contacts');
+  if(cbox){
+    var bind=function(row){var s=row.querySelector('select'),i=row.querySelector('input');s.addEventListener('change',function(){i.placeholder=ph[s.value]||'';i.type=s.value==='email'?'email':'text'})};
+    bind(cbox.firstElementChild);
+    var addB=document.getElementById('addContact');
+    addB.addEventListener('click',function(){
+      if(cbox.children.length>=5)return;
+      var row=cbox.firstElementChild.cloneNode(true),s=row.querySelector('select'),i=row.querySelector('input');
+      s.value='instagram';i.value='';i.required=false;i.type='text';i.placeholder=ph.instagram;
+      var x=document.createElement('button');x.type='button';x.className='cx';x.textContent='\u00d7';x.title='Remove';
+      x.onclick=function(){row.remove();addB.style.display=''};row.appendChild(x);
+      cbox.appendChild(row);bind(row);i.focus();
+      if(cbox.children.length>=5)addB.style.display='none';
+    });
+  }
   var main=document.getElementById('mainPic');
   if(main){
     var imgs=JSON.parse(main.getAttribute('data-imgs')||'[]'),i=0,mi=document.getElementById('mainImg'),th=[].slice.call(document.querySelectorAll('.thumbs button'));
@@ -1079,8 +1154,9 @@ function renderSite(user, offers, sent) {
   const names = offers.map(o => `<span>${esc(o.title)}</span>`).join('');
   const meta = [user.category, user.city].filter(Boolean).map(esc).join(' &middot; ');
   const cards = offers.length === 0 ? '<p class="none">No offers yet. Please check back soon.</p>' : offers.map((o, i) => offerCard(user, o, i)).join('');
-  const body = `<header class="bar"><b>${esc(user.siteName)}</b><nav><a href="#offers">Offers</a><a href="#about">About</a></nav></header>
-<section class="hero">${heroBg}<div class="layer blob b1" data-depth=".3"></div><div class="layer blob b2" data-depth="-.12"></div><div class="layer gridbg" data-depth=".22"></div><div class="layer ring" data-depth=".08"></div><div class="layer ring r2" data-depth=".12"></div>
+  const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
+  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="#offers">Offers</a><a href="#how">How it works</a><a href="#about">About</a></nav></header>
+<section class="hero"><div class="spot"></div>${heroBg}<div class="layer blob b1" data-depth=".3"></div><div class="layer blob b2" data-depth="-.12"></div><div class="layer gridbg" data-depth=".22"></div><div class="layer ring" data-depth=".08"></div><div class="layer ring r2" data-depth=".12"></div>
 <div class="hero-in">
 ${meta ? `<div class="chip">${meta}</div>` : ''}
 <h1>${esc(user.siteName)}</h1>
@@ -1091,7 +1167,10 @@ ${offers.length ? `<div class="strip" aria-hidden="true"><div>${names}${names}${
 <h2 class="rv">Our offers</h2><p class="sub rv">Pick what you need and open it for the full details. No account needed.</p>
 ${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
 <div class="grid">${cards}</div></main>
+<section class="wrap" id="how" style="padding-bottom:20px"><h2 class="rv">How it works</h2><p class="sub rv">Three quick steps. No account, no waiting.</p>
+<div class="steps"><div class="step rv"><i>1</i><h3>Choose an offer</h3><p>Open any offer to see photos, the full description and the price.</p></div><div class="step rv" style="--d:80ms"><i>2</i><h3>Send a request</h3><p>Leave your name and the contact you prefer: phone, Instagram, Facebook, email or anything else.</p></div><div class="step rv" style="--d:160ms"><i>3</i><h3>Get a reply</h3><p>${esc(user.siteName)} contacts you directly to confirm the details.</p></div></div></section>
 <div class="wrap" style="padding-top:20px">${aboutBlock(user)}</div>
+${phoneRaw ? `<a class="fab" href="tel:${esc(phoneRaw)}">&#9742; Call us</a>` : ''}
 <footer><b>${esc(user.siteName)}</b>${meta}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
   return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body });
 }
@@ -1103,14 +1182,17 @@ function renderOfferPage(user, offer, others, sent) {
     ? `<div class="main" id="mainPic" data-imgs="${esc(JSON.stringify(g))}"><img id="mainImg" src="${esc(g[0])}" alt="${esc(offer.title)}">${g.length > 1 ? '<button class="nav p" id="prev" aria-label="Previous photo">&#8249;</button><button class="nav n" id="next" aria-label="Next photo">&#8250;</button>' : ''}</div>${thumbs}`
     : `<div class="main"><div class="ph">${esc(String(offer.title || '?').charAt(0).toUpperCase())}</div></div>`;
   const more = others.length ? `<h2 class="rv" style="font-size:1.8rem;margin:70px 0 26px">More from ${esc(user.siteName)}</h2><div class="grid">${others.map((o, i) => offerCard(user, o, i)).join('')}</div>` : '';
-  const body = `<header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a></nav></header>
+  const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
+  const ld = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: offer.title, description: String(offer.description || offer.title), image: g, offers: { '@type': 'Offer', price: Number(offer.price || 0).toFixed(2), priceCurrency: 'EUR', availability: 'https://schema.org/InStock', seller: { '@type': 'Organization', name: user.siteName } } }).replace(/</g, '\\u003c');
+  const body = `<script type="application/ld+json">${ld}</script><div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a></nav></header>
 <main class="wrap" style="padding-top:110px">
 <a class="crumb" href="/site/${esc(user.slug)}#offers">&larr; Back to all offers</a>
 <div class="detail">
   <div class="gal">${main}</div>
   <div class="info">
     <h1>${esc(offer.title)}</h1>
-    <div class="price">${eur(offer.price)}</div>
+    <div class="price">${eur(offer.price)}</div><br>
+    <button type="button" class="share" id="shareBtn">&#8599; Share this offer</button>
     ${offer.description ? `<p class="short">${esc(offer.description)}</p>` : ''}
     ${offer.longDescription ? `<p class="long">${esc(offer.longDescription)}</p>` : ''}
     <div class="glass req" id="request">
@@ -1119,7 +1201,12 @@ function renderOfferPage(user, offer, others, sent) {
       <form method="POST" action="/site/${esc(user.slug)}/order">
         <input type="hidden" name="offerId" value="${offer._id}"><input type="hidden" name="from" value="offer">
         <input name="customerName" placeholder="Your name" required maxlength="80">
-        <input name="customerContact" placeholder="Phone or email" required maxlength="120">
+        <label class="lbl">How can we reach you?</label>
+        <div class="contacts" id="contacts"><div class="crow">
+          <select name="ctype" aria-label="Contact type">${Object.entries(CONTACT_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+          <input name="cvalue" placeholder="e.g. +359 88 123 4567" required maxlength="120">
+        </div></div>
+        <button type="button" class="addc" id="addContact">+ Add another contact</button>
         <label class="consent"><input type="checkbox" name="consent" value="1" required> <span>I agree that my details are used to answer my request. <a href="${PUBLIC_BASE}/privacy" target="_blank" rel="noopener">Privacy Policy</a></span></label>
         <button class="btn" type="submit">Send request</button>
       </form>
@@ -1130,6 +1217,8 @@ function renderOfferPage(user, offer, others, sent) {
 ${more}
 </main>
 <div class="lb" id="lb"><img id="lbImg" alt=""></div>
+<div class="stick"><b>${eur(offer.price)}</b><a href="#request">Request this offer</a></div>
+${phoneRaw ? `<a class="fab" href="tel:${esc(phoneRaw)}">&#9742; Call</a>` : ''}
 <footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
   return pageShell(user, { title: `${offer.title} - ${user.siteName}`, desc: String(offer.description || offer.title).slice(0, 160), body });
 }
@@ -1180,16 +1269,19 @@ app.post('/site/:slug/order', publicLimiter, async (req, res) => {
     if (!user || !mongoose.isValidObjectId(req.body.offerId)) return res.status(404).send('Not found');
     const offer = await Offer.findOne({ _id: req.body.offerId, userId: user._id });
     if (!offer) return res.status(404).send('Offer not found');
+    const parsed = parseContacts(req.body);
+    if (parsed.error) return res.status(400).send(`${esc(parsed.error)} Please go back and try again.`);
     await Order.create({
       userId: user._id, offerTitle: offer.title, amount: offer.price,
       customerName: String(req.body.customerName || '').slice(0, 80),
-      customerContact: String(req.body.customerContact || '').slice(0, 120),
+      customerContact: parsed.text.slice(0, 400),
+      contacts: parsed.contacts,
       status: 'Pending'
     });
     // Tell the business owner right away (not awaited, so the customer never waits for email)
     if (user.notifyOn !== false) {
       const name = String(req.body.customerName || '').slice(0, 80);
-      const contact = String(req.body.customerContact || '').slice(0, 120);
+      const contact = parsed.text.slice(0, 400);
       sendMail({
         to: user.notifyEmail || user.email,
         subject: `Нова заявка / New request: ${offer.title}`,

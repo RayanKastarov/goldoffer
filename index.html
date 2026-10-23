@@ -391,6 +391,8 @@
     .thumb .x:hover { background: #b91c1c; }
     .thumbs-row { display: flex; flex-wrap: wrap; gap: 10px; }
     .field textarea { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line2); background: var(--raise); color: inherit; font: inherit; resize: vertical; }
+    .acts { display: flex; gap: 8px; flex-shrink: 0; }
+    .editing { outline: 2px solid var(--iris); border-radius: 12px; }
     .sources { margin-top: 8px; font-size: .8rem; color: var(--mute); }
     .sources a { color: var(--soft); }
     .preview { position: sticky; top: calc(var(--nav-h) + 24px); background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 14px; }
@@ -875,9 +877,11 @@
               <div class="field"><label>Short description</label><input type="text" id="oDesc" maxlength="500" placeholder="One or two lines shown on the card"></div>
               <div class="field"><label>Full description (optional)</label><textarea id="oLong" maxlength="4000" rows="5" placeholder="Everything a customer should know: what is included, sizes, materials, how it works..."></textarea></div>
               <div class="field"><label>Photos (optional, up to 8)</label><input type="file" id="oImg" accept="image/*" multiple onchange="previewPhotos()">
+                <div id="oExisting" class="thumbs-row"></div>
                 <div id="oImgPrev" class="thumbs-row"></div>
               </div>
               <button class="btn btn-block" id="addOfferBtn" onclick="addOffer()">Add offer</button>
+              <button class="link-btn" id="cancelEditBtn" style="display:none" onclick="cancelEdit()">Cancel editing</button>
             </div>
             <button class="btn btn-lg btn-block" style="margin-top:22px" onclick="publishSite()">Publish website</button>
             <button class="link-btn" onclick="goStep(2)">Back</button>
@@ -889,7 +893,8 @@
             <div class="url-box" id="siteUrlBox"></div>
             <div class="row">
               <button class="btn-ghost" onclick="copyUrl()">Copy link</button>
-              <button class="btn-ghost" onclick="goStep(3)">Edit offers</button>
+              <button class="btn-ghost" onclick="goStep(3)">Add or edit offers</button>
+              <button class="btn-ghost" onclick="changeDesign()">Change colors and font</button>
             </div>
             <div class="field" style="margin-top:22px">
               <label>Change the address name</label>
@@ -1571,10 +1576,22 @@
   function renderAuth() {
     const a = $('authArea');
     if (S.user) {
-      a.innerHTML = '<span class="who">' + esc(S.user.firstName || S.user.email) + '</span><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><button class="btn-ghost" onclick="logout()">Log out</button>';
+      const nm = [S.user.firstName, S.user.lastName].filter(Boolean).join(' ');
+      a.innerHTML = '<span class="who" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><button class="btn-ghost" onclick="logout()">Log out</button>';
     } else {
       a.innerHTML = '<button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button><button class="btn" onclick="openAuth(\'signup\')">Get started</button>';
     }
+  }
+  async function editName() {
+    const cur = [S.user.firstName, S.user.lastName].filter(Boolean).join(' ');
+    const v = prompt('Your name', cur);
+    if (v === null) return;
+    const parts = v.trim().split(/\s+/);
+    if (!parts[0]) return notify('Please enter your name.');
+    try {
+      const d = await api('/api/auth/profile', { method: 'PUT', body: JSON.stringify({ firstName: parts[0], lastName: parts.slice(1).join(' ') }) });
+      S.user = d.user; renderAuth();
+    } catch (e) { notify(e.message, 'Error'); }
   }
   function openAuth(mode) { closeMenus(); $('nav').classList.remove('open'); S.mode = mode; applyAuthMode(); $('authErr').textContent = ''; hidePasswords(); $('authModal').style.display = 'flex'; }
   function closeAuth() { $('authModal').style.display = 'none'; }
@@ -1739,8 +1756,10 @@
         siteName: $('siteName').value.trim(), category: S.category, city: $('city').value.trim(), theme: S.theme, font: S.font }) });
       S.user = d.user;
     } catch (e) { return notify(e.message, 'Error'); }
-    goStep(3);
+    if (S.backToLive) { S.backToLive = false; showLive(); notify('Your design was updated. The live site shows it now.'); }
+    else goStep(3);
   }
+  function changeDesign() { S.backToLive = true; goStep(2); }
 
   // ---------- Offers ----------
   function offerLimit() { return (S.user && S.user.offerLimit) || 10; }
@@ -1761,7 +1780,7 @@
       '<div class="offer-row"><div class="row" style="flex-wrap:nowrap">' +
       offerImgs(o).slice(0, 4).map(u => '<span class="thumb sm"><img src="' + esc(u) + '" alt=""><button type="button" class="x" title="Remove photo" data-id="' + esc(o._id) + '" data-url="' + esc(u) + '" onclick="removeOfferImage(this.dataset.id, this.dataset.url)">&times;</button></span>').join('') +
       '<div><b>' + esc(o.title) + '</b><small>EUR ' + money(o.price) + (offerImgs(o).length > 1 ? ' &middot; ' + offerImgs(o).length + ' photos' : '') + '</small></div></div>' +
-      '<button class="btn-danger" onclick="removeOffer(\'' + esc(o._id) + '\')">Delete</button></div>').join('');
+      '<div class="acts"><button class="btn-ghost" style="padding:6px 12px" onclick="editOffer(\'' + esc(o._id) + '\')">Edit</button><button class="btn-danger" onclick="removeOffer(\'' + esc(o._id) + '\')">Delete</button></div></div>').join('');
   }
   async function lookupPrice() {
     const title = $('oTitle').value.trim();
@@ -1785,18 +1804,49 @@
     } catch (e) { notify(e.message, 'Price lookup'); }
     btn.disabled = false; btn.textContent = 'Check market price';
   }
+  // ---- Add a new offer, or save changes when an existing one is being edited ----
+  function renderExisting() {
+    $('oExisting').innerHTML = (S.editImages || []).map((u, i) =>
+      '<span class="thumb"><img src="' + esc(u) + '" alt="Saved photo"><button type="button" class="x" title="Remove photo" onclick="dropExisting(' + i + ')">&times;</button></span>').join('');
+  }
+  function dropExisting(i) { S.editImages.splice(i, 1); renderExisting(); }
+  function resetOfferForm() {
+    S.editId = null; S.editImages = [];
+    ['oTitle', 'oPrice', 'oDesc', 'oLong', 'oImg'].forEach(i => $(i).value = '');
+    clearPhoto(); renderExisting();
+    $('oRange').style.display = 'none';
+    $('addOfferBtn').textContent = 'Add offer';
+    $('cancelEditBtn').style.display = 'none';
+    document.querySelector('.add-box').classList.remove('editing');
+    renderOfferList();
+  }
+  function editOffer(id) {
+    const o = S.offers.find(x => x._id === id); if (!o) return;
+    S.editId = id; S.editImages = offerImgs(o).slice();
+    $('oTitle').value = o.title || ''; $('oPrice').value = o.price != null ? o.price : '';
+    $('oDesc').value = o.description || ''; $('oLong').value = o.longDescription || '';
+    $('oImg').value = ''; $('oImgPrev').innerHTML = '';
+    renderExisting();
+    $('addOfferBtn').textContent = 'Save changes';
+    $('cancelEditBtn').style.display = 'block';
+    const box = document.querySelector('.add-box'); box.classList.add('editing');
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function cancelEdit() { resetOfferForm(); }
   async function addOffer() {
-    if (!isPaid() && S.offers.length >= offerLimit()) {
+    const editing = !!S.editId;
+    if (!editing && !isPaid() && S.offers.length >= offerLimit()) {
       return notify('The free plan allows up to ' + offerLimit() + ' offers. Upgrade to add more.', 'Limit reached');
     }
     const title = $('oTitle').value.trim();
     if (!title) return notify('Please enter a title.');
     const price = parseFloat($('oPrice').value);
     if (!isFinite(price) || price < 0) return notify('Please enter a valid price.');
-    const btn = $('addOfferBtn'); btn.disabled = true; btn.textContent = 'Saving...';
+    const btn = $('addOfferBtn'); const label = editing ? 'Save changes' : 'Add offer';
+    btn.disabled = true; btn.textContent = 'Saving...';
     try {
-      const images = [];
-      const files = Array.from($('oImg').files).slice(0, 8);
+      const images = editing ? (S.editImages || []).slice() : [];
+      const files = Array.from($('oImg').files).slice(0, Math.max(0, 8 - images.length));
       for (let i = 0; i < files.length; i++) {
         btn.textContent = 'Uploading photo ' + (i + 1) + ' of ' + files.length + '...';
         const fd = new FormData(); fd.append('file', files[i]);
@@ -1805,14 +1855,19 @@
         if (!res.ok) throw new Error(up.message || 'Image upload failed');
         images.push(up.url);
       }
-      const d = await api('/api/offers', { method: 'POST', body: JSON.stringify({ title, price, description: $('oDesc').value.trim(), longDescription: $('oLong').value.trim(), images }) });
-      S.offers.unshift(d.offer);
-      ['oTitle', 'oPrice', 'oDesc', 'oLong', 'oImg'].forEach(i => $(i).value = '');
-      clearPhoto();
-      $('oRange').style.display = 'none';
-      renderOfferList(); renderPreview();
+      const payload = { title, price, description: $('oDesc').value.trim(), longDescription: $('oLong').value.trim(), images };
+      if (editing) {
+        const d = await api('/api/offers/' + S.editId, { method: 'PUT', body: JSON.stringify(payload) });
+        S.offers = S.offers.map(o => o._id === S.editId ? d.offer : o);
+        notify('Offer updated. It is already live on your site.');
+      } else {
+        const d = await api('/api/offers', { method: 'POST', body: JSON.stringify(payload) });
+        S.offers.unshift(d.offer);
+      }
+      resetOfferForm(); renderPreview();
     } catch (e) { notify(e.message, 'Error'); }
-    btn.disabled = false; btn.textContent = 'Add offer';
+    btn.disabled = false; btn.textContent = label;
+    if (S.editId == null) btn.textContent = 'Add offer';
   }
   async function removeOffer(id) {
     try {
