@@ -151,6 +151,16 @@ const OrderSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Visitor feedback is unverified. Never label it as a verified purchase.
+const ReviewSchema = new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  name: { type: String, required: true, maxlength: 60 },
+  emailHash: { type: String, required: true, select: false },
+  rating: { type: Number, min: 1, max: 5, required: true },
+  comment: { type: String, maxlength: 600, default: '' },
+  createdAt: { type: Date, default: Date.now }
+});
+ReviewSchema.index({ sellerId: 1, emailHash: 1 }, { unique: true });
 const ImageSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, index: true },
   contentType: String,
@@ -162,6 +172,7 @@ const User = mongoose.model('User', UserSchema);
 const Image = mongoose.model('Image', ImageSchema);
 const Offer = mongoose.model('Offer', OfferSchema);
 const Order = mongoose.model('Order', OrderSchema);
+const Review = mongoose.model('Review', ReviewSchema);
 
 // ---------- Themes and fonts (shared look with the builder) ----------
 // a/b = gradient colors, ink = readable accent on white, on = text color on the gradient
@@ -891,35 +902,19 @@ function searchDescription(title, items) {
   return `${String(title).trim()}. ${sentence.replace(/[.!?\s]+$/, '')}.`.slice(0, 450);
 }
 
-// Draft descriptions from owner-provided facts. Google is optional and never overrides the owner's details.
-function cleanOwnerFacts(value, max = 800) {
-  return String(value || '').replace(/<[^>]*>/g, ' ').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0,max);
-}
-function uniqueProductDraft(title, details, existing) {
-  const product = cleanOwnerFacts(title,120);
-  const facts = cleanOwnerFacts(details,700);
-  const current = cleanOwnerFacts(existing,500);
-  if (facts) {
-    const chunks = facts.split(/(?<=[.!?])\s+|[;•]+/).map(s=>s.trim().replace(/[.!?]+$/,'')).filter(Boolean).slice(0,4);
-    const txt=chunks.join('. ');
-    return (product + ' — ' + txt + (/[.!?]$/.test(txt)?'':'.')).slice(0,500);
-  }
-  if (current && !/^Professional\b.*Quality work, fair prices and reliable service\.?$/i.test(current)) return current;
-  return null;
-}
 app.post('/api/ai/product-description', authenticateToken, async (req, res) => {
-  const b=req.body || {};
-  const query=cleanOwnerFacts(b.query,120);
-  if(query.length<3)return res.status(400).json({message:'Enter a product name (at least 3 characters).'});
-  const ownDraft=uniqueProductDraft(query,b.details,b.existingDescription);
-  if(ownDraft)return res.json({description:ownDraft,source:'Your product details',message:'Draft based on the information you provided. Check it before publishing.'});
+  const query = String((req.body && req.body.query) || '').trim().slice(0, 120);
+  if (query.length < 3) return res.status(400).json({ message: 'Enter a product name (at least 3 characters).' });
   try {
-    const results=await googleResults(query,'Bulgaria');
-    if(results===null)return res.json({description:'',message:'Add a few facts about this product to generate its description. Google search is not configured.'});
-    const description=searchDescription(query,results);
-    if(!description)return res.json({description:'',message:'Add details such as condition, materials, size or what is included. No reliable Google text was found.'});
-    return res.json({description,source:'Google search snippets',message:'Search-based draft. Verify all specifications before publishing.'});
-  }catch(err){console.error('Product description search failed:',err.message);return res.json({description:'',message:'Google is temporarily unavailable. Enter product details and try again.'});}
+    const results = await googleResults(query, 'Bulgaria');
+    if (results === null) return res.status(503).json({ message: 'Google search is not configured on the server. Set SERPAPI_KEY or GOOGLE_API_KEY and GOOGLE_CX.' });
+    const description = searchDescription(query, results);
+    if (!description) return res.json({ description: '', message: 'Not enough reliable information found for this product. Please write the description yourself.' });
+    return res.json({ description, source: 'Google search snippets', message: 'Draft from search results. Review the details before publishing.' });
+  } catch (err) {
+    console.error('Product description search failed:', err.message);
+    return res.status(502).json({ message: 'Could not fetch Google results right now. Please try again.' });
+  }
 });
 
 app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
@@ -1956,28 +1951,7 @@ function pageShell(user, { title, desc, body, cls }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}
-@media(max-width:700px){
- html,body{width:100%;max-width:100%;overflow-x:clip}
- .bar{gap:8px;flex-wrap:wrap;min-height:64px;height:auto}
- .bar nav{gap:6px;display:flex;flex-wrap:wrap;justify-content:flex-end;min-width:0}
- .bar nav a{padding:8px 11px;font-size:.8rem;white-space:nowrap}
- .shop{padding:86px 16px 20px}.shop-in{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;min-height:auto}
- .shop h1{font-size:clamp(2.25rem,11vw,4rem);line-height:1.08;overflow-wrap:anywhere}
- .pics{max-width:360px;margin:0 auto}
- .wrap,.shop,.detail,.about{max-width:100%;min-width:0}
- .detail>* ,.about>*{min-width:0}
- .actions{display:flex;gap:9px;flex-wrap:wrap}
- .actions a,.actions button{max-width:100%}
- .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
- .grid>*{min-width:0}
- .card{min-width:0;overflow:hidden}
- .card h3,.card p{overflow-wrap:anywhere}
- .mcomposer{gap:8px;padding:10px}
- .mcomposer textarea{font-size:16px;min-width:0}
-}
-@media(max-width:380px){.grid{grid-template-columns:minmax(0,1fr)}.bar nav a{font-size:.75rem;padding:7px 8px}}
-</style></head><body class="${cls || ''}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+<style>${siteCss(t, f)}</style></head><body class="${cls || ''}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${body}
 <script>${SITE_JS}</script>
 </body></html>`;
@@ -2012,6 +1986,23 @@ function offerCard(user, o, i) {
 </a>`;
 }
 
+
+function renderReviewsPage(user) {
+  const s=esc(user.slug);
+  const body=`${siteBar(user,'reviews')}<main class="wrap" style="padding-top:48px;max-width:920px">
+  <a class="crumb" href="/site/${s}">&larr; Back to website</a>
+  <section class="review-hero"><div><small>COMMUNITY FEEDBACK</small><h1>Customer reviews</h1><p>Read what visitors say about ${esc(user.siteName)}.</p></div><div id="reviewScore" class="review-score">—</div></section>
+  <div class="review-layout"><section class="review-panel"><h2>Share your experience</h2><p class="review-note">Feedback is submitted by visitors and is not purchase-verified.</p>
+  <form id="reviewForm"><label>Your name<input name="name" autocomplete="name" maxlength="60" required minlength="2" placeholder="Your name"></label><label>Your email <small>(not published)</small><input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><label>Rating<select name="rating" required><option value="5">★★★★★ · Excellent</option><option value="4">★★★★☆ · Good</option><option value="3">★★★☆☆ · Okay</option><option value="2">★★☆☆☆ · Fair</option><option value="1">★☆☆☆☆ · Poor</option></select></label><label>Comment<textarea name="comment" rows="4" maxlength="600" placeholder="Tell others about your experience..."></textarea></label><button class="btn" type="submit">Post review</button><p id="reviewStatus" role="status"></p></form></section>
+  <section class="review-panel"><h2>Visitor feedback</h2><div id="reviewList" aria-live="polite">Loading reviews…</div></section></div>
+  </main><footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}">GoldOffer Studio</a></span></footer>
+  <style>
+  .review-hero{display:flex;gap:20px;align-items:center;justify-content:space-between;margin:24px 0 32px;padding:30px;border:1px solid #e4e5e8;border-radius:24px;background:#fafafa;color:#15191f}.review-hero h1{font-size:clamp(30px,5vw,48px);margin:8px 0}.review-hero p{color:#636975}.review-hero small{font-weight:800;letter-spacing:.12em;color:#9a6800}.review-score{font-size:clamp(30px,5vw,46px);font-weight:800;color:#a87000}.review-layout{display:grid;grid-template-columns: minmax(0,330px) minmax(0,1fr);gap:22px}.review-panel{padding:26px;border:1px solid #e4e5e8;border-radius:22px;background:#fff;color:#15191f;min-width:0}.review-panel h2{font-size:22px;margin-bottom:12px}.review-note{font-size:13px;color:#707783;margin-bottom:15px}.review-panel label{display:block;font-size:13px;font-weight:700;margin:12px 0}.review-panel input,.review-panel textarea,.review-panel select{box-sizing:border-box;display:block;width:100%;margin-top:7px;padding:12px;border:1px solid #d9dde3;border-radius:11px;color:#15191f;background:#f8f9fa;font:inherit}.review-panel input:focus,.review-panel textarea:focus,.review-panel select:focus{outline:2px solid #f0bf38}.review-card{padding:17px 0;border-bottom:1px solid #e8e9ed;overflow-wrap:anywhere}.review-card:last-child{border:0}.review-card strong{display:block}.review-card small{color:#7b8089}.review-stars{color:#c38b04;letter-spacing:2px;font-size:17px}.review-card p{white-space:pre-wrap;margin-top:8px}.review-panel .btn{width:100%;border:0;border-radius:12px;background:linear-gradient(120deg,#ffdf00,#ff9900);color:#15100b;font-weight:800;padding:13px;cursor:pointer}#reviewStatus{font-size:13px;margin-top:10px}@media(max-width:700px){.review-layout{grid-template-columns:minmax(0,1fr)}.review-panel{padding:18px}.review-hero{padding:20px}.review-score{white-space:nowrap}}
+  </style>
+  <script>(function(){const s=${JSON.stringify(user.slug)}, list=document.getElementById('reviewList'),score=document.getElementById('reviewScore'),form=document.getElementById('reviewForm'),status=document.getElementById('reviewStatus');function txt(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}async function load(){try{const r=await fetch('/api/storefront/'+encodeURIComponent(s)+'/reviews');const d=await r.json();score.textContent=d.count?d.average.toFixed(1)+' ★':'New';list.innerHTML=d.reviews.length?d.reviews.map(v=>'<div class="review-card"><strong>'+txt(v.name)+'</strong><span class="review-stars">'+ '★'.repeat(v.rating)+'☆'.repeat(5-v.rating)+'</span> <small>'+new Date(v.createdAt).toLocaleDateString('en-GB')+'</small><p>'+txt(v.comment)+'</p></div>').join(''):'No reviews yet.';}catch(e){list.textContent='Could not load reviews.'}}form.addEventListener('submit',async(e)=>{e.preventDefault();status.textContent='Sending...';const data=Object.fromEntries(new FormData(form));data.rating=Number(data.rating);try{const r=await fetch('/api/storefront/'+encodeURIComponent(s)+'/reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const d=await r.json();if(!r.ok)throw Error(d.message||'Could not submit');status.textContent=d.message;form.reset();load();}catch(err){status.textContent=err.message}});load()})()</script>`;
+  return pageShell(user,{title:`Reviews - ${user.siteName}`,desc:`Community feedback on ${user.siteName}`,body,cls:'reviewpage'});
+}
+
 function renderSite(user, offers, sent) {
   const withPics = offers.slice(0, 3);
   const meta = [user.categoryLabel || user.category, user.city].filter(Boolean).map(esc);
@@ -2040,9 +2031,12 @@ function renderSite(user, offers, sent) {
   ${tiles ? `<div class="pics${withPics.length === 1 ? ' one' : ''}">${tiles}</div>` : ''}
 </div></section>
 <main class="wrap top" id="offers">
-<div class="sec-head"><h2>Offers</h2><span>${offers.length} available</span></div>
+<div class="sec-head"><h2>Offers</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/reviews" style="color:inherit;text-decoration:underline">Customer reviews</a></span></div>
+<div class="go-shop-search"><input id="goOfferSearch" type="search" autocomplete="off" aria-label="Search offers" placeholder="Search offers by name or description..."><span id="goFound">${offers.length} offers</span></div>
 ${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
-<div class="grid">${cards}</div></main>
+<div class="grid" id="goOfferGrid">${cards}</div><p id="goNoResults" style="display:none;padding:28px 0;color:#707781">No matching offers.</p></main>
+<style>.go-shop-search{display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap;margin:18px 0 24px}.go-shop-search input{width:min(100%,430px);border-radius:14px;padding:13px 17px;background:#fff;color:#15191f;border:1px solid #dce0e4;font:inherit;box-shadow:0 3px 18px rgba(0,0,0,.035)}.go-shop-search input:focus{outline:2px solid #f7c42f}.go-shop-search span{font-size:13px;color:#707781}@media(max-width:600px){.go-shop-search input{width:100%}}</style>
+<script>(function(){var inp=document.getElementById('goOfferSearch'),grid=document.getElementById('goOfferGrid'),count=document.getElementById('goFound'),empty=document.getElementById('goNoResults');if(!inp||!grid)return;var items=[].slice.call(grid.querySelectorAll('.card'));inp.addEventListener('input',function(){var q=inp.value.trim().toLocaleLowerCase(),n=0;items.forEach(function(el){var show=el.textContent.toLocaleLowerCase().includes(q);el.style.display=show?'':'none';if(show)n++;});count.textContent=n+' offers';empty.style.display=n?'none':'block';});})();</script>
 <section class="wrap findus" id="about" style="padding-top:60px"><div class="sec-head"><h2>Find us</h2></div>${aboutBlock(user)}</section>
 <footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>`;
   return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body });
@@ -2124,7 +2118,7 @@ function siteBar(user, kind) {
   const first = kind === 'home'
     ? '<a class="hide-m" href="#offers">Offers</a><a class="hide-m" href="#about">About</a>'
     : `<a class="hide-m" href="/site/${s}#offers">All offers</a>`;
-  return `<header class="bar"><b>${esc(user.siteName)}</b><nav>${first}<a class="navi" href="/site/${s}/favorites" aria-label="Saved offers">${HEART_PATH}<span class="lab">Saved</span><span class="nbadge" id="favCount"></span></a><a class="navi" href="/site/${s}/messages" aria-label="Messages">${MSG_SVG}<span class="lab">Messages</span><span class="nbadge" id="msgBadge"></span></a></nav></header>`;
+  return `<header class="bar"><b>${esc(user.siteName)}</b><nav>${first}<a class="hide-m" href="/site/${s}/reviews">Reviews</a><a class="navi" href="/site/${s}/favorites" aria-label="Saved offers">${HEART_PATH}<span class="lab">Saved</span><span class="nbadge" id="favCount"></span></a><a class="navi" href="/site/${s}/messages" aria-label="Messages">${MSG_SVG}<span class="lab">Messages</span><span class="nbadge" id="msgBadge"></span></a></nav></header>`;
 }
 
 // ---------- Messages page (opens from the Messages button): list of chats + the open chat, photos/files and voice calls ----------
@@ -2570,6 +2564,47 @@ const SITE_CSP = [
   "base-uri 'self'"
 ].join('; ');
 
+
+// Public storefront feedback. No purchase verification is implied.
+app.get('/api/storefront/:slug/reviews', async (req, res) => {
+  try {
+    const seller = await User.findOne({ slug: req.params.slug, published: true }).select('_id');
+    if (!seller) return res.status(404).json({ message: 'Website not found' });
+    const [reviews, stats] = await Promise.all([
+      Review.find({ sellerId: seller._id }).select('name rating comment createdAt').sort({createdAt:-1}).limit(60).lean(),
+      Review.aggregate([{ $match:{sellerId:seller._id} }, {$group:{_id:null, count:{$sum:1}, avg:{$avg:'$rating'}}}])
+    ]);
+    res.json({ reviews, count:stats[0]?.count||0, average:Math.round((stats[0]?.avg||0)*10)/10, verified:false });
+  } catch(e) { res.status(500).json({message:'Cannot load reviews'}); }
+});
+app.post('/api/storefront/:slug/reviews', publicLimiter, async (req, res) => {
+  try {
+    const seller = await User.findOne({ slug:req.params.slug, published:true }).select('_id');
+    if (!seller) return res.status(404).json({message:'Website not found'});
+    const {name,email,comment,rating} = req.body||{};
+    const n=String(name||'').trim(), mail=String(email||'').trim().toLowerCase(), c=String(comment||'').trim();
+    const r=Number(rating);
+    if(n.length<2||n.length>60||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)||c.length>600||!Number.isInteger(r)||r<1||r>5)
+      return res.status(400).json({message:'Check your name, email, rating and comment.'});
+    const emailHash=crypto.createHash('sha256').update(String(seller._id)+':'+mail).digest('hex');
+    await Review.create({sellerId:seller._id,name:n,emailHash,rating:r,comment:c});
+    res.status(201).json({message:'Thanks for sharing your feedback.'});
+  } catch(e) {
+    if(e.code===11000)return res.status(409).json({message:'You have already reviewed this website.'});
+    res.status(500).json({message:'Unable to save review'});
+  }
+});
+app.get('/api/my/reviews', authenticateToken, async(req,res)=>{
+  try {
+    const id=new mongoose.Types.ObjectId(req.user.id);
+    const [reviews,stats]=await Promise.all([
+      Review.find({sellerId:id}).select('name rating comment createdAt').sort({createdAt:-1}).limit(100).lean(),
+      Review.aggregate([{$match:{sellerId:id}},{$group:{_id:null,count:{$sum:1},avg:{$avg:'$rating'}}}])
+    ]);
+    res.json({reviews,count:stats[0]?.count||0,average:Math.round((stats[0]?.avg||0)*10)/10});
+  }catch(e){res.status(500).json({message:'Unable to load feedback'});}
+});
+
 app.get('/site/:slug', async (req, res) => {
   try {
     const user = await User.findOne({ slug: req.params.slug });
@@ -2580,6 +2615,11 @@ app.get('/site/:slug', async (req, res) => {
   } catch (err) {
     res.status(500).send('Server error');
   }
+});
+
+app.get('/site/:slug/reviews', async(req,res)=>{
+  try { const seller=await User.findOne({slug:req.params.slug,published:true});if(!seller)return res.status(404).send('Site not found');res.setHeader('Content-Security-Policy',SITE_CSP);res.send(renderReviewsPage(seller));}
+  catch(e){res.status(500).send('Server error');}
 });
 
 app.get('/site/:slug/messages', async (req, res) => {
@@ -2689,7 +2729,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/privacy', '/terms', '/reset'];
+const PAGE_ROUTES = ['/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
@@ -2712,6 +2752,7 @@ const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"
 <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd700"/><stop offset="1" stop-color="#ff8c00"/></linearGradient></defs>
 <rect width="64" height="64" rx="14" fill="url(#g)"/>
 <text x="32" y="46" font-size="38" font-weight="800" text-anchor="middle" fill="#1a1a1a" font-family="Arial, Helvetica, sans-serif">G</text></svg>`;
+app.get('/manifest.webmanifest',(req,res)=>res.type('application/manifest+json').json({name:'GoldOffer Studio',short_name:'GoldOffer',start_url:'/',scope:'/',display:'standalone',background_color:'#05070b',theme_color:'#ffcf00',icons:[{src:'/favicon.svg',sizes:'any',type:'image/svg+xml',purpose:'any'}]}));
 app.get('/favicon.svg', (req, res) => {
   res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(FAVICON_SVG);
 });

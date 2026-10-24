@@ -10,6 +10,7 @@
   <meta property="og:title" content="GoldOffer Studio - Websites for local businesses">
   <meta property="og:description" content="A website your customers will trust. Free to start, live in minutes.">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&family=Comfortaa:wght@600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@400;600;800&family=Oswald:wght@500;700&family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
@@ -631,38 +632,10 @@
     .cbtn:disabled { opacity: .5; }
     @keyframes callpulse { 0% { box-shadow: 0 0 0 0 rgba(255,190,30,.5); } 70% { box-shadow: 0 0 0 28px rgba(255,190,30,0); } 100% { box-shadow: 0 0 0 0 rgba(255,190,30,0); } }
   
-/* GoldOffer Studio: responsive workspace + phone preview */
-.pv-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;flex-wrap:wrap}
-.pv-toolbar strong,.pv-toolbar span{display:block}.pv-toolbar strong{font-size:.93rem}.pv-toolbar span{font-size:.72rem;color:var(--mute);margin-top:2px}
-.pv-modes{display:flex;background:#080c12;border:1px solid var(--line2);border-radius:12px;padding:4px;gap:3px}
-.pv-modes button{border:0;background:transparent;border-radius:9px;padding:8px 11px;color:var(--soft);font-weight:600;font-size:.78rem;cursor:pointer}
-.pv-modes button.active{background:linear-gradient(120deg,#ffdf00,#ff9b00);color:#14110b}
-.pv-device{width:100%;transition:width .3s ease,box-shadow .3s ease;margin:auto;overflow:hidden;border-radius:13px}
-.pv-device.phone-mode{width:min(100%,360px);border:7px solid #292f3a;border-radius:27px;box-shadow:0 18px 45px rgba(0,0,0,.48)}
-.pv-device.phone-mode .screen{min-height:440px;max-height:550px;overflow-y:auto}
-.pv-device.phone-mode .screen .body{display:grid;grid-template-columns:1fr!important}
-.helper-copy{display:block;color:var(--mute);font-size:.79rem;margin-top:6px}
-#v-builder,#v-dashboard,#v-messages{max-width:100vw}
-@media(max-width:760px){
- html,body{max-width:100%;overflow-x:clip}
- .layout,.dash-grid,.inbox,.stats{min-width:0}
- .layout>* ,.dash-grid>* ,.inbox>*{min-width:0}
- .preview{padding:12px;border-radius:18px}
- .pv-toolbar{align-items:flex-start}
- .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px}
- .stat{padding:15px!important;min-width:0}
- .stat .v{font-size:clamp(1.3rem,5vw,2rem)!important;overflow-wrap:anywhere}
- .add-box{padding:16px!important}
- .field input,.field textarea,.field select{min-width:0;width:100%;max-width:100%;font-size:16px}
- .offer-row{flex-wrap:wrap;gap:12px}
- .offer-row .acts{width:100%;justify-content:flex-end}
- .conv-form{display:flex;flex-wrap:wrap;gap:8px}
- .conv-form textarea{flex:1 1 100%;order:-1;min-width:0!important}
- .nav-end{gap:6px}.nav-end .btn,.nav-end .btn-ghost{padding:8px 10px}
- .screen img,.p-item img{max-width:100%}
-}
-@media(max-width:390px){.stats{grid-template-columns:1fr 1fr!important}.pv-modes{width:100%;justify-content:center}.pv-modes button{flex:1}}
-@media(prefers-reduced-motion:reduce){.pv-device{transition:none}}
+/* GoldOffer Studio 2.0: restrained accents and separate review workspace */
+.go-tools{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 25px}.go-tools a{text-decoration:none;padding:10px 15px;border:1px solid rgba(255,255,255,.15);border-radius:999px;color:#e7ebf2;font-size:13px;font-weight:600}.go-tools a:hover{border-color:#ffc400;color:#ffde44}
+.go-eyebrow{letter-spacing:.15em;font-size:11px;color:#f0b92d;font-weight:800}.go-reviews-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:28px}.go-rating-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:20px}.go-rating-summary>div{border-radius:20px;padding:24px;background:#111722;border:1px solid rgba(255,255,255,.1)}.go-rating-summary b{display:block;font-size:clamp(25px,4vw,42px);color:#f5cf3c}.go-rating-summary span{font-size:13px;color:#9ea7b6}.go-review-list{border-radius:20px;background:#10151e;border:1px solid rgba(255,255,255,.1);padding:12px 24px;min-height:110px}.go-review-row{padding:18px 0;border-bottom:1px solid rgba(255,255,255,.09);overflow-wrap:anywhere}.go-review-row:last-child{border-bottom:0}.go-review-row>div{display:flex;gap:14px;justify-content:space-between}.go-review-row p{margin:9px 0;color:#d0d6df;white-space:pre-wrap}.go-review-row small{color:#8490a0}.go-review-stars{color:#ffd11d;letter-spacing:2px}
+@media(max-width:640px){html,body{max-width:100%;overflow-x:clip}.nav-in{padding-left:14px;padding-right:14px;gap:10px}.dash{padding-left:16px!important;padding-right:16px!important}.go-rating-summary>div{padding:16px}.go-review-list{padding:12px 16px}.go-tools{gap:8px}.go-tools a{padding:9px 11px;font-size:12px}.btn,.btn-ghost{max-width:100%}input,textarea,select{font-size:16px} .mx,.mx-side,.mx-main,.mx-pane{min-width:0!important}}
 </style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
@@ -994,12 +967,11 @@
               <div class="field"><label>Title</label><input type="text" id="oTitle" placeholder="e.g. Oil change"></div>
               <div style="display:flex;gap:9px;flex-wrap:wrap">
                 <button class="btn-ghost" id="aiBtn" onclick="lookupPrice()">Check market price</button>
-                <button class="btn-ghost" id="descBtn" onclick="lookupDescription()">✦ Improve description</button>
+                <button class="btn-ghost" id="descBtn" onclick="lookupDescription()">✦ Generate description from Google</button>
               </div>
               <div class="range" id="oRange"></div>
               <div class="field" style="margin-top:12px"><label>Price (EUR)</label><input type="number" id="oPrice" min="0" step="0.01" placeholder="e.g. 25"></div>
-              <div class="field"><label>Product details / what makes it special</label><textarea id="oFacts" maxlength="1000" rows="3" placeholder="Example: homemade butter biscuits, baked fresh, 500g box. Only write facts you know."></textarea><small class="helper-copy">Optional. Your description will use these details, not generic marketing text.</small></div>
-              <div class="field"><label>Short description</label><input type="text" id="oDesc" maxlength="500" placeholder="A unique sentence for this offer"></div>
+              <div class="field"><label>Short description</label><input type="text" id="oDesc" maxlength="500" placeholder="One or two lines shown on the card"></div>
               <div class="field"><label>Full description (optional)</label><textarea id="oLong" maxlength="4000" rows="5" placeholder="Everything a customer should know: what is included, sizes, materials, how it works..."></textarea></div>
               <div class="field"><label>Photos (optional, up to 8)</label><input type="file" id="oImg" accept="image/*" multiple onchange="previewPhotos()">
                 <div id="oExisting" class="thumbs-row"></div>
@@ -1030,14 +1002,11 @@
           </div>
         </div>
 
-        <div class="preview" id="studioPreview">
-          <div class="pv-toolbar"><div><strong>Live design preview</strong><span>See your storefront before publishing</span></div><div class="pv-modes" role="group" aria-label="Preview screen size"><button class="active" id="pvDesktop" type="button" onclick="setPreviewMode('desktop')" aria-pressed="true">▣ Desktop</button><button id="pvPhone" type="button" onclick="setPreviewMode('phone')" aria-pressed="false">▯ Phone</button></div></div>
-          <div class="pv-device" id="pvDevice">
+        <div class="preview">
           <div class="pbar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url" id="pvUrl">your-site</span></div>
           <div class="screen">
             <div class="top"><h3 id="pvName">Your brand</h3><p id="pvCat">Business category</p></div>
             <div class="body" id="pvOffers"></div>
-          </div>
           </div>
         </div>
       </div>
@@ -1177,10 +1146,18 @@
   </div>
 </main>
 
+<!-- =================== WEBSITE REVIEWS =================== -->
+<main class="view" id="v-reviews">
+ <div class="dash" data-nav="dark" style="max-width:1040px">
+  <div class="go-reviews-heading"><div><small class="go-eyebrow">YOUR WEBSITE</small><h1>Customer reviews</h1><p style="color:var(--mute);margin-top:10px">Visitor feedback for your published website. Ratings are not purchase-verified.</p></div><a class="btn-ghost" href="/build" data-link>Manage website</a></div>
+  <div class="go-rating-summary"><div><b id="goRatingAverage">—</b><span>Average rating</span></div><div><b id="goRatingCount">0</b><span>Reviews received</span></div></div>
+  <div id="goReviewList" class="go-review-list">Sign in to view your feedback.</div>
+ </div>
+</main>
 <!-- =================== DASHBOARD =================== -->
 <main class="view" id="v-dashboard">
   <div class="dash" data-nav="dark">
-    <h1>Dashboard</h1>
+    <h1>Dashboard</h1><div class="go-tools"><a href="/reviews" data-link>★ Customer reviews</a><a href="/messages" data-link>Messages</a><a href="/build" data-link>Edit website</a></div>
     <div id="dashGate" class="panel" style="display:none">Please sign up or log in to see your dashboard.</div>
     <div id="dashBody">
       <div class="stats">
@@ -1208,7 +1185,7 @@
       <p>Websites for local businesses. Free to start.</p>
     </div>
     <div><h4>Product</h4><a href="/how-it-works" data-link>How it works</a><a href="/features" data-link>Features</a><a href="/pricing" data-link>Pricing</a><a href="/build" data-link>Website builder</a></div>
-    <div><h4>Explore</h4><a href="/professions" data-link>Professions</a><a href="/dashboard" data-link>Dashboard</a></div>
+    <div><h4>Explore</h4><a href="/professions" data-link>Professions</a><a href="/dashboard" data-link>Dashboard</a><a href="/reviews" data-link>Reviews</a></div>
     <div><h4>Company</h4><a href="/about" data-link>About</a><a href="/contact" data-link>Contact</a><a href="/privacy" data-link>Privacy Policy</a><a href="/terms" data-link>Terms of use</a><a href="mailto:rayankatsarov2013@gmail.com">rayankatsarov2013@gmail.com</a><a href="tel:+359896255898">0896 255 898</a></div>
   </div>
   <div class="foot-end">&copy; 2026 GoldOffer Studio. Founded by Rayan Katsarov.</div>
@@ -1371,13 +1348,33 @@
     return data;
   }
 
+
+  async function loadMyReviews(){
+    const root=document.getElementById('goReviewList');if(!root)return;
+    if(!S.token){root.textContent='Sign in to see reviews for your website.';return;}
+    try{
+      const d=await api('/api/my/reviews');
+      document.getElementById('goRatingAverage').textContent=d.count?d.average.toFixed(1)+' ★':'—';
+      document.getElementById('goRatingCount').textContent=String(d.count);
+      root.replaceChildren();
+      if(!d.reviews.length){root.textContent='No reviews yet. Share your published website to collect feedback.';return;}
+      for(const r of d.reviews){
+        const card=document.createElement('article');card.className='go-review-row';
+        const top=document.createElement('div');const title=document.createElement('strong');title.textContent=r.name;const star=document.createElement('span');star.textContent='★'.repeat(r.rating)+'☆'.repeat(5-r.rating);star.className='go-review-stars';top.append(title,star);
+        const body=document.createElement('p');body.textContent=r.comment||'Rating only';
+        const date=document.createElement('small');date.textContent=new Date(r.createdAt).toLocaleDateString('en-GB');
+        card.append(top,body,date);root.append(card);
+      }
+    }catch(e){root.textContent=e.message||'Could not load reviews';}
+  }
+
   // ---------- Router: every route is its own page ----------
-  const ROUTES = { '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/messages': 'messages', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset' };
+  const ROUTES = { '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/messages': 'messages', '/reviews': 'reviews', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset' };
   const TITLES = {
     privacy: 'Privacy Policy - GoldOffer Studio', terms: 'Terms of use - GoldOffer Studio', reset: 'New password - GoldOffer Studio',
     home: 'GoldOffer Studio - Websites for local businesses', how: 'How it works - GoldOffer Studio', features: 'Features - GoldOffer Studio',
     professions: 'Professions - GoldOffer Studio', pricing: 'Pricing - GoldOffer Studio', about: 'About - GoldOffer Studio',
-    contact: 'Contact - GoldOffer Studio', build: 'Website builder - GoldOffer Studio', dashboard: 'Dashboard - GoldOffer Studio', messages: 'Messages - GoldOffer Studio'
+    contact: 'Contact - GoldOffer Studio', build: 'Website builder - GoldOffer Studio', dashboard: 'Dashboard - GoldOffer Studio', messages: 'Messages - GoldOffer Studio', reviews: 'Customer reviews - GoldOffer Studio'
   };
   let currentPage = 'home';
 
@@ -1395,6 +1392,7 @@
     document.querySelectorAll('.menu a.ml').forEach(a => a.classList.toggle('active', a.getAttribute('href') === finalPath));
     if (name === 'dashboard') loadDashboard();
     if (name === 'messages') openMessagesPage();
+    if (name === 'reviews') loadMyReviews();
     if (name === 'reset') prepareReset();
     if (name === 'professions') { renderMarquee(); renderGallery(); }
     window.dispatchEvent(new Event('resize'));
@@ -1931,13 +1929,13 @@
     const btn = $('descBtn');
     btn.disabled = true; btn.textContent = 'Searching Google...';
     try {
-      const d = await api('/api/ai/product-description', { method: 'POST', body: JSON.stringify({ query: title, details: $('oFacts').value.trim(), existingDescription: $('oDesc').value.trim(), category: S.category }) });
+      const d = await api('/api/ai/product-description', { method: 'POST', body: JSON.stringify({ query: title }) });
       if (d.description) {
         $('oDesc').value = d.description;
-        notify('A tailored draft is ready. Review it before publishing.', 'Description');
-      } else notify(d.message || 'Add more product details for a better description.', 'Description');
+        notify('Description generated. Please review it before publishing.', 'Description');
+      } else notify(d.message || 'No suitable description found.', 'Description');
     } catch (e) { notify(e.message, 'Description'); }
-    finally { btn.disabled = false; btn.textContent = '✦ Improve description'; }
+    finally { btn.disabled = false; btn.textContent = '✦ Generate description from Google'; }
   }
   // ---- Add a new offer, or save changes when an existing one is being edited ----
   function renderExisting() {
@@ -2029,16 +2027,6 @@
   }
 
   // ---------- Preview (real data only) ----------
-  function setPreviewMode(mode) {
-    const phone = mode === 'phone';
-    const device = $('pvDevice');
-    if (!device) return;
-    device.classList.toggle('phone-mode', phone);
-    $('pvPhone').classList.toggle('active', phone);
-    $('pvDesktop').classList.toggle('active', !phone);
-    $('pvPhone').setAttribute('aria-pressed', String(phone));
-    $('pvDesktop').setAttribute('aria-pressed', String(!phone));
-  }
   function renderPreview() {
     const name = $('siteName').value.trim() || (S.user && S.user.siteName) || '';
     $('pvName').textContent = name || 'Your brand';
