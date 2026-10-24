@@ -391,33 +391,7 @@
     .thumb .x:hover { background: #b91c1c; }
     .thumbs-row { display: flex; flex-wrap: wrap; gap: 10px; }
     .field textarea { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line2); background: var(--raise); color: inherit; font: inherit; resize: vertical; }
-    .inbox { display: grid; grid-template-columns: 300px 1fr; gap: 16px; min-height: 360px; }
-    .conv-list { border: 1px solid var(--line2); border-radius: 16px; overflow: auto; max-height: 460px; background: rgba(255,255,255,.02); }
-    .conv-empty { color: var(--mute); padding: 18px; font-size: .9rem; }
-    .conv-item { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid rgba(255,255,255,.08); color: var(--paper); padding: 15px 16px; cursor: pointer; font: inherit; transition: background .18s ease, border-color .18s ease; }
-    .conv-item:hover, .conv-item.on { background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border-color: rgba(195,162,112,.26); }
-    .conv-item b { display: flex; justify-content: space-between; gap: 8px; font-size: .98rem; color: var(--paper); font-weight: 700; }
-    .conv-item b span { color: var(--paper) !important; font-size: .98rem !important; margin: 0 !important; }
-    .conv-item span { display: block; color: var(--mute); font-size: .82rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .conv-dot { background: #ff3d7f; color: #fff; border-radius: 99px; font-size: .7rem; padding: 1px 8px; }
-    .conv-view { display: flex; flex-direction: column; border: 1px solid var(--line2); border-radius: 16px; padding: 14px; min-width: 0; background: rgba(255,255,255,.02); }
-    .conv-head { font-weight: 600; padding-bottom: 10px; border-bottom: 1px solid var(--line2); margin-bottom: 10px; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
-    .conv-head small { color: var(--mute); font-weight: 400; }
-    .conv-msgs { flex: 1; overflow-y: auto; max-height: 320px; display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
-    .cbub { max-width: 82%; padding: 9px 13px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; font-size: .93rem; }
-    .cbub small { display: block; margin-top: 3px; font-size: .68rem; opacity: .65; }
-    .cbub.cust { align-self: flex-start; background: var(--raise); border: 1px solid var(--line2); }
-    .cbub.me { align-self: flex-end; background: linear-gradient(135deg, var(--iris), var(--lagoon)); color: #07090d; }
-    .conv-form { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding: 10px; border-radius: 18px; border: 1px solid rgba(195,162,112,.2); background: linear-gradient(180deg, rgba(18,23,34,.98), rgba(13,17,25,.96)); box-shadow: inset 0 1px 0 rgba(255,255,255,.03); }
-    .conv-form textarea { flex: 1; min-height: 54px; padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); color: var(--paper); font: inherit; resize: none; outline: none; }
-    .conv-form textarea::placeholder { color: #9ea7b8; }
-    .conv-form textarea:focus { border-color: rgba(195,162,112,.6); box-shadow: 0 0 0 3px rgba(195,162,112,.12); }
-    .conv-form input[type=file] { display: none; }
-    .conv-attach { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 94px; height: 54px; padding: 0 14px; border-radius: 14px; border: 1px solid rgba(195,162,112,.35); background: rgba(195,162,112,.08); color: #e8d2a4; font-weight: 600; cursor: pointer; transition: background .18s ease, border-color .18s ease, transform .18s ease; }
-    .conv-attach:hover { background: rgba(195,162,112,.14); border-color: rgba(195,162,112,.55); transform: translateY(-1px); }
-    .conv-send { flex-shrink: 0; min-width: 102px; height: 54px; border-radius: 14px; }
-    .badge-msg { background: #ff3d7f; color: #fff; border-radius: 99px; font-size: .7rem; padding: 1px 7px; margin-left: 6px; }
-    @media (max-width: 760px) { .inbox { grid-template-columns: 1fr; } .conv-form { flex-wrap: wrap; align-items: stretch; } .conv-attach { min-width: 100px; height: 48px; } .conv-form textarea { width: 100%; min-height: 88px; order: 3; } .conv-send { min-width: 96px; height: 48px; } }
+
     .acts { display: flex; gap: 8px; flex-shrink: 0; }
     .editing { outline: 2px solid var(--iris); border-radius: 12px; }
     .sources { margin-top: 8px; font-size: .8rem; color: var(--mute); }
@@ -440,7 +414,7 @@
 
     /* footer */
     .foot { border-top: 1px solid var(--line); background: var(--ink); }
-    body[data-page=dashboard] .foot { display: none; }
+    body[data-page=dashboard] .foot, body[data-page=messages] .foot { display: none; }
     .foot-in { max-width: 1240px; margin: 0 auto; padding: 64px 28px 40px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; }
     .foot .brand { margin-bottom: 14px; }
     .foot p { color: var(--mute); font-size: .92rem; max-width: 34ch; }
@@ -568,10 +542,94 @@
       .toast { opacity: 1; }
       html { scroll-behavior: auto; }
     }
-  .seller-call-btn{background:linear-gradient(120deg,#ffd700,#ff8c00);color:#14110b;border:1px solid #ffbb26;border-radius:9px;padding:8px 12px;cursor:pointer;font:600 13px Inter,sans-serif;box-shadow:none}
-  .seller-call-btn:hover{filter:brightness(1.08)}
-  #convForm .btn{background:linear-gradient(120deg,#ffd700,#ff8c00)!important;color:#14110b!important;box-shadow:none!important}
-  @media(max-width:700px){#convHead{flex-wrap:wrap;gap:8px}.seller-call-btn{font-size:12px;padding:8px}}
+
+    @media (max-width: 600px) { .nav-end { gap: 6px; } .nav-end .btn-ghost, .nav-end .btn { padding: 7px 10px; font-size: .78rem; } }
+    /* ---------- Messages page ---------- */
+    body[data-page=messages] .foot { display: none; }
+    .mpg { max-width: 1240px; margin: 0 auto; padding: calc(var(--nav-h) + 22px) 22px 22px; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+    .mx { flex: 1; min-height: 0; display: grid; grid-template-columns: 340px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 20px; background: var(--panel); overflow: hidden; }
+    .mx-side { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--line); }
+    .mx-sh { display: flex; align-items: center; gap: 10px; padding: 18px 18px 14px; border-bottom: 1px solid var(--line); }
+    .mx-sh h1 { font-size: 1.4rem; margin: 0; letter-spacing: -.01em; }
+    .mx-list { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+    .conv-empty { color: var(--mute); padding: 22px 18px; font-size: .92rem; line-height: 1.5; }
+    .conv-item { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--line); color: var(--paper); padding: 13px 16px; cursor: pointer; font: inherit; }
+    .conv-item:hover { background: rgba(255,255,255,.03); }
+    .conv-item.on { background: rgba(255,200,40,.1); }
+    .mx-av { width: 46px; height: 46px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #17120a; background: linear-gradient(135deg, #ffd700, #ff8c00); }
+    .mx-mid { flex: 1; min-width: 0; }
+    .mx-mid b { display: block; font-size: .96rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mx-mid small { display: block; color: var(--mute); font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mx-mid span { display: block; color: var(--soft); font-size: .86rem; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mx-end { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; color: var(--mute); font-size: .72rem; flex: none; }
+    .conv-dot { background: #ff3d7f; color: #fff; border-radius: 99px; font-size: .7rem; font-style: normal; font-weight: 700; min-width: 19px; height: 19px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; }
+    .mx-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    .mx-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; color: var(--mute); padding: 30px; }
+    .mx-empty i { width: 84px; height: 84px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,200,40,.12); color: #ffc61a; }
+    .mx-empty svg, .mx-ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .mx-empty i svg { width: 38px; height: 38px; }
+    .mx-pane { flex: 1; display: none; flex-direction: column; min-height: 0; }
+    .mx-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    .mx-head .mx-av { width: 42px; height: 42px; }
+    .mx-title { flex: 1; min-width: 0; }
+    .mx-title b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mx-title small { color: var(--mute); font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .mx-acts { display: flex; gap: 14px; align-items: center; flex: none; }
+    .mx-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line2); background: transparent; color: var(--paper); font: 600 .9rem inherit; font-family: inherit; cursor: pointer; transition: border-color .2s, background .2s; }
+    .mx-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .mx-btn:hover { border-color: #ffc61a; }
+    .mx-btn.call { background: linear-gradient(120deg, #ffd700, #ff8c00); color: #17120a; border: 0; }
+    .mx-btn.del:hover { border-color: var(--danger); color: var(--danger); }
+    .mx-back { display: none; }
+    .mx-ico { width: 42px; height: 42px; padding: 0; flex: none; }
+    .mx-offer { padding: 9px 16px; border-bottom: 1px solid var(--line); color: var(--soft); font-size: .86rem; background: rgba(255,255,255,.02); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mx-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+    .dsep { align-self: center; color: var(--mute); font-size: .72rem; margin: 8px 0 2px; padding: 3px 10px; border-radius: 99px; background: rgba(255,255,255,.05); }
+    .cbub { max-width: min(78%, 520px); padding: 9px 13px; border-radius: 16px; white-space: pre-wrap; word-break: break-word; font-size: .94rem; }
+    .cbub small { display: block; margin-top: 3px; font-size: .68rem; opacity: .6; }
+    .cbub.cust { align-self: flex-start; background: var(--raise); border: 1px solid var(--line2); border-bottom-left-radius: 5px; }
+    .cbub.me { align-self: flex-end; background: linear-gradient(135deg, #ffd700, #ff8c00); color: #17120a; border-bottom-right-radius: 5px; }
+    .cbub.sys { align-self: center; max-width: 90%; background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--soft); border-radius: 99px; padding: 6px 14px; font-size: .82rem; text-align: center; }
+    .cbub.sys small { display: inline; margin-left: 8px; }
+    .cbub .att-img { display: block; max-width: 100%; max-height: 280px; border-radius: 12px; margin-bottom: 6px; }
+    .cbub .att-file { display: flex; gap: 10px; align-items: center; text-decoration: none; color: inherit; padding: 8px 10px; margin-bottom: 6px; border-radius: 12px; background: rgba(0,0,0,.18); white-space: normal; }
+    .cbub .att-file svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .cbub .att-file small { margin: 0; }
+    .mx-hint { padding: 6px 16px; color: var(--mute); font-size: .8rem; border-top: 1px solid var(--line); display: none; }
+    .conv-form { display: flex; gap: 8px; align-items: flex-end; padding: 10px 12px; border-top: 1px solid var(--line); }
+    .conv-form textarea { flex: 1; min-width: 0; resize: none; min-height: 42px; max-height: 130px; padding: 11px 16px; border-radius: 21px; border: 1px solid var(--line2); background: rgba(255,255,255,.05); color: var(--paper); font: inherit; font-size: .95rem; line-height: 1.35; }
+    .conv-form textarea::placeholder { color: #9ea7b8; }
+    .conv-form textarea:focus { outline: 0; border-color: #ffc61a; box-shadow: 0 0 0 3px rgba(255,200,40,.14); }
+    .mx-send { background: linear-gradient(120deg, #ffd700, #ff8c00); color: #17120a; border: 0; }
+    .mx-send:hover { filter: brightness(1.08); }
+    @media (max-width: 860px) {
+      .mpg { padding: calc(var(--nav-h) + 6px) 0 0; }
+      .mx { grid-template-columns: minmax(0, 1fr); border: 0; border-radius: 0; }
+      .mx[data-view=list] .mx-main { display: none; }
+      .mx[data-view=thread] .mx-side { display: none; }
+      .mx-side { border-right: 0; }
+      .mx-back { display: inline-flex; }
+      .mx-btn .lbl { display: none; }
+      .mx-btn.call, .mx-btn.del { width: 42px; padding: 0; }
+      .mx-acts { gap: 10px; }
+      .cbub { max-width: 86%; }
+    }
+    /* call screen (works on every page while you are logged in) */
+    .callov { position: fixed; inset: 0; z-index: 300; background: rgba(5,7,11,.93); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); display: none; align-items: center; justify-content: center; padding: 24px; }
+    .callov.open { display: flex; }
+    .callbox { text-align: center; width: min(360px, 100%); }
+    .callav { width: 112px; height: 112px; margin: 0 auto 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; font-weight: 800; color: #17120a; background: linear-gradient(135deg, #ffd700, #ff8c00); animation: callpulse 1.8s infinite; }
+    .callov.live .callav { animation: none; }
+    .callbox h3 { font-size: 1.6rem; margin-bottom: 6px; }
+    .callbox p { color: var(--soft); min-height: 1.5em; }
+    .callbtns { display: flex; gap: 24px; justify-content: center; margin-top: 38px; }
+    .cbtn { width: 68px; height: 68px; border-radius: 50%; border: 0; color: #fff; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(255,255,255,.14); }
+    .cbtn svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .cbtn.red { background: #e5484d; } .cbtn.red svg { transform: rotate(135deg); }
+    .cbtn.green { background: #22c55e; }
+    .cbtn.on { background: #fff; color: #111; }
+    .cbtn:disabled { opacity: .5; }
+    @keyframes callpulse { 0% { box-shadow: 0 0 0 0 rgba(255,190,30,.5); } 70% { box-shadow: 0 0 0 28px rgba(255,190,30,0); } 100% { box-shadow: 0 0 0 0 rgba(255,190,30,0); } }
   </style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
@@ -1046,6 +1104,42 @@
   </div>
 </main>
 
+<!-- =================== MESSAGES =================== -->
+<main class="view" id="v-messages">
+  <div class="mpg" data-nav="dark">
+    <div id="msgGate" class="panel" style="display:none">Please log in to see your messages.</div>
+    <div class="mx" id="mx" data-view="list">
+      <aside class="mx-side">
+        <div class="mx-sh"><h1>Messages</h1><span class="pill Pending" id="msgUnread" style="display:none"></span></div>
+        <div class="mx-list" id="convList"><p class="conv-empty">No messages yet. When a visitor writes to you from an offer page, the chat appears here.</p></div>
+      </aside>
+      <section class="mx-main">
+        <div class="mx-empty" id="mxEmpty"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></i><p>Select a conversation to read and reply.</p></div>
+        <div class="mx-pane" id="mxPane">
+          <div class="mx-head">
+            <button type="button" class="mx-btn mx-ico mx-back" id="mxBack" aria-label="Back to messages"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+            <span class="mx-av" id="convAv">?</span>
+            <div class="mx-title" id="convHead"></div>
+            <div class="mx-acts">
+              <button type="button" class="mx-btn call" id="convCall" onclick="startOutgoingCall()"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span class="lbl">Call</span></button>
+              <button type="button" class="mx-btn del" id="convDel" onclick="deleteConv()"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg><span class="lbl">Delete</span></button>
+            </div>
+          </div>
+          <div class="mx-offer" id="convOffer"></div>
+          <div class="mx-body" id="convMsgs"></div>
+          <div class="mx-hint" id="convHint"></div>
+          <form id="convForm" class="conv-form" onsubmit="sendReply(event)">
+            <input type="file" id="convFile" multiple hidden>
+            <button type="button" class="mx-btn mx-ico" id="convAttach" aria-label="Attach a photo or file" onclick="$('convFile').click()"><svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+            <textarea id="convText" rows="1" maxlength="1500" placeholder="Write a message..." aria-label="Message"></textarea>
+            <button class="mx-btn mx-ico mx-send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
 <!-- =================== DASHBOARD =================== -->
 <main class="view" id="v-dashboard">
   <div class="dash" data-nav="dark">
@@ -1058,23 +1152,7 @@
         <div class="stat"><h3>Pending requests</h3><div class="v" id="sPending">0</div></div>
         <div class="stat"><h3>Active offers</h3><div class="v" id="sOffers">0</div></div>
       </div>
-      <div class="panel" id="msgPanel" style="margin-bottom:18px">
-        <h2>Messages <span class="pill Pending" id="msgUnread" style="display:none"></span></h2>
-        <div class="inbox">
-          <div class="conv-list" id="convList"><p class="conv-empty">No messages yet. When a visitor writes to you from an offer page, the chat appears here.</p></div>
-          <div class="conv-view">
-            <div class="conv-head" id="convHead">Select a conversation</div>
-            <div class="conv-msgs" id="convMsgs"></div>
-            <form id="convForm" class="conv-form" onsubmit="sendReply(event)" style="display:none">
-              <label class="conv-attach" for="convFile">＋ File</label>
-              <input type="file" id="convFile" accept="image/*,.pdf,.txt" title="Attach photo or file">
-              <textarea id="convText" rows="2" maxlength="1500" placeholder="Write a reply..." required></textarea>
-              <button class="btn conv-send" type="submit">Send</button>
-            </form>
-          </div>
-        </div>
-      </div>
-      <div class="dash-grid">
+            <div class="dash-grid">
         <div class="panel"><h2>Revenue, last 6 months</h2><canvas id="chart"></canvas></div>
         <div class="panel"><h2>Recent orders</h2>
           <table><thead><tr><th>Offer</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody id="orderRows"></tbody></table>
@@ -1136,6 +1214,13 @@
   </div>
 </div>
 
+<div class="callov" id="callOv" role="dialog" aria-live="polite"><div class="callbox"><div class="callav" id="callAv">?</div><h3 id="callName"></h3><p id="callState"></p>
+  <div class="callbtns">
+    <button type="button" class="cbtn" id="cMute" aria-label="Mute"><svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
+    <button type="button" class="cbtn red" id="cDecline" aria-label="End call"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+    <button type="button" class="cbtn green" id="cAccept" aria-label="Answer"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+  </div></div></div>
+<audio id="remoteAudio" autoplay playsinline></audio>
 <div id="alertModal" class="modal">
   <div class="modal-box" style="text-align:center">
     <h3 id="alertTitle">Notice</h3>
@@ -1250,12 +1335,12 @@
   }
 
   // ---------- Router: every route is its own page ----------
-  const ROUTES = { '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset' };
+  const ROUTES = { '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/messages': 'messages', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset' };
   const TITLES = {
     privacy: 'Privacy Policy - GoldOffer Studio', terms: 'Terms of use - GoldOffer Studio', reset: 'New password - GoldOffer Studio',
     home: 'GoldOffer Studio - Websites for local businesses', how: 'How it works - GoldOffer Studio', features: 'Features - GoldOffer Studio',
     professions: 'Professions - GoldOffer Studio', pricing: 'Pricing - GoldOffer Studio', about: 'About - GoldOffer Studio',
-    contact: 'Contact - GoldOffer Studio', build: 'Website builder - GoldOffer Studio', dashboard: 'Dashboard - GoldOffer Studio'
+    contact: 'Contact - GoldOffer Studio', build: 'Website builder - GoldOffer Studio', dashboard: 'Dashboard - GoldOffer Studio', messages: 'Messages - GoldOffer Studio'
   };
   let currentPage = 'home';
 
@@ -1272,6 +1357,7 @@
     window.scrollTo(0, 0);
     document.querySelectorAll('.menu a.ml').forEach(a => a.classList.toggle('active', a.getAttribute('href') === finalPath));
     if (name === 'dashboard') loadDashboard();
+    if (name === 'messages') openMessagesPage();
     if (name === 'reset') prepareReset();
     if (name === 'professions') { renderMarquee(); renderGallery(); }
     window.dispatchEvent(new Event('resize'));
@@ -1572,7 +1658,7 @@
     const a = $('authArea');
     if (S.user) {
       const nm = [S.user.firstName, S.user.lastName].filter(Boolean).join(' ');
-      a.innerHTML = '<span class="who" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span><a class="btn-ghost" href="/dashboard" data-link>Dashboard<span class="badge-msg who-badge" style="display:none"></span></a><button class="btn-ghost" onclick="logout()">Log out</button>';
+      a.innerHTML = '<span class="who" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span><a class="btn-ghost" href="/messages" data-link>Messages<span class="badge-msg who-badge" style="display:none"></span></a><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><button class="btn-ghost" onclick="logout()">Log out</button>';
       setTimeout(() => { if (S.user) loadInbox(); }, 400);
     } else {
       a.innerHTML = '<button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button><button class="btn" onclick="openAuth(\'signup\')">Get started</button>';
@@ -1712,10 +1798,12 @@
     S.token = null; S.user = null; S.offers = []; S.category = '';
     localStorage.removeItem('token');
     renderAuth(); setCategory(''); renderProfs(); renderOfferList(); resetDashboard(); goStep(0);
+    S.convs = []; S.openConv = null; setUnread(0); if (currentPage === 'messages') openMessagesPage();
     if (silent !== true) notify('You have been logged out.');
   }
   async function afterLogin() {
     renderAuth();
+    if (currentPage === 'messages') openMessagesPage();
     const u = S.user;
     if (u.siteName) $('siteName').value = u.siteName;
     if (u.city) $('city').value = u.city;
@@ -1946,6 +2034,7 @@
     $('orderRows').innerHTML = '';
     if (S.chart) { S.chart.destroy(); S.chart = null; }
     if (currentPage === 'dashboard') loadDashboard();
+    if (currentPage === 'messages') openMessagesPage();
   }
   async function loadDashboard() {
     $('dashGate').style.display = S.user ? 'none' : 'block';
@@ -1957,7 +2046,7 @@
       $('sCompleted').textContent = d.completedOrders;
       $('sPending').textContent = d.pendingOrders;
       $('sOffers').textContent = d.offersCount;
-      S.lastMonthly = d.monthly; drawChart(d.monthly); loadInbox();
+      S.lastMonthly = d.monthly; drawChart(d.monthly);
       $('orderRows').innerHTML = d.recentOrders.length ? d.recentOrders.map(o =>
         '<tr><td>' + esc(o.offerTitle) + '<br><small style="color:var(--mute)">' + esc(o.customerName) + ' ' + esc(o.customerContact) + (o.note ? '<br><em style="color:var(--soft)">&ldquo;' + esc(o.note) + '&rdquo;</em>' : '') + '</small></td>' +
         '<td>' + money(o.amount) + '</td><td><span class="pill ' + esc(o.status) + '">' + esc(o.status) + '</span></td>' +
@@ -1965,69 +2054,285 @@
       ).join('') : '<tr><td colspan="4" style="color:var(--mute);text-align:center">No orders yet.</td></tr>';
     } catch (e) { notify(e.message, 'Dashboard'); }
   }
-  // ---------- Messages inbox ----------
+  // ---------- Messages page (separate from the dashboard) ----------
+  const FILE_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>';
+  const pad2 = (n) => (n < 10 ? '0' : '') + n;
+  const hhmm = (d) => pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  function fmtShort(v) { const x = new Date(v), n = new Date(); return x.toDateString() === n.toDateString() ? hhmm(x) : pad2(x.getDate()) + '.' + pad2(x.getMonth() + 1); }
+  function dayLabel(d) {
+    const n = new Date(), y = new Date(Date.now() - 864e5);
+    if (d.toDateString() === n.toDateString()) return 'Today';
+    if (d.toDateString() === y.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  }
+  const fileSize = (n) => n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+  function convPreview(m) {
+    if (!m) return '';
+    if (m.from === 'system') return m.text;
+    const who = m.from === 'seller' ? 'You: ' : '';
+    if (m.att && m.att.name && !m.text) return who + '📎 ' + m.att.name;
+    return who + (m.text || '');
+  }
   function setUnread(n) {
     const pill = $('msgUnread'); if (pill) { pill.style.display = n ? 'inline-block' : 'none'; pill.textContent = n + ' new'; }
     document.querySelectorAll('.who-badge').forEach(b => { b.style.display = n ? 'inline' : 'none'; b.textContent = n; });
     S.unread = n;
   }
-  function timeAgo(d) { return new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
   function renderConvList() {
     const list = S.convs || [];
     $('convList').innerHTML = list.length ? list.map(c =>
       '<button type="button" class="conv-item' + (S.openConv === c.id ? ' on' : '') + '" onclick="openConv(\'' + esc(c.id) + '\')">' +
-      '<b><span style="color:inherit;margin:0;font-size:inherit">' + esc(c.customerName) + '</span>' + (c.unread ? '<i class="conv-dot" style="font-style:normal">' + c.unread + '</i>' : '') + '</b>' +
-      '<span>' + esc(c.offerTitle) + '</span><span>' + esc(c.last ? c.last.text : '') + '</span></button>').join('')
+      '<span class="mx-av">' + esc(String(c.customerName || '?').charAt(0).toUpperCase()) + '</span>' +
+      '<span class="mx-mid"><b>' + esc(c.customerName) + '</b><small>' + esc(c.offerTitle) + '</small><span>' + esc(convPreview(c.last)) + '</span></span>' +
+      '<span class="mx-end"><span>' + (c.lastAt ? esc(fmtShort(c.lastAt)) : '') + '</span>' + (c.unread ? '<i class="conv-dot">' + c.unread + '</i>' : '') + '</span></button>').join('')
       : '<p class="conv-empty">No messages yet. When a visitor writes to you from an offer page, the chat appears here.</p>';
   }
   async function loadInbox() {
     if (!S.user) return;
     try {
       const d = await api('/api/conversations');
-      S.convs = d.conversations; setUnread(d.unread); renderConvList();
-      if (S.openConv && currentPage === 'dashboard') openConv(S.openConv, true);
+      S.convs = d.conversations;
+      if (currentPage === 'messages' && S.openConv) { const row = S.convs.find(x => x.id === S.openConv); if (row) row.unread = 0; setUnread(S.convs.reduce((n, c) => n + (c.unread || 0), 0)); }
+      else setUnread(d.unread);
+      renderConvList();
     } catch (e) { /* silent: the next poll will try again */ }
   }
+  async function openMessagesPage() {
+    $('msgGate').style.display = S.user ? 'none' : 'block';
+    $('mx').style.display = S.user ? '' : 'none';
+    if (!S.user) return;
+    await loadInbox();
+    if (!S.openConv || !(S.convs || []).some(c => c.id === S.openConv)) { S.openConv = null; showConvList(); if ((S.convs || []).length && matchMedia('(min-width:861px)').matches) openConv(S.convs[0].id); }
+    else openConv(S.openConv, true);
+  }
+  function showConvList() {
+    S.openConv = null; S.convCount = -1;
+    $('mx').setAttribute('data-view', 'list');
+    $('mxPane').style.display = 'none'; $('mxEmpty').style.display = 'flex';
+    renderConvList();
+  }
   async function openConv(id, quiet) {
+    if (S.openConv !== id) { S.convCount = -1; $('convMsgs').innerHTML = ''; }
     S.openConv = id;
+    $('mxEmpty').style.display = 'none'; $('mxPane').style.display = 'flex';
+    $('mx').setAttribute('data-view', 'thread');
     try {
       const d = await api('/api/conversations/' + id);
+      if (S.openConv !== id) return;
       const c = d.conversation;
-      const box = $('convMsgs');
-      const stick = !quiet || box.scrollHeight - box.scrollTop - box.clientHeight < 90;
-      $('convHead').innerHTML = '<div>' + esc(c.customerName) + '<br><small>' + esc(c.offerTitle) + (c.customerEmail ? ' &middot; ' + esc(c.customerEmail) : '') + '</small></div>' +
-        '<div class="call-actions"><button class="seller-call-btn" type="button" onclick="startSellerCall()">☎ Обади се</button><button class="btn-ghost" style="padding:5px 10px;font-size:.75rem" onclick="deleteConv(\'' + esc(c.id) + '\')">Delete</button></div>';
-      box.innerHTML = c.messages.map(m => '<div class="cbub ' + (m.from === 'seller' ? 'me' : 'cust') + '">' + esc(m.text || '') + (m.attachmentId ? '<button type="button" class="btn-ghost" onclick="downloadConvFile(\'' + esc(m.attachmentId) + '\',\'' + esc(m.attachmentName) + '\')">📎 ' + esc(m.attachmentName) + '</button>' : '') + '<small>' + esc(timeAgo(m.at)) + '</small></div>').join('');
-      if (stick) box.scrollTop = box.scrollHeight;
-      $('convForm').style.display = 'flex';
-      if (!quiet) renderConvList();
-      if (!quiet) { const row = (S.convs || []).find(x => x.id === id); if (row && row.unread) { setUnread(Math.max(0, (S.unread || 0) - row.unread)); row.unread = 0; renderConvList(); } }
+      $('convAv').textContent = String(c.customerName || '?').charAt(0).toUpperCase();
+      $('convHead').innerHTML = '<b>' + esc(c.customerName) + '</b><small>' + (c.customerEmail ? esc(c.customerEmail) : 'No email left') + '</small>';
+      $('convOffer').textContent = 'About: ' + c.offerTitle + (c.offerPrice != null ? ' · €' + money(c.offerPrice) : '');
+      drawConv(c.messages);
+      const row = (S.convs || []).find(x => x.id === id);
+      if (row && row.unread) { row.unread = 0; setUnread(S.convs.reduce((n, x) => n + (x.unread || 0), 0)); }
+      renderConvList();
     } catch (e) { if (!quiet) notify(e.message, 'Messages'); }
   }
+  function drawConv(msgs) {
+    if (msgs.length === S.convCount) return;
+    const box = $('convMsgs');
+    const stick = S.convCount < 0 || box.scrollHeight - box.scrollTop - box.clientHeight < 100;
+    let html = '', last = '';
+    msgs.forEach(m => {
+      const d = new Date(m.at), day = d.toDateString();
+      if (day !== last) { last = day; html += '<div class="dsep">' + esc(dayLabel(d)) + '</div>'; }
+      const t = hhmm(d);
+      if (m.from === 'system') { html += '<div class="cbub sys">' + esc(m.text) + '<small>' + t + '</small></div>'; return; }
+      let inner = '';
+      if (m.att && m.att.url) {
+        if (/^image\//.test(m.att.mime || '')) inner += '<a href="' + esc(m.att.url) + '" target="_blank" rel="noopener"><img class="att-img" src="' + esc(m.att.url) + '" alt="' + esc(m.att.name) + '"></a>';
+        else inner += '<a class="att-file" href="' + esc(m.att.url) + '" target="_blank" rel="noopener">' + FILE_ICO + '<span>' + esc(m.att.name) + '<small>' + esc(fileSize(m.att.size || 0)) + '</small></span></a>';
+      }
+      if (m.text) inner += '<div>' + esc(m.text) + '</div>';
+      html += '<div class="cbub ' + (m.from === 'seller' ? 'me' : 'cust') + '">' + inner + '<small>' + t + '</small></div>';
+    });
+    box.innerHTML = html;
+    S.convCount = msgs.length;
+    if (stick) { box.scrollTop = box.scrollHeight; box.querySelectorAll('img.att-img').forEach(im => im.addEventListener('load', () => { box.scrollTop = box.scrollHeight; })); }
+  }
+  function growReply() { const t = $('convText'); t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 130) + 'px'; }
   async function sendReply(e) {
     e.preventDefault();
     const t = $('convText').value.trim(); if (!t || !S.openConv) return;
-    $('convText').value = '';
-    try { await api('/api/conversations/' + S.openConv + '/reply', { method: 'POST', body: JSON.stringify({ text: t }) }); await openConv(S.openConv, false); loadInbox(); }
-    catch (err) { $('convText').value = t; notify(err.message, 'Error'); }
+    const id = S.openConv;
+    $('convText').value = ''; growReply();
+    try { const d = await api('/api/conversations/' + id + '/reply', { method: 'POST', body: JSON.stringify({ text: t }) }); if (S.openConv === id) drawConv(d.conversation.messages); loadInbox(); }
+    catch (err) { $('convText').value = t; notify(err.message, 'Message not sent'); }
   }
-  async function downloadConvFile(id,name){
-    if(!S.openConv)return;
-    try{const r=await fetch(API+'/api/conversations/'+S.openConv+'/file/'+id,{headers:{Authorization:'Bearer '+S.token}});if(!r.ok)throw Error('Cannot download file');const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name||'attachment';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){notify(e.message,'File')}
+  async function uploadFiles(files) {
+    const id = S.openConv; if (!id || !files.length) return;
+    const caption = $('convText').value.trim(); $('convText').value = ''; growReply();
+    for (let i = 0; i < Math.min(files.length, 5); i++) {
+      const f = files[i];
+      if (f.size > 8 * 1024 * 1024) { notify('"' + f.name + '" is too big. The limit is 8 MB.', 'File not sent'); continue; }
+      const h = $('convHint'); h.textContent = 'Sending ' + (f.name || 'photo') + '...'; h.style.display = 'block';
+      const fd = new FormData(); fd.append('file', f, f.name || 'photo.png'); fd.append('text', i === 0 ? caption : '');
+      try {
+        const res = await fetch(API + '/api/conversations/' + id + '/attach', { method: 'POST', headers: { Authorization: 'Bearer ' + S.token }, body: fd });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(d.message || 'Could not send the file.');
+        if (S.openConv === id) drawConv(d.conversation.messages);
+      } catch (err) { notify(err.message, 'File not sent'); }
+      h.style.display = 'none';
+    }
+    loadInbox();
   }
-  async function uploadConversationFile(){
-    const field=$('convFile');if(!field||!field.files[0]||!S.openConv)return;
-    const data=new FormData();data.append('file',field.files[0]);
-    try {const res=await fetch(API+'/api/conversations/'+S.openConv+'/file',{method:'POST',headers:{Authorization:'Bearer '+S.token},body:data});const d=await res.json();if(!res.ok)throw Error(d.message||'Upload failed');field.value='';await openConv(S.openConv,false);loadInbox();}
-    catch(err){notify(err.message,'Attachment')}
-  }
-  document.addEventListener('change',e=>{if(e.target&&e.target.id==='convFile')uploadConversationFile()});
-  async function deleteConv(id) {
+  async function deleteConv() {
+    const id = S.openConv; if (!id) return;
     if (!confirm('Delete this conversation for good?')) return;
-    try { await api('/api/conversations/' + id, { method: 'DELETE' }); S.openConv = null; $('convMsgs').innerHTML = ''; $('convHead').textContent = 'Select a conversation'; $('convForm').style.display = 'none'; loadInbox(); }
+    try { await api('/api/conversations/' + id, { method: 'DELETE' }); showConvList(); loadInbox(); }
     catch (err) { notify(err.message, 'Error'); }
   }
-  setInterval(() => { if (S.user && !document.hidden) loadInbox(); }, 8000);
+  document.addEventListener('change', (e) => { if (e.target && e.target.id === 'convFile') { const fs = [].slice.call(e.target.files); e.target.value = ''; uploadFiles(fs); } });
+  document.addEventListener('input', (e) => { if (e.target && e.target.id === 'convText') growReply(); });
+  document.addEventListener('paste', (e) => { if (e.target && e.target.id === 'convText' && e.clipboardData && e.clipboardData.files.length) { e.preventDefault(); uploadFiles([].slice.call(e.clipboardData.files)); } });
+  document.addEventListener('keydown', (e) => { if (e.target && e.target.id === 'convText' && e.key === 'Enter' && !e.shiftKey && matchMedia('(pointer:fine)').matches) { e.preventDefault(); $('convForm').requestSubmit(); } });
+  $('mxBack').addEventListener('click', () => { showConvList(); loadInbox(); });
+  setInterval(() => { if (S.user && !document.hidden) { loadInbox(); if (currentPage === 'messages' && S.openConv) openConv(S.openConv, true); } }, 3500);
+
+  // ---------- Voice calls (WebRTC) ----------
+  // The server only passes the connection messages between you and the visitor. The sound goes directly between the two browsers.
+  let CALL = null, ICE = null, RING = null;
+  const callSupported = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.RTCPeerConnection);
+  const MIC_ON = '<svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+  const MIC_OFF = '<svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  async function getIce() {
+    if (ICE) return ICE;
+    try { const d = await api('/api/ice'); ICE = d.iceServers || []; } catch (e) { ICE = [{ urls: 'stun:stun.l.google.com:19302' }]; }
+    return ICE;
+  }
+  function ringtone(on, mode) {
+    if (RING) { clearInterval(RING.t); try { RING.ctx.close(); } catch (e) {} RING = null; }
+    if (!on) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const beep = () => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = mode === 'in' ? 880 : 440; g.gain.value = 0.06; o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.35); };
+      beep(); RING = { ctx, t: setInterval(beep, mode === 'in' ? 1500 : 3000) };
+    } catch (e) {}
+  }
+  const callState = (t) => { $('callState').textContent = t; };
+  function callPhase(p) { if (CALL) CALL.phase = p; $('cMute').style.display = p === 'in' ? 'none' : ''; $('cAccept').style.display = p === 'in' ? '' : 'none'; }
+  function convName(id) { const c = (S.convs || []).find(x => x.id === id); return c ? c.customerName : 'Visitor'; }
+  function newCall(role, conv, name) { return { conv, name, role, id: null, after: 0, pc: null, stream: null, queue: [], pending: [], remoteSet: false, offer: null, t0: 0, muted: false, timer: null, tick: null, busy: false, ended: false, phase: role }; }
+  function callOpen(c, text, phase) {
+    CALL = c; $('callName').textContent = c.name; $('callAv').textContent = String(c.name || '?').charAt(0).toUpperCase();
+    $('cMute').classList.remove('on'); $('cMute').innerHTML = MIC_ON; $('cAccept').disabled = false;
+    callState(text); callPhase(phase); $('callOv').classList.remove('live'); $('callOv').classList.add('open');
+  }
+  const callSignal = (c, type, data) => api('/api/conversations/' + c.conv + '/call/signal', { method: 'POST', body: JSON.stringify({ callId: c.id, type, data }) });
+  function callClose(c) {
+    if (c.ended) return; c.ended = true;
+    clearInterval(c.timer); clearInterval(c.tick); ringtone(false);
+    try { if (c.pc) c.pc.close(); } catch (e) {}
+    if (c.stream) c.stream.getTracks().forEach(t => t.stop());
+    $('remoteAudio').srcObject = null;
+    $('callOv').classList.remove('open', 'live');
+    if (CALL === c) CALL = null;
+    loadInbox(); if (currentPage === 'messages' && S.openConv) openConv(S.openConv, true);
+  }
+  function callEndedRemote(c, reason) {
+    if (c.ended) return;
+    toast(reason === 'declined' ? 'Call declined' : (reason === 'missed' || reason === 'cancelled') ? (c.role === 'in' ? 'Missed call' : 'No answer') : 'Call ended');
+    callClose(c);
+  }
+  function callPc(c, ice) {
+    const pc = new RTCPeerConnection({ iceServers: ice }); c.pc = pc;
+    c.stream.getTracks().forEach(t => pc.addTrack(t, c.stream));
+    pc.onicecandidate = (e) => { if (!e.candidate) return; const cd = e.candidate.toJSON ? e.candidate.toJSON() : e.candidate; if (c.id) callSignal(c, 'candidate', cd).catch(() => {}); else c.queue.push(cd); };
+    pc.ontrack = (e) => { const a = $('remoteAudio'); a.srcObject = e.streams[0]; const p = a.play(); if (p && p.catch) p.catch(() => {}); };
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'connected') callConnected(c);
+      else if (pc.connectionState === 'failed') { toast('Connection failed. Try again.'); if (c.id) callSignal(c, 'hangup').catch(() => {}); callClose(c); }
+    };
+    return pc;
+  }
+  function callConnected(c) {
+    if (c.t0 || c.ended) return;
+    c.t0 = Date.now(); ringtone(false); callPhase('live'); $('callOv').classList.add('live'); callState('00:00');
+    c.tick = setInterval(() => { const s = Math.floor((Date.now() - c.t0) / 1000); callState(pad2(Math.floor(s / 60)) + ':' + pad2(s % 60)); }, 1000);
+  }
+  function callCandidate(c, d) { if (c.pc && c.remoteSet) c.pc.addIceCandidate(new RTCIceCandidate(d)).catch(() => {}); else c.pending.push(d); }
+  function callFlush(c) { c.pending.splice(0).forEach(d => c.pc.addIceCandidate(new RTCIceCandidate(d)).catch(() => {})); }
+  function callOnSignal(c, s) {
+    if (s.type === 'offer' && c.role === 'in') { c.offer = s.data; $('cAccept').disabled = false; }
+    else if (s.type === 'answer' && c.role === 'out' && c.pc) {
+      callState('Connecting...');
+      c.pc.setRemoteDescription(new RTCSessionDescription(s.data)).then(() => { c.remoteSet = true; callFlush(c); }).catch(() => {});
+    } else if (s.type === 'candidate') callCandidate(c, s.data);
+  }
+  async function callPoll(c) {
+    if (c.busy || c.ended) return; c.busy = true;
+    try {
+      const x = await api('/api/conversations/' + c.conv + '/call?after=' + c.after);
+      c.busy = false; if (c.ended) return;
+      const k = x.call;
+      if (!k) { if (c.id) callEndedRemote(c, 'ended'); return; }
+      if (c.id && k.id !== c.id) { callEndedRemote(c, 'ended'); return; }
+      (x.signals || []).forEach(s => { c.after = Math.max(c.after, s.n); callOnSignal(c, s); });
+      if (k.status === 'ended') callEndedRemote(c, k.reason);
+    } catch (e) { c.busy = false; }
+  }
+  const callStartPoll = (c) => { c.timer = setInterval(() => callPoll(c), 1000); callPoll(c); };
+
+  async function startOutgoingCall() {
+    if (CALL || !S.openConv) return;
+    if (!callSupported()) { notify('Calls need a modern browser and a secure (https) page.', 'Calls not supported'); return; }
+    const c = newCall('out', S.openConv, convName(S.openConv)); callOpen(c, 'Calling...', 'out');
+    try {
+      const ice = await getIce();
+      c.stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => { throw new Error('Allow the microphone in your browser to make calls.'); });
+      if (c.ended) { c.stream.getTracks().forEach(t => t.stop()); return; }
+      const pc = callPc(c, ice);
+      await pc.setLocalDescription(await pc.createOffer());
+      const r = await api('/api/conversations/' + c.conv + '/call/signal', { method: 'POST', body: JSON.stringify({ type: 'offer', data: pc.localDescription }) });
+      if (c.ended) return;
+      c.id = r.callId; c.queue.splice(0).forEach(cd => callSignal(c, 'candidate', cd).catch(() => {}));
+      ringtone(true, 'out'); callStartPoll(c);
+    } catch (e) { toast(e.message || 'The call failed. Please try again.'); callClose(c); }
+  }
+  function startIncomingCall(convId, callId) {
+    if (CALL) return;
+    const c = newCall('in', convId, convName(convId)); c.id = callId;
+    callOpen(c, 'Incoming call', 'in'); $('cAccept').disabled = true; ringtone(true, 'in'); callStartPoll(c);
+    if (!(S.convs || []).some(x => x.id === convId)) loadInbox().then(() => { if (CALL === c) { c.name = convName(convId); $('callName').textContent = c.name; $('callAv').textContent = String(c.name || '?').charAt(0).toUpperCase(); } });
+  }
+  $('cAccept').addEventListener('click', async () => {
+    const c = CALL; if (!c || c.role !== 'in' || !c.offer || !c.id) return;
+    if (!callSupported()) { notify('Calls need a modern browser and a secure (https) page.', 'Calls not supported'); callSignal(c, 'decline').catch(() => {}); callClose(c); return; }
+    ringtone(false); $('cAccept').disabled = true; callState('Connecting...');
+    try {
+      const ice = await getIce();
+      c.stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => { throw new Error('Allow the microphone in your browser to answer calls.'); });
+      if (c.ended) { c.stream.getTracks().forEach(t => t.stop()); return; }
+      const pc = callPc(c, ice);
+      await pc.setRemoteDescription(new RTCSessionDescription(c.offer)); c.remoteSet = true; callFlush(c);
+      await pc.setLocalDescription(await pc.createAnswer());
+      await callSignal(c, 'answer', pc.localDescription); callPhase('live');
+    } catch (e) { toast(e.message || 'The call failed.'); if (c.id) callSignal(c, 'decline').catch(() => {}); callClose(c); }
+  });
+  $('cDecline').addEventListener('click', () => {
+    const c = CALL; if (!c) return;
+    if (c.id) callSignal(c, c.phase === 'in' ? 'decline' : 'hangup').catch(() => {});
+    callClose(c);
+  });
+  $('cMute').addEventListener('click', function () {
+    const c = CALL; if (!c || !c.stream) return;
+    c.muted = !c.muted; c.stream.getAudioTracks().forEach(t => { t.enabled = !c.muted; });
+    this.classList.toggle('on', c.muted); this.innerHTML = c.muted ? MIC_OFF : MIC_ON;
+  });
+  // Ring on every page while you are logged in
+  setInterval(async () => {
+    if (!S.user || !S.token || CALL || document.hidden) return;
+    try { const d = await api('/api/calls/incoming'); if (d.calls && d.calls[0] && !CALL) startIncomingCall(String(d.calls[0].convId), d.calls[0].callId); } catch (e) {}
+  }, 2500);
+  let toastT;
+  function toast(m) {
+    let t = $('mxToast');
+    if (!t) { t = document.createElement('div'); t.id = 'mxToast'; t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:400;background:#10151e;border:1px solid rgba(255,255,255,.17);color:#f1eee8;padding:12px 18px;border-radius:14px;font-size:.92rem;box-shadow:0 10px 40px rgba(0,0,0,.6);max-width:90vw'; document.body.appendChild(t); }
+    t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => { t.style.display = 'none'; }, 3500);
+  }
+
   async function setOrder(id, status) {
     try { await api('/api/orders/' + id, { method: 'PATCH', body: JSON.stringify({ status }) }); loadDashboard(); }
     catch (e) { notify(e.message, 'Error'); }
@@ -2102,25 +2407,6 @@
     if (new URLSearchParams(location.search).get('paid')) notify('Thank you. Your subscription is being activated.', 'Payment received');
     if (new URLSearchParams(location.search).get('forgot') === '1' && !S.token) { openAuth('login'); openForgot(); history.replaceState(null, '', location.pathname); }
   }
-
-  // Voice calls in seller dashboard: SDP exchanged through authenticated API.
-  let sellerVoice=null, sellerAudio=null, sellerStream=null, sellerCallState='', sellerLastId=null, sellerBusy=false;
-  async function sellerCallApi(id,action,extra){const opts={method:'POST',body:JSON.stringify({action,...(extra||{})})};return api('/api/conversations/'+id+'/call',opts)}
-  function sellerCallMessage(t){let e=document.getElementById('seller-call-status');if(!e){e=document.createElement('div');e.id='seller-call-status';e.style.cssText='padding:10px;color:#dec497;font-size:13px';document.getElementById('convHead').after(e)}e.textContent=t}
-  function closeSellerVoice(){if(sellerVoice){sellerVoice.close();sellerVoice=null}if(sellerStream){sellerStream.getTracks().forEach(t=>t.stop());sellerStream=null}if(sellerAudio){sellerAudio.remove();sellerAudio=null}let b=document.querySelector('.seller-call-btn');if(b)b.textContent='☎ Обади се'}
-  async function sellerVoiceSetup(){if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)throw Error('Обажданията изискват HTTPS и достъп до микрофон.');sellerStream=await navigator.mediaDevices.getUserMedia({audio:true});sellerVoice=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});sellerStream.getTracks().forEach(t=>sellerVoice.addTrack(t,sellerStream));sellerAudio=document.createElement('audio');sellerAudio.autoplay=true;document.body.appendChild(sellerAudio);sellerVoice.ontrack=e=>sellerAudio.srcObject=e.streams[0]}
-  function sellerIce(){return new Promise(resolve=>{if(sellerVoice.iceGatheringState==='complete')return resolve();const done=()=>{if(sellerVoice.iceGatheringState==='complete'){clearTimeout(t);sellerVoice.removeEventListener('icegatheringstatechange',done);resolve()}};const t=setTimeout(()=>{sellerVoice.removeEventListener('icegatheringstatechange',done);resolve()},9000);sellerVoice.addEventListener('icegatheringstatechange',done)})}
-  async function startSellerCall(){if(!S.openConv)return;if(sellerVoice){await sellerCallApi(S.openConv,'end').catch(()=>{});closeSellerVoice();sellerCallMessage('Разговорът приключи.');return}try{await sellerVoiceSetup();const offer=await sellerVoice.createOffer();await sellerVoice.setLocalDescription(offer);await sellerIce();await sellerCallApi(S.openConv,'start',{offer:{type:'offer',sdp:sellerVoice.localDescription.sdp}});sellerLastId=S.openConv;sellerCallState='ringing';sellerCallMessage('Звъни на купувача…');document.querySelector('.seller-call-btn').textContent='■ Затвори'}catch(e){sellerCallMessage(e.message);closeSellerVoice()}}
-  async function sellerPollCall(){const id=S.openConv;if(!id||!S.token||currentPage!=='dashboard'||sellerBusy)return;if(sellerVoice&&sellerLastId!==id){closeSellerVoice();sellerCallState=''}sellerBusy=true;try{const d=await api('/api/conversations/'+id+'/call'),c=d.call||{state:'idle'};
-    if(c.state==='ringing'&&c.by==='customer'&&!sellerVoice&&sellerCallState!=='accepting'){
-      sellerCallState='accepting';sellerCallMessage('Входящо обаждане от купувача');let bar=document.getElementById('seller-call-status');let accept=document.createElement('button'),reject=document.createElement('button');accept.className=reject.className='seller-call-btn';accept.textContent='Приеми';reject.textContent='Откажи';bar.append(accept,reject);
-      accept.onclick=async()=>{accept.disabled=true;try{await sellerVoiceSetup();await sellerVoice.setRemoteDescription(c.offer);const answer=await sellerVoice.createAnswer();await sellerVoice.setLocalDescription(answer);await sellerIce();await sellerCallApi(id,'answer',{answer:{type:'answer',sdp:sellerVoice.localDescription.sdp}});sellerLastId=id;sellerCallState='active';sellerCallMessage('Разговорът е свързан');document.querySelector('.seller-call-btn').textContent='■ Затвори'}catch(e){sellerCallMessage(e.message);closeSellerVoice()}};
-      reject.onclick=async()=>{await sellerCallApi(id,'end').catch(()=>{});sellerCallState='ended';sellerCallMessage('Обаждането е отказано')};
-    }
-    if(c.state==='active'&&c.by==='seller'&&sellerVoice&&!sellerVoice.currentRemoteDescription&&c.answer){await sellerVoice.setRemoteDescription(c.answer);sellerCallState='active';sellerCallMessage('Разговорът е свързан')}
-    if((c.state==='idle'||c.state==='ended')&&sellerVoice){closeSellerVoice();sellerCallState=c.state;sellerCallMessage('Разговорът приключи')}
-  }catch(e){}finally{sellerBusy=false}}
-  setInterval(sellerPollCall,2500);
 
   init();
 </script>

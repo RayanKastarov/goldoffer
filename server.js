@@ -189,6 +189,11 @@ const FONTS = {
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
 
 const CYR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sht', ъ: 'a', ь: 'y', ю: 'yu', я: 'ya' };
+// Name shown to visitors as the person behind the shop (falls back to the shop name)
+function sellerName(user) {
+  return ([user.firstName, user.lastName].filter(Boolean).join(' ').trim()) || user.siteName;
+}
+
 function slugify(text) {
   const s = String(text || '').toLowerCase().split('').map(c => CYR[c] !== undefined ? CYR[c] : c).join('')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
@@ -984,7 +989,8 @@ const ConversationSchema = new mongoose.Schema({
   customerName: String,
   customerEmail: String,          // optional, only used to say "you have a reply"
   tokenHash: String,              // the visitor proves who they are with a secret kept in their browser
-  messages: [{ from: String, text: String, attachmentId: mongoose.Schema.Types.ObjectId, attachmentName: String, attachmentType: String, at: { type: Date, default: Date.now }, _id: false }],
+  // from: 'customer' | 'seller' | 'system' (call notes). att = a photo or file sent in the chat
+  messages: [{ from: String, text: String, at: { type: Date, default: Date.now }, att: { url: String, name: String, mime: String, size: Number }, _id: false }],
   unreadSeller: { type: Number, default: 0 },
   unreadCustomer: { type: Number, default: 0 },
   lastAt: { type: Date, default: Date.now },
@@ -993,11 +999,21 @@ const ConversationSchema = new mongoose.Schema({
 });
 const Conversation = mongoose.model('Conversation', ConversationSchema);
 
-const ChatFile = mongoose.model('ChatFile',new mongoose.Schema({ conversationId:{type:mongoose.Schema.Types.ObjectId,index:true}, name:String,mime:String,data:Buffer,createdAt:{type:Date,default:Date.now} }));
-const chatUpload = multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024},fileFilter:(req,file,cb)=>cb(null,/^(image\/(jpeg|png|webp|gif)|application\/pdf|text\/plain)$/.test(file.mimetype))});
+// Photos and files sent inside a chat. The link contains a random key, so only people in the chat know it.
+const ChatFile = mongoose.model('ChatFile', new mongoose.Schema({
+  key: { type: String, unique: true, index: true },
+  convId: { type: mongoose.Schema.Types.ObjectId, index: true },
+  name: String,
+  contentType: String,
+  size: Number,
+  data: Buffer,
+  createdAt: { type: Date, default: Date.now }
+}));
 
 const startLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
-const chatLimiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+const chatLimiter = rateLimit({ windowMs: 60 * 1000, max: 150 });
+const callLimiter = rateLimit({ windowMs: 60 * 1000, max: 300 });
+const attachLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 40, message: { message: 'Too many files sent. Please wait a few minutes.' } });
 const tokHash = (t) => crypto.createHash('sha256').update(String(t || '')).digest('hex');
 const cleanMsg = (v) => String(v || '').replace(/\r/g, '').trim().slice(0, 1500);
 const MAX_MSGS = 300;
@@ -1008,9 +1024,192 @@ function tokenOk(conv, token) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 const lastOf = (c) => (c.messages.length ? c.messages[c.messages.length - 1] : null);
-const briefConv = (c, forSeller) => ({
-  id: c._id, offerId: c.offerId, offerTitle: c.offerTitle, customerName: c.customerName, customerEmail: forSeller ? c.customerEmail : undefined,
-  last: lastOf(c), unread: forSeller ? c.unreadSeller : c.unreadCustomer, lastAt: c.lastAt, count: c.messages.length
+const briefConv = (c, forSeller, info) => {
+  const o = (info && info[String(c.offerId)]) || {};
+  const live = liveCall(c._id);
+  const me = forSeller ? 'seller' : 'customer';
+  return {
+    id: c._id, offerId: c.offerId, offerTitle: c.offerTitle, customerName: c.customerName, customerEmail: forSeller ? c.customerEmail : undefined,
+    last: lastOf(c), unread: forSeller ? c.unreadSeller : c.unreadCustomer, lastAt: c.lastAt, count: c.messages.length,
+    offerImage: o.image || null, offerPrice: o.price != null ? o.price : null,
+    ringing: !!(live && live.status === 'ringing' && live.caller !== me)
+  };
+};
+// Photo and price of the offers behind a list of conversations (for the list screen)
+async function offerInfo(convs, userId) {
+  const ids = [...new Set(convs.map(c => String(c.offerId || '')).filter(id => mongoose.isValidObjectId(id)))];
+  if (!ids.length) return {};
+  const offers = await Offer.find({ _id: { $in: ids }, userId });
+  const map = {};
+  offers.forEach(o => { map[String(o._id)] = { image: galleryOf(o)[0] || null, price: o.price }; });
+  return map;
+}
+
+// ---------- Chat files ----------
+const CHAT_FILE_MAX = 8 * 1024 * 1024;
+const BLOCKED_FILE = /\.(exe|bat|cmd|com|scr|msi|jar|vbs|ps1|sh|apk|dll|js|html?|svg|php|lnk)$/i;
+const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const chatUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: CHAT_FILE_MAX, files: 1 } });
+// Browsers can send file names as UTF-8 that multer reads as latin1 (Cyrillic names), so repair them
+function fixName(n) {
+  n = String(n || 'file');
+  if (/[\u0080-\u00ff]/.test(n) && !/[^\u0000-\u00ff]/.test(n)) {
+    const u = Buffer.from(n, 'latin1').toString('utf8');
+    if (!u.includes('\uFFFD')) n = u;
+  }
+  return n.replace(/[\r\n"\\\/]/g, '_').slice(0, 120) || 'file';
+}
+// Real image files start with known bytes. A file that only claims to be an image is sent as a plain download.
+function sniffMime(buf) {
+  if (!buf || buf.length < 12) return 'application/octet-stream';
+  if (buf[0] === 0xff && buf[1] === 0xd8) return 'image/jpeg';
+  if (buf[0] === 0x89 && buf.toString('ascii', 1, 4) === 'PNG') return 'image/png';
+  if (buf.toString('ascii', 0, 3) === 'GIF') return 'image/gif';
+  if (buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
+  return 'application/octet-stream';
+}
+// Saves an uploaded file and returns the attachment record for the message
+async function storeChatFile(conv, file) {
+  const name = fixName(file.originalname);
+  if (BLOCKED_FILE.test(name)) throw Object.assign(new Error('This file type is not allowed.'), { status: 400 });
+  const count = await ChatFile.countDocuments({ convId: conv._id });
+  if (count >= 60) throw Object.assign(new Error('This conversation has too many files.'), { status: 400 });
+  const key = crypto.randomBytes(16).toString('hex');
+  const mime = sniffMime(file.buffer);
+  await ChatFile.create({ key, convId: conv._id, name, contentType: mime, size: file.size, data: file.buffer });
+  return { url: `${PUBLIC_BASE}/api/file/${key}`, name, mime, size: file.size };
+}
+function runUpload(req, res, next) {
+  chatUpload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ message: err.code === 'LIMIT_FILE_SIZE' ? 'The file is too big (max 8 MB).' : 'Upload failed: ' + err.message });
+    if (!req.file) return res.status(400).json({ message: 'Please choose a file.' });
+    next();
+  });
+}
+app.get('/api/file/:key', async (req, res) => {
+  try {
+    if (!/^[a-f0-9]{32}$/.test(req.params.key)) return res.status(404).end();
+    const f = await ChatFile.findOne({ key: req.params.key });
+    if (!f) return res.status(404).end();
+    const isImg = IMAGE_MIMES.includes(f.contentType);
+    res.set({
+      'Content-Type': isImg ? f.contentType : 'application/octet-stream',
+      'Content-Disposition': `${isImg ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(f.name || 'file')}`,
+      'Cache-Control': 'private, max-age=86400',
+      'X-Content-Type-Options': 'nosniff',
+      'Cross-Origin-Resource-Policy': 'cross-origin'
+    });
+    res.send(f.data);
+  } catch (e) { res.status(404).end(); }
+});
+
+// ---------- Voice calls (WebRTC). The server only passes the setup messages between the two people; the audio goes directly. ----------
+const CALLS = new Map(); // conversation id -> call
+const RING_MS = 45 * 1000;
+function callOf(convId) { return CALLS.get(String(convId)) || null; }
+function liveCall(convId) { const c = callOf(convId); return c && c.status !== 'ended' ? c : null; }
+const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+async function finishCall(c, reason) {
+  if (c.status === 'ended') return;
+  const wasActive = c.status === 'active';
+  c.status = 'ended'; c.reason = reason; c.endedAt = Date.now();
+  const text = wasActive ? `Call ended \u00b7 ${mmss(Math.max(0, Math.round((c.endedAt - c.answeredAt) / 1000)))}` : (reason === 'declined' ? 'Call declined' : 'Missed call');
+  const update = { $push: { messages: { from: 'system', text, at: new Date() } }, $set: { lastAt: new Date() } };
+  if (!wasActive && reason !== 'declined') update.$inc = c.caller === 'customer' ? { unreadSeller: 1 } : { unreadCustomer: 1 };
+  try { await Conversation.updateOne({ _id: c.convId }, update); } catch (e) { console.error('Call note error', e.message); }
+}
+setInterval(() => {
+  const now = Date.now();
+  CALLS.forEach((c, k) => {
+    if (c.status === 'ringing') {
+      if (now - c.createdAt > RING_MS) finishCall(c, 'missed');
+      else if (now - c.seen[c.caller] > 12000) finishCall(c, 'cancelled');
+    } else if (c.status === 'active') {
+      if (now - c.seen.customer > 40000 || now - c.seen.seller > 40000) finishCall(c, 'dropped');
+    } else if (now - c.endedAt > 30000) CALLS.delete(k);
+  });
+}, 5000).unref();
+
+function callPoll(conv, side, after) {
+  const c = callOf(conv._id);
+  if (!c) return { call: null, signals: [] };
+  c.seen[side] = Date.now();
+  return {
+    call: { id: c.id, status: c.status, caller: c.caller, reason: c.reason || null },
+    signals: c.signals.filter(s => s.n > after && s.from !== side).map(s => ({ n: s.n, type: s.type, data: s.data }))
+  };
+}
+// Handles offer / answer / candidate / decline / hangup from one side. Returns { code, body }.
+async function callSignal(conv, side, owner, b) {
+  const type = String(b.type || '');
+  const data = b.data;
+  if (data !== undefined && JSON.stringify(data).length > 20000) return { code: 400, body: { message: 'Bad call data.' } };
+  let c = callOf(conv._id);
+  if (type === 'offer') {
+    if (c && c.status !== 'ended') return { code: 409, body: { message: 'A call is already in progress.' } };
+    if (!data || data.type !== 'offer' || typeof data.sdp !== 'string') return { code: 400, body: { message: 'Bad call data.' } };
+    c = { id: crypto.randomBytes(8).toString('hex'), convId: conv._id, userId: conv.userId, caller: side, status: 'ringing', createdAt: Date.now(), signals: [], seen: { customer: 0, seller: 0 }, n: 0 };
+    c.seen[side] = Date.now();
+    c.signals.push({ n: ++c.n, from: side, type: 'offer', data });
+    CALLS.set(String(conv._id), c);
+    notifyCall(conv, side, owner);
+    return { code: 200, body: { callId: c.id } };
+  }
+  if (!c || c.id !== String(b.callId || '')) return { code: 404, body: { message: 'Call not found.' } };
+  if (c.status === 'ended') return { code: 200, body: { ended: true } };
+  c.seen[side] = Date.now();
+  if (type === 'answer') {
+    if (side === c.caller || c.status !== 'ringing' || !data || data.type !== 'answer') return { code: 400, body: { message: 'Bad call data.' } };
+    c.status = 'active'; c.answeredAt = Date.now(); c.seen.customer = c.seen.seller = Date.now();
+    c.signals.push({ n: ++c.n, from: side, type: 'answer', data });
+  } else if (type === 'candidate') {
+    if (c.signals.length < 300 && data && typeof data === 'object') c.signals.push({ n: ++c.n, from: side, type: 'candidate', data });
+  } else if (type === 'decline') {
+    if (side !== c.caller) await finishCall(c, 'declined');
+  } else if (type === 'hangup') {
+    await finishCall(c, c.status === 'ringing' ? (side === c.caller ? 'cancelled' : 'declined') : 'ended');
+  } else return { code: 400, body: { message: 'Unknown call message.' } };
+  return { code: 200, body: { ok: true } };
+}
+// Tell the other person by email, at most once every 10 minutes per conversation
+function notifyCall(conv, side, owner) {
+  if (!owner) return;
+  const gap = (d) => !d || Date.now() - new Date(d).getTime() > MAIL_GAP_MS;
+  if (side === 'customer') {
+    if (owner.notifyOn === false || !gap(conv.sellerMailedAt)) return;
+    Conversation.updateOne({ _id: conv._id }, { $set: { sellerMailedAt: new Date() } }).catch(() => {});
+    sendMail({
+      to: owner.notifyEmail || owner.email, subject: `${conv.customerName} is calling you`,
+      text: `${conv.customerName} is calling you about "${conv.offerTitle}". Open your dashboard to answer: ${PUBLIC_BASE}/dashboard`,
+      html: emailShell({ icon: '&#128222;', preheader: `${esc(conv.customerName)} is calling`, heading: ['', 'Incoming call'], intro: ['', `${esc(conv.customerName)} is calling you about \u201c${esc(conv.offerTitle)}\u201d.`], buttonText: ['', 'Open dashboard'], link: `${PUBLIC_BASE}/dashboard`, footnote: ['', 'Keep the dashboard open to receive calls.'] })
+    });
+  } else if (conv.customerEmail && gap(conv.customerMailedAt)) {
+    Conversation.updateOne({ _id: conv._id }, { $set: { customerMailedAt: new Date() } }).catch(() => {});
+    const link = `${PUBLIC_BASE}/site/${owner.slug}/messages`;
+    sendMail({
+      to: conv.customerEmail, subject: `${owner.siteName} is calling you`,
+      text: `${owner.siteName} is calling you about "${conv.offerTitle}". Open the chat to answer: ${link}`,
+      html: emailShell({ icon: '&#128222;', preheader: `${esc(owner.siteName)} is calling`, heading: ['', 'Incoming call'], intro: ['', `${esc(owner.siteName)} is calling you about \u201c${esc(conv.offerTitle)}\u201d.`], buttonText: ['', 'Open the chat'], link, footnote: ['', 'Open it in the same browser you used before.'] })
+    });
+  }
+}
+// Connection servers. STUN is free. For calls over mobile data a TURN server helps: set TURN_URL (+ TURN_USERNAME, TURN_CREDENTIAL)
+// or METERED_DOMAIN + METERED_API_KEY (free plan at metered.ca) in Render, Environment.
+let iceCache = { at: 0, list: null };
+app.get('/api/ice', chatLimiter, async (req, res) => {
+  const list = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  try {
+    if (process.env.METERED_DOMAIN && process.env.METERED_API_KEY) {
+      if (!iceCache.list || Date.now() - iceCache.at > 30 * 60 * 1000) {
+        const r = await axios.get(`https://${process.env.METERED_DOMAIN}/api/v1/turn/credentials`, { params: { apiKey: process.env.METERED_API_KEY }, timeout: 8000 });
+        iceCache = { at: Date.now(), list: Array.isArray(r.data) ? r.data : [] };
+      }
+      list.push(...iceCache.list);
+    } else if (process.env.TURN_URL) {
+      list.push({ urls: process.env.TURN_URL.split(',').map(s => s.trim()).filter(Boolean), username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL });
+    }
+  } catch (e) { console.error('ICE error', e.message); }
+  res.json({ iceServers: list });
 });
 
 async function siteBySlug(slug) {
@@ -1065,9 +1264,11 @@ app.post('/site/:slug/chat/list', chatLimiter, async (req, res) => {
     if (!user) return res.status(404).json({ message: 'Site not found.' });
     const items = (Array.isArray(req.body && req.body.chats) ? req.body.chats : []).slice(0, 20).filter(x => x && mongoose.isValidObjectId(x.id));
     const found = await Conversation.find({ _id: { $in: items.map(x => x.id) }, userId: user._id });
-    const out = found.filter(c => tokenOk(c, (items.find(x => String(x.id) === String(c._id)) || {}).token)).map(c => briefConv(c, false));
+    const mine = found.filter(c => tokenOk(c, (items.find(x => String(x.id) === String(c._id)) || {}).token));
+    const info = await offerInfo(mine, user._id);
+    const out = mine.map(c => briefConv(c, false, info));
     out.sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
-    res.json({ conversations: out });
+    res.json({ conversations: out, businessName: sellerName(user), phone: user.phone || '' });
   } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
 
@@ -1078,8 +1279,9 @@ app.get('/site/:slug/chat/:id', chatLimiter, async (req, res) => {
     const user = await siteBySlug(req.params.slug);
     const conv = user && await Conversation.findOne({ _id: req.params.id, userId: user._id });
     if (!conv || !tokenOk(conv, req.query.token)) return res.status(404).json({ message: 'Conversation not found.' });
-    if (conv.unreadCustomer) { conv.unreadCustomer = 0; await conv.save(); }
-    res.json({ messages: conv.messages, businessName: ([user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.siteName) });
+    if (conv.unreadCustomer) { await Conversation.updateOne({ _id: conv._id }, { $set: { unreadCustomer: 0 } }); }
+    const live = liveCall(conv._id);
+    res.json({ messages: conv.messages, businessName: sellerName(user), call: live ? { id: live.id, status: live.status, caller: live.caller } : null });
   } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
 
@@ -1093,54 +1295,94 @@ app.post('/site/:slug/chat/:id/send', chatLimiter, async (req, res) => {
     const text = cleanMsg(req.body && req.body.text);
     if (!text) return res.status(400).json({ message: 'Please write a message.' });
     if (conv.messages.length >= MAX_MSGS) return res.status(400).json({ message: 'This conversation is full. Please call or use another contact.' });
-    conv.messages.push({ from: 'customer', text, at: new Date() });
-    conv.unreadSeller += 1; conv.lastAt = new Date();
-    const mailNow = user.notifyOn !== false && (!conv.sellerMailedAt || Date.now() - new Date(conv.sellerMailedAt).getTime() > MAIL_GAP_MS);
-    if (mailNow) conv.sellerMailedAt = new Date();
-    await conv.save();
-    if (mailNow) {
-      sendMail({
-        to: user.notifyEmail || user.email,
-        subject: `New message from ${conv.customerName}`,
-        text: `${conv.customerName} wrote about "${conv.offerTitle}":\n\n${text}\n\nReply: ${PUBLIC_BASE}/dashboard`,
-        html: emailShell({
-          icon: '&#128172;', preheader: `${esc(conv.customerName)}: ${esc(text.slice(0, 80))}`,
-          heading: ['', 'New message'], intro: ['', `${esc(conv.customerName)} wrote again about “${esc(conv.offerTitle)}”.`],
-          details: [['', 'Message', text]], buttonText: ['', 'Reply in dashboard'], link: `${PUBLIC_BASE}/dashboard`,
-          footnote: ['', 'You get at most one email every 10 minutes per conversation.']
-        })
-      });
-    }
+    await pushCustomerMessage(user, conv, text, null);
     res.json({ messages: conv.messages });
   } catch (err) { res.status(500).json({ message: 'Could not send your message. Please try again.' }); }
 });
 
-// Attachment access is limited to the seller or the browser holding the conversation token.
-app.post('/site/:slug/chat/:id/file', chatLimiter, chatUpload.single('file'), async(req,res)=>{
- try { const user=await siteBySlug(req.params.slug);const c=user&&await Conversation.findOne({_id:req.params.id,userId:user._id});
- if(!c||!tokenOk(c,req.body.token))return res.status(403).json({message:'Not authorized'});
- if(!req.file)return res.status(400).json({message:'Choose JPG, PNG, WebP, GIF, PDF or TXT up to 5 MB.'});
- if(c.messages.length>=MAX_MSGS)return res.status(400).json({message:'Conversation full'});
- const f=await ChatFile.create({conversationId:c._id,name:path.basename(req.file.originalname).slice(0,120),mime:req.file.mimetype,data:req.file.buffer});
- c.messages.push({from:'customer',text:'',attachmentId:f._id,attachmentName:f.name,attachmentType:f.mime});c.unreadSeller++;c.lastAt=new Date();await c.save();res.json({messages:c.messages});
- }catch(e){res.status(500).json({message:'Could not attach file'});}
+// Adds a message from the visitor (text and/or a file) and emails the business at most once every 10 minutes
+async function pushCustomerMessage(user, conv, text, att) {
+  const msg = { from: 'customer', text, at: new Date() };
+  if (att) msg.att = att;
+  conv.messages.push(msg);
+  conv.unreadSeller += 1; conv.lastAt = new Date();
+  const mailNow = user.notifyOn !== false && (!conv.sellerMailedAt || Date.now() - new Date(conv.sellerMailedAt).getTime() > MAIL_GAP_MS);
+  if (mailNow) conv.sellerMailedAt = new Date();
+  await conv.save();
+  if (mailNow) {
+    const shown = text || (att ? `File: ${att.name}` : '');
+    sendMail({
+      to: user.notifyEmail || user.email,
+      subject: `New message from ${conv.customerName}`,
+      text: `${conv.customerName} wrote about "${conv.offerTitle}":\n\n${shown}\n\nReply: ${PUBLIC_BASE}/dashboard`,
+      html: emailShell({
+        icon: '&#128172;', preheader: `${esc(conv.customerName)}: ${esc(shown.slice(0, 80))}`,
+        heading: ['', 'New message'], intro: ['', `${esc(conv.customerName)} wrote again about “${esc(conv.offerTitle)}”.`],
+        details: [['', 'Message', shown]], buttonText: ['', 'Reply in dashboard'], link: `${PUBLIC_BASE}/dashboard`,
+        footnote: ['', 'You get at most one email every 10 minutes per conversation.']
+      })
+    });
+  }
+}
+// Adds a message from the business (text and/or a file) and emails the visitor (if they left an email) at most once every 10 minutes
+async function pushSellerMessage(owner, c, text, att) {
+  const msg = { from: 'seller', text, at: new Date() };
+  if (att) msg.att = att;
+  c.messages.push(msg);
+  c.unreadCustomer += 1; c.lastAt = new Date();
+  const mailNow = c.customerEmail && (!c.customerMailedAt || Date.now() - new Date(c.customerMailedAt).getTime() > MAIL_GAP_MS);
+  if (mailNow) c.customerMailedAt = new Date();
+  await c.save();
+  if (mailNow && owner) {
+    const link = `${PUBLIC_BASE}/site/${owner.slug}/messages`;
+    const shown = text || (att ? `File: ${att.name}` : '');
+    sendMail({
+      to: c.customerEmail,
+      subject: `${owner.siteName} replied to you`,
+      text: `${owner.siteName} replied about "${c.offerTitle}":\n\n${shown}\n\nOpen the chat: ${link}`,
+      html: emailShell({
+        icon: '&#128172;', preheader: esc(shown.slice(0, 90)),
+        heading: ['', 'You have a reply'], intro: ['', `${esc(owner.siteName)} answered your message about “${esc(c.offerTitle)}”.`],
+        details: [['', 'Reply', shown]], buttonText: ['', 'Open the chat'], link,
+        footnote: ['', 'Open the same browser you used before to continue the conversation.']
+      })
+    });
+  }
+}
+
+// Visitor: send a photo or file (the text box content becomes the caption)
+app.post('/site/:slug/chat/:id/attach', chatLimiter, attachLimiter, runUpload, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Not found' });
+    const user = await siteBySlug(req.params.slug);
+    const conv = user && await Conversation.findOne({ _id: req.params.id, userId: user._id });
+    if (!conv || !tokenOk(conv, req.body && req.body.token)) return res.status(404).json({ message: 'Conversation not found.' });
+    if (conv.messages.length >= MAX_MSGS) return res.status(400).json({ message: 'This conversation is full.' });
+    const att = await storeChatFile(conv, req.file);
+    await pushCustomerMessage(user, conv, cleanMsg(req.body && req.body.text), att);
+    res.json({ messages: conv.messages });
+  } catch (err) { res.status(err.status || 500).json({ message: err.status ? err.message : 'Could not send the file. Please try again.' }); }
 });
-app.post('/api/conversations/:id/file',authenticateToken,chatUpload.single('file'),async(req,res)=>{
- try {const c=await Conversation.findOne({_id:req.params.id,userId:req.user.id});if(!c)return res.status(404).json({message:'Not found'});
- if(!req.file)return res.status(400).json({message:'Choose JPG, PNG, WebP, GIF, PDF or TXT up to 5 MB.'});
- if(c.messages.length>=MAX_MSGS)return res.status(400).json({message:'Conversation full'});
- const f=await ChatFile.create({conversationId:c._id,name:path.basename(req.file.originalname).slice(0,120),mime:req.file.mimetype,data:req.file.buffer});
- c.messages.push({from:'seller',text:'',attachmentId:f._id,attachmentName:f.name,attachmentType:f.mime});c.unreadCustomer++;c.lastAt=new Date();await c.save();res.json({conversation:{...briefConv(c,true),messages:c.messages}});
- }catch(e){res.status(500).json({message:'Could not attach file'});}
+
+// Visitor: call status (polled once a second during a call)
+app.get('/site/:slug/chat/:id/call', callLimiter, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Not found' });
+    const user = await siteBySlug(req.params.slug);
+    const conv = user && await Conversation.findOne({ _id: req.params.id, userId: user._id });
+    if (!conv || !tokenOk(conv, req.query.token)) return res.status(404).json({ message: 'Conversation not found.' });
+    res.json(callPoll(conv, 'customer', Number(req.query.after) || 0));
+  } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
-app.get('/site/:slug/chat/:id/file/:fileId',chatLimiter,async(req,res)=>{
- try {const user=await siteBySlug(req.params.slug);const c=user&&await Conversation.findOne({_id:req.params.id,userId:user._id});if(!c||!tokenOk(c,req.query.token))return res.sendStatus(403);
- const f=await ChatFile.findOne({_id:req.params.fileId,conversationId:c._id});if(!f)return res.sendStatus(404);
- res.set('Content-Type',f.mime);res.set('X-Content-Type-Options','nosniff');res.set('Content-Disposition',`attachment; filename="${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}"`);res.send(f.data);
- }catch(e){res.sendStatus(404);}
-});
-app.get('/api/conversations/:id/file/:fileId',authenticateToken,async(req,res)=>{
- try{const c=await Conversation.findOne({_id:req.params.id,userId:req.user.id});if(!c)return res.sendStatus(403);const f=await ChatFile.findOne({_id:req.params.fileId,conversationId:c._id});if(!f)return res.sendStatus(404);res.set('Content-Type',f.mime);res.set('X-Content-Type-Options','nosniff');res.set('Content-Disposition',`attachment; filename="${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}"`);res.send(f.data);}catch(e){res.sendStatus(404);}
+app.post('/site/:slug/chat/:id/call/signal', callLimiter, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Not found' });
+    const user = await siteBySlug(req.params.slug);
+    const conv = user && await Conversation.findOne({ _id: req.params.id, userId: user._id });
+    if (!conv || !tokenOk(conv, req.body && req.body.token)) return res.status(404).json({ message: 'Conversation not found.' });
+    const r = await callSignal(conv, 'customer', user, req.body || {});
+    res.status(r.code).json(r.body);
+  } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
 
 // Public offers by id (for the Saved page, which keeps the ids in the visitor's own browser)
@@ -1157,13 +1399,22 @@ app.get('/site/:slug/offers.json', chatLimiter, async (req, res) => {
 // Business owner: inbox
 app.get('/api/conversations', authenticateToken, async (req, res) => {
   const list = await Conversation.find({ userId: req.user.id }).sort({ lastAt: -1 }).limit(100);
-  res.json({ conversations: list.map(c => briefConv(c, true)), unread: list.reduce((n, c) => n + (c.unreadSeller || 0), 0) });
+  const info = await offerInfo(list, req.user.id);
+  res.json({ conversations: list.map(c => briefConv(c, true, info)), unread: list.reduce((n, c) => n + (c.unreadSeller || 0), 0) });
+});
+// Calls from visitors that are ringing right now (the dashboard polls this every few seconds)
+app.get('/api/calls/incoming', authenticateToken, callLimiter, (req, res) => {
+  const calls = [];
+  CALLS.forEach((c) => {
+    if (String(c.userId) === String(req.user.id) && c.status === 'ringing' && c.caller === 'customer') calls.push({ convId: c.convId, callId: c.id });
+  });
+  res.json({ calls });
 });
 app.get('/api/conversations/:id', authenticateToken, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
   const c = await Conversation.findOne({ _id: req.params.id, userId: req.user.id });
   if (!c) return res.status(404).json({ message: 'Conversation not found' });
-  if (c.unreadSeller) { c.unreadSeller = 0; await c.save(); }
+  if (c.unreadSeller) { await Conversation.updateOne({ _id: c._id }, { $set: { unreadSeller: 0 } }); c.unreadSeller = 0; }
   res.json({ conversation: { ...briefConv(c, true), messages: c.messages } });
 });
 app.post('/api/conversations/:id/reply', authenticateToken, async (req, res) => {
@@ -1174,28 +1425,42 @@ app.post('/api/conversations/:id/reply', authenticateToken, async (req, res) => 
     const text = cleanMsg(req.body && req.body.text);
     if (!text) return res.status(400).json({ message: 'Please write a message.' });
     if (c.messages.length >= MAX_MSGS) return res.status(400).json({ message: 'This conversation is full.' });
-    c.messages.push({ from: 'seller', text, at: new Date() });
-    c.unreadCustomer += 1; c.lastAt = new Date();
     const owner = await User.findById(req.user.id);
-    const mailNow = c.customerEmail && (!c.customerMailedAt || Date.now() - new Date(c.customerMailedAt).getTime() > MAIL_GAP_MS);
-    if (mailNow) c.customerMailedAt = new Date();
-    await c.save();
-    if (mailNow && owner) {
-      const link = `${PUBLIC_BASE}/site/${owner.slug}/offer/${c.offerId}#chat`;
-      sendMail({
-        to: c.customerEmail,
-        subject: `${owner.siteName} replied to you`,
-        text: `${owner.siteName} replied about "${c.offerTitle}":\n\n${text}\n\nOpen the chat: ${link}`,
-        html: emailShell({
-          icon: '&#128172;', preheader: esc(text.slice(0, 90)),
-          heading: ['', 'You have a reply'], intro: ['', `${esc(owner.siteName)} answered your message about “${esc(c.offerTitle)}”.`],
-          details: [['', 'Reply', text]], buttonText: ['', 'Open the chat'], link,
-          footnote: ['', 'Open the same browser you used before to continue the conversation.']
-        })
-      });
-    }
+    await pushSellerMessage(owner, c, text, null);
     res.json({ conversation: { ...briefConv(c, true), messages: c.messages } });
   } catch (err) { res.status(500).json({ message: 'Could not send the reply.' }); }
+});
+// Business owner: send a photo or file
+app.post('/api/conversations/:id/attach', authenticateToken, attachLimiter, runUpload, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
+    const c = await Conversation.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!c) return res.status(404).json({ message: 'Conversation not found' });
+    if (c.messages.length >= MAX_MSGS) return res.status(400).json({ message: 'This conversation is full.' });
+    const owner = await User.findById(req.user.id);
+    const att = await storeChatFile(c, req.file);
+    await pushSellerMessage(owner, c, cleanMsg(req.body && req.body.text), att);
+    res.json({ conversation: { ...briefConv(c, true), messages: c.messages } });
+  } catch (err) { res.status(err.status || 500).json({ message: err.status ? err.message : 'Could not send the file.' }); }
+});
+// Business owner: call status and call messages
+app.get('/api/conversations/:id/call', authenticateToken, callLimiter, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
+    const c = await Conversation.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!c) return res.status(404).json({ message: 'Conversation not found' });
+    res.json(callPoll(c, 'seller', Number(req.query.after) || 0));
+  } catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+app.post('/api/conversations/:id/call/signal', authenticateToken, callLimiter, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
+    const c = await Conversation.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!c) return res.status(404).json({ message: 'Conversation not found' });
+    const owner = await User.findById(req.user.id);
+    const r = await callSignal(c, 'seller', owner, req.body || {});
+    res.status(r.code).json(r.body);
+  } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
 app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
@@ -1236,7 +1501,7 @@ a{color:inherit}
 .ring.r2{width:min(56vw,520px);animation-direction:reverse;animation-duration:28s}
 .hero-in{position:relative;z-index:2;max-width:920px;transform-style:preserve-3d;transition:transform .15s ease-out}
 .chip{display:inline-block;border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:8px 18px;font-size:.86rem;margin-bottom:28px;background:rgba(255,255,255,.06);backdrop-filter:blur(8px);animation:rise .8s both}
-h1{font-size:clamp(2.7rem,9vw,7rem);line-height:1.02;letter-spacing:-.035em;background:linear-gradient(100deg,var(--a) 0%,#ffe75f 32%,var(--b) 75%,var(--a) 100%);background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:rise .9s .1s both,shine 9s linear infinite;padding-bottom:.08em}
+h1{font-size:clamp(2.7rem,9vw,7rem);line-height:1.02;letter-spacing:-.035em;color:#f4f1ea;padding-bottom:.08em}
 .lead{color:var(--soft);font-size:clamp(1rem,1.7vw,1.25rem);margin:22px auto 0;max-width:46ch;animation:rise .9s .25s both}
 .cta{display:inline-block;margin-top:38px;background:linear-gradient(105deg,var(--a) 0%,#ffcc12 42%,var(--b) 100%);color:var(--on);text-decoration:none;font-weight:700;padding:16px 34px;border-radius:99px;box-shadow:0 0 40px color-mix(in srgb,var(--a) 45%,transparent);transition:transform .2s;animation:rise .9s .4s both}
 .cta:hover{transform:translateY(-3px) scale(1.03)}
@@ -1250,7 +1515,7 @@ h1{font-size:clamp(2.7rem,9vw,7rem);line-height:1.02;letter-spacing:-.035em;back
 .wrap h2{font-size:clamp(2rem,5vw,3.6rem);letter-spacing:-.03em;margin-bottom:12px}
 .sub{color:var(--mute);margin-bottom:56px;max-width:52ch}
 .ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#86efac;padding:16px 20px;border-radius:14px;margin-bottom:28px;font-weight:600}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:26px;perspective:1400px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:26px;perspective:1400px}
 /* neon card: gradient edge, glow that follows the cursor, 3D tilt */
 .card{position:relative;display:flex;flex-direction:column;text-decoration:none;background:var(--panel);border-radius:22px;overflow:hidden;transform-style:preserve-3d;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .35s;box-shadow:0 0 0 1px var(--line),0 18px 50px rgba(0,0,0,.45);will-change:transform}
 .card::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:linear-gradient(135deg,var(--a),transparent 40%,transparent 60%,var(--b));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.55;transition:opacity .3s;pointer-events:none;z-index:3}
@@ -1360,15 +1625,236 @@ body::after{content:'';position:fixed;inset:0;z-index:100;pointer-events:none;op
 .msgrow{display:flex;justify-content:space-between;gap:14px;align-items:center;text-decoration:none;padding:16px 18px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03);margin-bottom:10px}
 .msgrow:hover{border-color:var(--a)}.msgrow b{display:block}.msgrow span{color:var(--mute);font-size:.88rem}
 .newdot{background:#ff3d7f;color:#fff;border-radius:99px;font-size:.75rem;padding:3px 9px;font-weight:700}
+/* header icons with badges */
+.bar b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar nav{align-items:center;flex-shrink:0}
+.navi{position:relative;display:inline-flex;align-items:center;gap:8px}
+.navi svg{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nbadge{min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#ff3d7f;color:#fff;font-size:.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.nbadge:empty{display:none}
+.ringb{position:fixed;left:12px;right:12px;top:72px;z-index:250;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);font-weight:800;text-decoration:none;text-align:center;padding:14px 16px;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+/* offer page: action buttons next to the price (like a classifieds app) */
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 24px}
+.abtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:14px;font-family:inherit;font-weight:700;font-size:.98rem;text-decoration:none;cursor:pointer;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;transition:transform .2s,border-color .2s}
+.abtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.abtn:hover{border-color:var(--a)}
+.abtn.pri{flex:1 1 190px;border:0;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 30px color-mix(in srgb,var(--a) 35%,transparent)}
+.abtn.pri:hover{transform:translateY(-2px)}
+.actions .heart.lg,.actions .share{margin:0;padding:13px 16px;border-radius:14px}
+.actions .heart.lg{border-radius:14px}
+.detail>*,.about>*,.glass{min-width:0}
+.long,.short,.in p,.row div,.row a{overflow-wrap:anywhere}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:200;background:#10151e;border:1px solid var(--line);color:#fff;padding:12px 18px;border-radius:14px;font-size:.92rem;box-shadow:0 10px 40px rgba(0,0,0,.6);max-width:90vw}
+.mhint{padding:6px 16px;color:var(--mute);font-size:.8rem;border-top:1px solid var(--line)}
+/* ---------- Messages page: list of chats on the left, the open chat on the right ---------- */
+body.mpage{overflow:hidden}
+body.mpage::after{display:none}
+.mwrap{position:fixed;top:var(--bh,64px);left:0;right:0;bottom:0;padding:14px 20px 20px}
+.msgr{height:100%;max-width:1180px;margin:0 auto;display:grid;grid-template-columns:350px minmax(0,1fr);border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--panel)}
+.mside{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--line)}
+.mside-h{padding:18px 18px 14px;border-bottom:1px solid var(--line)}
+.mside-h h2{font-size:1.3rem;letter-spacing:-.01em}
+.mlist{flex:1;overflow-y:auto;overscroll-behavior:contain}
+.citem{display:flex;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;background:transparent;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;font-family:inherit;color:inherit}
+.citem:hover{background:rgba(255,255,255,.03)}
+.citem.on{background:color-mix(in srgb,var(--a) 13%,transparent)}
+.cav{width:48px;height:48px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b));overflow:hidden}
+.cav img{width:100%;height:100%;object-fit:cover;display:block}
+.cmid{flex:1;min-width:0}
+.cmid small{display:block;color:var(--mute);font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmid b{display:block;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmid span{display:block;color:var(--soft);font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.cend{display:flex;flex-direction:column;align-items:flex-end;gap:6px;color:var(--mute);font-size:.72rem;flex-shrink:0}
+.mmain{display:flex;flex-direction:column;min-width:0;min-height:0}
+.mempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--mute);text-align:center;padding:30px}
+.mempty .bigico{width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--a) 14%,transparent);color:var(--a)}
+.mempty .bigico svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mpane{flex:1;display:flex;flex-direction:column;min-height:0}
+.mhead{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.mhead .cav{width:42px;height:42px}
+.mtitle{flex:1;min-width:0}
+.mtitle b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtitle small{color:var(--mute);font-size:.78rem}
+.ibtn{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:transparent;color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;text-decoration:none;font-family:inherit;transition:border-color .2s,background .2s}
+.ibtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ibtn:hover{border-color:var(--a)}
+.ibtn.go{background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);border:0}
+.ibtn:disabled{opacity:.5;cursor:default}
+.mback{display:none}
+.moffer{display:flex;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit;background:rgba(255,255,255,.02)}
+.moffer img,.moffer .ph2{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;background:linear-gradient(135deg,var(--a),var(--b));display:flex;align-items:center;justify-content:center;color:var(--on);font-weight:800}
+.moffer div{min-width:0}
+.moffer b{display:block;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.moffer span{color:var(--a);font-weight:700;font-size:.9rem}
+.mbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.mbody .hint{margin:auto;color:var(--mute);text-align:center;max-width:32ch;font-size:.92rem}
+.dsep{align-self:center;color:var(--mute);font-size:.72rem;margin:8px 0 2px;padding:3px 10px;border-radius:99px;background:rgba(255,255,255,.05)}
+.bub.sys{align-self:center;max-width:90%;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--soft);font-size:.82rem;padding:6px 14px;border-radius:99px;text-align:center}
+.bub.sys small{display:inline;margin-left:8px}
+.bub .att-img{display:block;max-width:100%;max-height:280px;border-radius:12px;margin-bottom:6px}
+.bub .att-file{display:flex;gap:10px;align-items:center;text-decoration:none;color:inherit;padding:8px 10px;margin-bottom:6px;border-radius:12px;background:rgba(0,0,0,.2)}
+.bub .att-file svg{width:22px;height:22px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bub .att-file span{min-width:0;overflow-wrap:anywhere;font-size:.88rem}
+.bub .att-file small{display:block;opacity:.65;margin:0;font-size:.72rem}
+.mcomposer{display:flex;gap:8px;align-items:flex-end;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.mcomposer textarea{flex:1;min-width:0;resize:none;min-height:42px;max-height:130px;padding:11px 14px;border-radius:21px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-size:.95rem;line-height:1.35}
+.mcomposer textarea:focus{outline:2px solid var(--a);border-color:transparent}
+.mnew{padding:12px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:grid;gap:8px}
+.mnew input,.mnew textarea{width:100%;padding:11px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-size:.95rem}
+.mnew textarea{min-height:70px;resize:none}
+.mnew .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mnew .chips button{font-size:.78rem;padding:6px 11px}
+.mnew .err{color:#ff8aa5;font-size:.85rem;min-height:1em}
+/* call screen */
+.callov{position:fixed;inset:0;z-index:300;background:rgba(5,7,11,.92);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:none;align-items:center;justify-content:center;padding:24px}
+.callov.open{display:flex}
+.callbox{text-align:center;width:min(360px,100%)}
+.callav{width:112px;height:112px;margin:0 auto 22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.8rem;font-weight:800;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 0 0 color-mix(in srgb,var(--a) 50%,transparent);animation:pulse 1.8s infinite}
+.callov.live .callav{animation:none}
+.callbox h3{font-size:1.6rem;margin-bottom:6px}
+.callbox p{color:var(--soft);min-height:1.5em}
+.callbtns{display:flex;gap:22px;justify-content:center;margin-top:38px}
+.cbtn{width:68px;height:68px;border-radius:50%;border:0;color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(255,255,255,.14)}
+.cbtn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cbtn.red{background:#e5484d}.cbtn.red svg{transform:rotate(135deg)}
+.cbtn.green{background:#22c55e}
+.cbtn.on{background:#fff;color:#111}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--a) 50%,transparent)}70%{box-shadow:0 0 0 28px transparent}100%{box-shadow:0 0 0 0 transparent}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shine{to{background-position:220% center}}
 @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 @keyframes wheel{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
 @keyframes slide{to{transform:translateX(-50%)}}
 @media (max-width:860px){.detail,.about{grid-template-columns:1fr}.gal{position:static}.bar{padding:12px 16px}.wrap{padding:90px 18px 40px}}
-@media(max-width:700px){html,body{max-width:100%;overflow-x:clip}.wrap{width:100%;padding:92px 12px 50px}.bar{gap:8px;padding:10px 12px}.bar nav{gap:5px;flex-wrap:wrap;justify-content:flex-end}.bar nav a{font-size:.73rem;padding:7px 8px}.detail,.grid{min-width:0;grid-template-columns:minmax(0,1fr)}.glass,.gal,.detail>*{min-width:0;max-width:100%}.req,.chat{padding:16px}.stick a{padding:10px 12px;font-size:.82rem}.fab{bottom:85px}.sendrow textarea{min-width:0;flex:1}.sendrow .btn{padding:12px}.msgs{height: min(55vh,450px)}}
-.message-layout{display:grid;grid-template-columns:minmax(220px,32%) minmax(0,1fr);gap:14px;min-height:65vh;margin-top:28px}.message-layout #chatList{min-width:0}.message-layout .msgrow{width:100%;text-align:left;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer}.message-pane{display:flex;flex-direction:column;min-width:0;padding:18px}.message-pane .msgs{flex:1;min-height:250px;height:50vh}.message-head{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:10px;flex-wrap:wrap}.message-head small{color:var(--mute)}.attachbtn{padding:10px;background:transparent;color:var(--paper);border:1px solid var(--line2);border-radius:9px;cursor:pointer}.message-pane .bub a{display:block;color:inherit;text-decoration:underline;overflow-wrap:anywhere}
-@media(max-width:700px){.message-layout{display:block;position:relative}.message-pane{display:none}.message-pane.visible{display:flex;position:fixed;inset:65px 0 0;z-index:70;background:var(--deep);border-radius:0;padding:12px}.message-pane.visible .msgs{height:auto;flex:1}.message-layout .msgrow{margin-bottom:8px}.message-head small{font-size:.78rem}}
+/* ---------- storefront (home) ---------- */
+.shop{max-width:1180px;margin:0 auto;padding:96px 24px 18px}
+.shop-in{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:44px;align-items:center;min-height:min(540px,72vh)}
+.shop h1{font-size:clamp(2.9rem,7.4vw,6rem);line-height:.96;letter-spacing:-.045em;font-weight:800;color:#f4f1ea;margin:0 0 16px;overflow-wrap:anywhere;padding:0;animation:none}
+.shop-sub{color:var(--soft);font-size:clamp(1.02rem,1.6vw,1.2rem);margin-bottom:14px}
+.shop-open{display:inline-flex;align-items:center;gap:10px;color:var(--soft);font-size:.95rem;margin-bottom:26px;max-width:100%}
+.shop-open::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--a);flex:none;box-shadow:0 0 0 4px color-mix(in srgb,var(--a) 22%,transparent)}
+.shop .actions{margin:0}
+.pics{position:relative;width:100%;max-width:470px;aspect-ratio:1/1;margin-left:auto}
+.pics::before{content:'';position:absolute;inset:8% 4%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--a) 20%,transparent),transparent);filter:blur(10px)}
+.tile{position:absolute;width:60%;aspect-ratio:4/5;border-radius:20px;overflow:hidden;background:var(--panel);border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.6);display:block;text-decoration:none;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.tile img{width:100%;height:100%;object-fit:cover;display:block}
+.tile .ph{font-size:3.4rem}
+.tile .tg{position:absolute;left:10px;bottom:10px;right:10px;display:flex;gap:8px;align-items:center;justify-content:space-between;background:#f4f1ea;color:#15130e;padding:7px 12px;border-radius:99px;font-weight:800;font-size:.85rem}
+.tile .tg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.tile .tg b{white-space:nowrap}
+.t1{left:0;top:6%;transform:rotate(-5deg);z-index:1}
+.t2{right:0;top:0;transform:rotate(4deg);z-index:2}
+.t3{left:19%;bottom:0;transform:rotate(-1.5deg);z-index:3}
+.pics.one .t3{left:20%;width:62%;bottom:auto;top:6%}
+.tile:hover{transform:translateY(-8px) rotate(0)}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:28px}
+.wrap .sec-head h2{margin:0;font-size:clamp(1.7rem,3.6vw,2.4rem)}
+.sec-head span{color:var(--mute);font-size:.92rem;white-space:nowrap}
+.wrap.top{padding-top:40px}
+.findus .about{align-items:start}
+.findus .glass{background:none;border:0;padding:0;backdrop-filter:none;border-radius:0}
+.findus .about h3{font-size:1.25rem}
+.findus .row small{text-transform:none;letter-spacing:0;font-size:.88rem}
+footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 24px;text-align:left;max-width:1180px;margin:30px auto 0;padding:26px 24px 40px}
+footer b{display:inline;margin:0;font-size:1.05rem}
+footer span{color:var(--mute)}
+footer a{color:var(--mute)}
+.seller{display:flex;align-items:center;gap:12px;padding:14px 0;margin:0 0 22px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-decoration:none}
+.seller .sav{width:46px;height:46px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b))}
+.seller div{min-width:0}
+.seller b{display:block}
+.seller small{display:block;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seller em{margin-left:auto;font-style:normal;color:var(--a);font-weight:700;font-size:.9rem;white-space:nowrap}
+.info h1{color:#f4f1ea}
+/* messages page on tablets and phones: one screen at a time (list, then the chat) */
+@media (max-width:860px){
+.mwrap{padding:0}
+.msgr{grid-template-columns:minmax(0,1fr);border:0;border-radius:0;max-width:none}
+.msgr[data-view=list] .mmain{display:none}
+.msgr[data-view=thread] .mside{display:none}
+.mside{border-right:0}
+.mback{display:inline-flex}
+.mhead{padding:10px 12px}
+}
+/* phones: smaller type and spacing, nothing wider than the screen, two offers per row like a classifieds app */
+@media (max-width:600px){
+html{font-size:15px;-webkit-text-size-adjust:100%}
+input,textarea,select{font-size:16px!important}
+.bar{padding:10px 14px;gap:10px}
+.bar b{font-size:.98rem}
+.bar nav{gap:8px}
+.bar nav a{padding:0;border-radius:50%;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center}
+.bar nav .hide-m{display:none}
+.navi .lab{display:none}
+.navi .nbadge{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;font-size:.65rem}
+.hero{padding:92px 18px 64px}
+h1{font-size:clamp(2.1rem,11vw,3.2rem)}
+.lead{font-size:.98rem;margin-top:16px}
+.cta{margin-top:26px;padding:13px 26px}
+.chip{margin-bottom:18px;padding:6px 14px;font-size:.8rem}
+.strip{padding:14px 0}.strip span{font-size:1.1rem}.strip div,.strip span{gap:34px}
+.wrap{padding:82px 14px 30px}
+.wrap h2{font-size:1.65rem}
+.sub{margin-bottom:26px;font-size:.95rem}
+.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{border-radius:16px}
+.pic{aspect-ratio:1/1}
+.in{padding:12px;transform:none}
+.in h3{font-size:.95rem;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.in p{font-size:.8rem;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.more{font-size:.82rem}
+.tag{right:8px;top:8px;padding:5px 10px;font-size:.8rem}
+.count{left:8px;top:8px;padding:4px 8px;font-size:.68rem}
+.heart{right:8px;bottom:8px;width:34px;height:34px}.heart svg{width:17px;height:17px}
+.ph{font-size:2.6rem}
+.steps{gap:12px}.step{padding:20px}
+.glass{padding:18px;border-radius:18px}
+.about{gap:16px}
+.row small{width:76px}
+.map{min-height:230px}.map iframe{min-height:230px}
+.detail{gap:18px}
+.wrap.offerwrap{padding-top:76px}
+.gal{margin:0 -14px}
+.main{border-radius:0;box-shadow:none}
+.main .ph{font-size:4.5rem}
+.thumbs{padding:4px 14px}
+.thumbs button{flex-basis:64px;height:50px}
+.nav{width:38px;height:38px}
+.info h1{font-size:1.55rem;margin-bottom:10px}
+.price{font-size:1.2rem;padding:6px 16px;margin-bottom:14px}
+.short{font-size:.98rem;margin-bottom:14px}
+.long{font-size:.94rem;margin-bottom:20px}
+.actions{gap:8px;margin-bottom:18px}
+.abtn{padding:12px 16px;font-size:.92rem}
+.abtn.pri{flex:1 1 100%}
+.heart.lg .t,.share .t2{display:none}
+.actions .heart.lg,.actions .share{padding:12px 14px}
+.crow{flex-wrap:wrap}.crow select{flex:1 1 100%}.crow input{flex:1 1 70%}
+.req h2{font-size:1.15rem}
+.steps{margin-top:6px}
+footer{padding:32px 16px 96px;margin-top:30px}
+.fab{padding:11px 16px;right:14px}
+body.offerpage .fab{display:none}
+.stick{gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.stick b{font-size:1.05rem;white-space:nowrap}
+.stick a{padding:11px 16px;font-size:.9rem;text-align:center;white-space:nowrap}
+.stick a.alt{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.28)}
+.msgr{font-size:.95rem}
+.callbtns{gap:26px}
+.shop{padding:70px 16px 8px}
+.shop-in{grid-template-columns:minmax(0,1fr);gap:20px;min-height:0}
+.shop h1{font-size:clamp(2.5rem,13.5vw,3.6rem)}
+.shop-sub{font-size:1rem;margin-bottom:10px}
+.shop-open{margin-bottom:18px;font-size:.9rem}
+.pics{max-width:330px;margin:4px auto 0;aspect-ratio:1/.82}
+.tile{width:54%;border-radius:16px}
+.tile .tg{left:7px;right:7px;bottom:7px;padding:5px 9px;font-size:.76rem}
+.tile .ph{font-size:2.4rem}
+.wrap.top{padding-top:26px}
+.sec-head{margin-bottom:18px;padding-bottom:10px}
+footer{padding:22px 16px 40px;margin-top:10px}
+.seller{padding:12px 0;margin-bottom:16px}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}`;
 }
 
@@ -1391,7 +1877,7 @@ const SITE_JS = `(function(){
   var sp=document.querySelector('.spot');
   if(hero&&sp&&fine&&!calm){hero.addEventListener('pointermove',function(e){var r=hero.getBoundingClientRect();sp.style.background='radial-gradient(520px circle at '+(e.clientX-r.left)+'px '+(e.clientY-r.top)+'px,rgba(255,255,255,.07),transparent 60%)'})}
   var sh=document.getElementById('shareBtn');
-  if(sh)sh.addEventListener('click',function(){var d={title:document.title,url:location.href.split('#')[0]};if(navigator.share){navigator.share(d).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(d.url);sh.textContent='Link copied'}});
+  if(sh)sh.addEventListener('click',function(){var d={title:document.title,url:location.href.split('#')[0]};if(navigator.share){navigator.share(d).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(d.url);var lb2=sh.querySelector('.t2');if(lb2)lb2.textContent='Link copied'}});
   var ph={phone:'e.g. +359 88 123 4567',email:'name@example.com',instagram:'@username or profile link',facebook:'Profile name or link',x:'@username or profile link',tiktok:'@username',telegram:'@username or phone',whatsapp:'WhatsApp number',viber:'Viber number',other:'Type your contact details'};
   var cbox=document.getElementById('contacts');
   if(cbox){
@@ -1410,7 +1896,7 @@ const SITE_JS = `(function(){
   }
   var slug=document.body.getAttribute('data-slug')||'';
   function favs(){try{return JSON.parse(localStorage.getItem('fav:'+slug)||'[]')}catch(e){return[]}}
-  function paintFavs(){var a=favs();document.querySelectorAll('.heart').forEach(function(h){var on=a.indexOf(h.dataset.id)>-1;h.classList.toggle('on',on);h.setAttribute('aria-pressed',on)});var c=document.getElementById('favCount');if(c)c.textContent=a.length?'('+a.length+')':''}
+  function paintFavs(){var a=favs();document.querySelectorAll('.heart').forEach(function(h){var on=a.indexOf(h.dataset.id)>-1;h.classList.toggle('on',on);h.setAttribute('aria-pressed',on)});var c=document.getElementById('favCount');if(c)c.textContent=a.length||''}
   document.addEventListener('click',function(e){var h=e.target.closest&&e.target.closest('.heart');if(!h)return;e.preventDefault();e.stopPropagation();var a=favs(),i=a.indexOf(h.dataset.id);if(i>-1)a.splice(i,1);else a.unshift(h.dataset.id);try{localStorage.setItem('fav:'+slug,JSON.stringify(a.slice(0,100)))}catch(x){}paintFavs();
     var fl=document.getElementById('favList');if(fl&&i>-1){var card=h.closest('.card');if(card)card.remove();if(!fl.children.length)fl.innerHTML='<p class="none">No saved offers yet. Tap the heart on any offer to save it here.</p>'}});
   function mk(t,c,x){var n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n}
@@ -1426,51 +1912,10 @@ const SITE_JS = `(function(){
         var hb=mk('button','heart');hb.type='button';hb.dataset.id=o.id;hb.setAttribute('aria-label','Remove from favorites');hb.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 5 6 5c2 0 3.4 1.1 4 2.2.6-1.1 2-2.2 4-2.2 3.3 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z"/></svg>';pic.appendChild(hb);
         a.appendChild(pic);var inn=mk('div','in');inn.appendChild(mk('h3',null,o.title));inn.appendChild(mk('p',null,o.description||''));inn.appendChild(mk('span','more','View details'));a.appendChild(inn);fl.appendChild(a)});
       if(!shown)fl.innerHTML='<p class="none">Those offers are no longer available.</p>';paintFavs();tiltAll()}).catch(function(){fl.innerHTML='<p class="none">Could not load your saved offers. Please refresh.</p>'})}
-  var cl=document.getElementById('chatList');
-  if(cl){var saved=[];try{saved=JSON.parse(localStorage.getItem('chats:'+slug)||'[]')}catch(e){}
-    var pane=document.getElementById('messagePane');
-    function openMessage(c,mine){
-      pane.textContent='';var head=mk('div','message-head');head.appendChild(mk('b',null,document.body.dataset.seller||'Seller'));head.appendChild(mk('small',null,c.offerTitle));pane.appendChild(head);
-      var view=mk('div','msgs');pane.appendChild(view);var form=mk('form','sendrow');var attach=mk('input');attach.type='file';attach.accept='image/*,.pdf,.txt';attach.style.display='none';
-      var pick=mk('button','attachbtn','+');pick.type='button';pick.title='Attach photo or file';pick.onclick=function(){attach.click()};form.appendChild(pick);form.appendChild(attach);
-      var input=mk('textarea');input.placeholder='Write a message...';input.maxLength=1500;form.appendChild(input);var send=mk('button','btn','Send');send.type='submit';form.appendChild(send);pane.appendChild(form);
-      function draw(messages){view.textContent='';messages.forEach(function(m){var bub=mk('div','bub '+(m.from==='customer'?'me':'them'));if(m.text)bub.appendChild(mk('div',null,m.text));if(m.attachmentId){var a=mk('a',null,'📎 '+m.attachmentName);a.href='/site/'+slug+'/chat/'+mine.id+'/file/'+m.attachmentId+'?token='+encodeURIComponent(mine.token);bub.appendChild(a)}bub.appendChild(mk('small',null,new Date(m.at).toLocaleString()));view.appendChild(bub)});view.scrollTop=view.scrollHeight;}
-      function refresh(){fetch('/site/'+slug+'/chat/'+mine.id+'?token='+encodeURIComponent(mine.token)).then(function(r){return r.json()}).then(function(x){if(x.messages)draw(x.messages)}).catch(function(){})}
-      form.onsubmit=function(e){e.preventDefault();var text=input.value.trim();if(!text)return;send.disabled=true;fetch('/site/'+slug+'/chat/'+mine.id+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:mine.token,text:text})}).then(function(r){return r.json()}).then(function(x){if(x.messages){input.value='';draw(x.messages)}else alert(x.message||'Error')}).finally(function(){send.disabled=false})};
-      attach.onchange=function(){if(!attach.files[0])return;var data=new FormData();data.append('token',mine.token);data.append('file',attach.files[0]);fetch('/site/'+slug+'/chat/'+mine.id+'/file',{method:'POST',body:data}).then(function(r){return r.json()}).then(function(x){if(x.messages)draw(x.messages);else alert(x.message||'Upload failed')}).catch(function(){alert('Upload failed')});attach.value=''};
-      refresh();if(window.messageTimer)clearInterval(window.messageTimer);window.messageTimer=setInterval(function(){if(!document.hidden)refresh()},5000);
-      if(window.matchMedia('(max-width:700px)').matches){pane.classList.add('visible');var back=mk('button','attachbtn','← Back');back.onclick=function(){pane.classList.remove('visible')};head.prepend(back)}
-    }
-    if(!saved.length){cl.innerHTML='<p class="none">No conversations yet. Open an offer and send a message.</p>'}
-    else fetch('/site/'+slug+'/chat/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chats:saved})}).then(function(r){return r.json()}).then(function(d){cl.textContent='';var list=d.conversations||[];
-      if(!list.length){cl.innerHTML='<p class="none">No conversations yet.</p>';return}
-      list.forEach(function(c){var mine=saved.find(function(x){return x.id===c.id});var b=mk('button','msgrow');b.type='button';b.appendChild(mk('b',null,document.body.dataset.seller||'Seller'));b.appendChild(mk('small',null,c.offerTitle));b.appendChild(mk('span',null,c.last?(c.last.from==='seller'?'Seller: ':'You: ')+(c.last.text||c.last.attachmentName||'').slice(0,70):''));b.onclick=function(){openMessage(c,mine)};cl.appendChild(b)});
-      if(list.length===1&&!window.matchMedia('(max-width:700px)').matches)openMessage(list[0],saved.find(function(x){return x.id===list[0].id}));}).catch(function(){cl.textContent='Could not load conversations.'})}
+  var mb=document.getElementById('msgBadge');
+  if(mb&&!document.getElementById('msgr')){var sv=[];try{sv=JSON.parse(localStorage.getItem('chats:'+slug)||'[]')}catch(e){}
+    if(sv.length){var chk=function(){if(document.hidden)return;fetch('/site/'+slug+'/chat/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chats:sv})}).then(function(r){return r.json()}).then(function(d){var n=0,ring=null;(d.conversations||[]).forEach(function(c){n+=c.unread||0;if(c.ringing)ring=c});mb.textContent=n||'';var bn=document.getElementById('ringBanner');if(ring&&!bn){bn=document.createElement('a');bn.id='ringBanner';bn.className='ringb';bn.href='/site/'+slug+'/messages';bn.textContent='\u260E  '+(document.body.getAttribute('data-seller')||'The shop')+' is calling you. Tap to answer';document.body.appendChild(bn)}else if(!ring&&bn){bn.remove()}}).catch(function(){})};chk();setInterval(chk,4000)}}
   paintFavs();
-  var cw=document.getElementById('chat');
-  if(cw){
-    var offerId=cw.dataset.offer,ckey='chats:'+slug,startF=document.getElementById('chatStart'),thread=document.getElementById('chatThread'),box=document.getElementById('chatMsgs'),cerr=document.getElementById('chErr');
-    function chats(){try{return JSON.parse(localStorage.getItem(ckey)||'[]')}catch(e){return[]}}
-    function putChats(a){try{localStorage.setItem(ckey,JSON.stringify(a.slice(0,20)))}catch(e){}}
-    var mine=chats().filter(function(x){return x.offerId===offerId})[0],count=-1,timer=null;
-    function bubble(m){var d=mk('div','bub '+(m.from==='customer'?'me':'them'));if(m.text)d.appendChild(mk('div',null,m.text));if(m.attachmentId){var a=mk('a',null,'📎 '+m.attachmentName);a.href='/site/'+slug+'/chat/'+mine.id+'/file/'+m.attachmentId+'?token='+encodeURIComponent(mine.token);d.appendChild(a)}d.appendChild(mk('small',null,new Date(m.at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})));return d}
-    function draw(msgs){var stick=count<0||box.scrollHeight-box.scrollTop-box.clientHeight<90;box.textContent='';msgs.forEach(function(m){box.appendChild(bubble(m))});count=msgs.length;if(stick)box.scrollTop=box.scrollHeight}
-    function pull(){fetch('/site/'+slug+'/chat/'+mine.id+'?token='+encodeURIComponent(mine.token)).then(function(r){if(r.status===404){forget();return null}return r.json()}).then(function(d){if(d&&d.messages&&d.messages.length!==count)draw(d.messages)}).catch(function(){})}
-    function forget(){clearInterval(timer);putChats(chats().filter(function(x){return x.offerId!==offerId}));mine=null;count=-1;thread.style.display='none';startF.style.display='grid'}
-    function openThread(){startF.style.display='none';thread.style.display='block';pull();clearInterval(timer);timer=setInterval(function(){if(!document.hidden)pull()},4000)}
-    if(mine)openThread();
-    startF.querySelectorAll('.chips button').forEach(function(b){b.addEventListener('click',function(){document.getElementById('chText').value=b.textContent})});
-    startF.addEventListener('submit',function(e){e.preventDefault();cerr.textContent='';var btn=startF.querySelector('.btn');btn.disabled=true;
-      fetch('/site/'+slug+'/chat/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offerId:offerId,name:document.getElementById('chName').value,email:document.getElementById('chEmail').value,text:document.getElementById('chText').value})})
-      .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}})}).then(function(x){btn.disabled=false;if(!x.ok){cerr.textContent=x.d.message||'Could not send.';return}
-        mine={offerId:offerId,id:x.d.id,token:x.d.token};putChats([mine].concat(chats().filter(function(c){return c.offerId!==offerId})));openThread()}).catch(function(){btn.disabled=false;cerr.textContent='Connection problem. Please try again.'})});
-    var sf=document.getElementById('chatSend'),ta=document.getElementById('chReply');
-    document.getElementById('chFile').addEventListener('change',function(){var f=this.files[0];if(!f||!mine)return;var fd=new FormData();fd.append('file',f);fd.append('token',mine.token);fetch('/site/'+slug+'/chat/'+mine.id+'/file',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){if(d.messages)draw(d.messages);else alert(d.message||'Upload failed')}).catch(function(){alert('Upload failed')});this.value='';});
-    ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sf.requestSubmit()}});
-    sf.addEventListener('submit',function(e){e.preventDefault();var t=ta.value.trim();if(!t||!mine)return;ta.value='';
-      fetch('/site/'+slug+'/chat/'+mine.id+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:mine.token,text:t})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}})}).then(function(x){if(x.ok&&x.d.messages)draw(x.d.messages);else{ta.value=t;alert(x.d.message||'Could not send.')}}).catch(function(){ta.value=t})});
-    if(location.hash==='#chat')cw.scrollIntoView({behavior:'smooth',block:'center'});
-  }
   var main=document.getElementById('mainPic');
   if(main){
     var imgs=JSON.parse(main.getAttribute('data-imgs')||'[]'),i=0,mi=document.getElementById('mainImg'),th=[].slice.call(document.querySelectorAll('.thumbs button'));
@@ -1484,18 +1929,18 @@ const SITE_JS = `(function(){
   }
 })();`;
 
-function pageShell(user, { title, desc, body }) {
+function pageShell(user, { title, desc, body, cls }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
   return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#05070b">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}</style></head><body data-slug="${esc(user.slug)}" data-seller="${esc(([user.firstName,user.lastName].filter(Boolean).join(" ").trim()) || user.siteName)}">
+<style>${siteCss(t, f)}</style></head><body class="${cls || ''}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${body}
 <script>${SITE_JS}</script>
 </body></html>`;
@@ -1515,7 +1960,7 @@ function aboutBlock(user) {
     user.instagram ? `<div class="row"><small>Instagram</small><a href="${esc(user.instagram)}" target="_blank" rel="noopener">${esc(user.instagram.replace(/^https?:\/\/(www\.)?/, ''))}</a></div>` : ''
   ].join('');
   const cat = [user.categoryLabel || user.category, user.city].filter(Boolean).map(esc).join(' &middot; ');
-  return `<section class="about rv" id="about">
+  return `<section class="about">
 <div class="glass"><h3>${esc(user.siteName)}</h3><div class="cat">${cat}</div>${rows || '<div class="row"><small>Info</small><div>Contact details will appear here soon.</div></div>'}</div>
 ${q ? `<div><div class="map"><iframe title="Map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed"></iframe></div><a class="mapbtn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener">Open in Google Maps &rarr;</a></div>` : ''}
 </section>`;
@@ -1531,29 +1976,38 @@ function offerCard(user, o, i) {
 }
 
 function renderSite(user, offers, sent) {
-  const first = offers.map(galleryOf).find(g => g.length);
-  const heroBg = first ? `<div class="layer herobg" data-depth=".15" style="background-image:url('${esc(encodeURI(first[0]))}')"></div>` : '';
-  const names = offers.map(o => `<span>${esc(o.title)}</span>`).join('');
-  const meta = [user.category, user.city].filter(Boolean).map(esc).join(' &middot; ');
-  const cards = offers.length === 0 ? '<p class="none">No offers yet. Please check back soon.</p>' : offers.map((o, i) => offerCard(user, o, i)).join('');
+  const withPics = offers.slice(0, 3);
+  const meta = [user.categoryLabel || user.category, user.city].filter(Boolean).map(esc);
+  const sub = meta.length === 2 ? `${meta[0]} in ${meta[1]}` : meta.join('');
+  const hours = String(user.hours || '').split('\n')[0].trim();
+  const q = mapQuery(user);
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
-  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="#offers">Offers</a><a href="#about">About</a><a href="/site/${esc(user.slug)}/messages">&#9993; Messages</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
-<section class="hero"><div class="spot"></div>${heroBg}<div class="layer blob b1" data-depth=".3"></div><div class="layer blob b2" data-depth="-.12"></div><div class="layer gridbg" data-depth=".22"></div><div class="layer ring" data-depth=".08"></div><div class="layer ring r2" data-depth=".12"></div>
-<div class="hero-in">
-${meta ? `<div class="chip">${meta}</div>` : ''}
-<h1>${esc(user.siteName)}</h1>
-<p class="lead">Browse our offers, open any of them for photos and details, and send a request in seconds.</p>
-<a class="cta" href="#offers">See what we offer</a></div><div class="scroll" aria-hidden="true"></div></section>
-${offers.length ? `<div class="strip" aria-hidden="true"><div>${names}${names}${names}${names}</div></div>` : ''}
-<main class="wrap" id="offers">
-<h2 class="rv">Our offers</h2><p class="sub rv">Pick what you need and open it for the full details. No account needed.</p>
+  const tiles = withPics.map((o, i) => {
+    const g = galleryOf(o);
+    const cls = withPics.length === 1 ? 't3' : withPics.length === 2 ? ['t1', 't2'][i] : ['t2', 't1', 't3'][i];
+    return `<a class="tile ${cls}" href="/site/${esc(user.slug)}/offer/${o._id}" aria-label="${esc(o.title)}">${g.length ? `<img src="${esc(g[0])}" alt="" loading="lazy">` : `<div class="ph">${esc(String(o.title || '?').charAt(0).toUpperCase())}</div>`}<span class="tg"><span>${esc(o.title)}</span><b>${eur(o.price)}</b></span></a>`;
+  }).join('');
+  const cards = offers.length === 0 ? '<p class="none">No offers yet. Please check back soon.</p>' : offers.map((o, i) => offerCard(user, o, i)).join('');
+  const body = `<div class="prog" id="prog"></div>${siteBar(user, 'home')}
+<section class="shop"><div class="shop-in">
+  <div class="shop-txt">
+    <h1>${esc(user.siteName)}</h1>
+    ${sub ? `<p class="shop-sub">${sub}</p>` : ''}
+    ${hours ? `<p class="shop-open">${esc(hours)}</p>` : ''}
+    <div class="actions">
+      <a class="abtn pri" href="/site/${esc(user.slug)}/messages">${MSG_SVG}Message us</a>
+      ${phoneRaw ? `<a class="abtn" href="tel:${esc(phoneRaw)}">${PHONE_SVG}Call</a>` : ''}
+      ${q ? `<a class="abtn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener">${PIN_SVG}Directions</a>` : ''}
+    </div>
+  </div>
+  ${tiles ? `<div class="pics${withPics.length === 1 ? ' one' : ''}">${tiles}</div>` : ''}
+</div></section>
+<main class="wrap top" id="offers">
+<div class="sec-head"><h2>Offers</h2><span>${offers.length} available</span></div>
 ${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
 <div class="grid">${cards}</div></main>
-<section class="wrap" id="how" style="padding-bottom:20px"><h2 class="rv">How it works</h2><p class="sub rv">Three quick steps. No account, no waiting.</p>
-<div class="steps"><div class="step rv"><i>1</i><h3>Choose an offer</h3><p>Open any offer to see photos, the full description and the price.</p></div><div class="step rv" style="--d:80ms"><i>2</i><h3>Send a request</h3><p>Leave your name and the contact you prefer: phone, Instagram, Facebook, email or anything else.</p></div><div class="step rv" style="--d:160ms"><i>3</i><h3>Get a reply</h3><p>${esc(user.siteName)} contacts you directly to confirm the details.</p></div></div></section>
-<div class="wrap" style="padding-top:20px">${aboutBlock(user)}</div>
-${phoneRaw ? `<a class="fab" href="tel:${esc(phoneRaw)}">&#9742; Call us</a>` : ''}
-<footer><b>${esc(user.siteName)}</b>${meta}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
+<section class="wrap findus" id="about" style="padding-top:60px"><div class="sec-head"><h2>Find us</h2></div>${aboutBlock(user)}</section>
+<footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>`;
   return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body });
 }
 
@@ -1563,18 +2017,24 @@ function renderOfferPage(user, offer, others, sent) {
   const main = g.length
     ? `<div class="main" id="mainPic" data-imgs="${esc(JSON.stringify(g))}"><img id="mainImg" src="${esc(g[0])}" alt="${esc(offer.title)}">${g.length > 1 ? '<button class="nav p" id="prev" aria-label="Previous photo">&#8249;</button><button class="nav n" id="next" aria-label="Next photo">&#8250;</button>' : ''}</div>${thumbs}`
     : `<div class="main"><div class="ph">${esc(String(offer.title || '?').charAt(0).toUpperCase())}</div></div>`;
-  const more = others.length ? `<h2 class="rv" style="font-size:1.8rem;margin:70px 0 26px">More from ${esc(user.siteName)}</h2><div class="grid">${others.map((o, i) => offerCard(user, o, i)).join('')}</div>` : '';
+  const more = others.length ? `<h2 class="rv" style="font-size:1.8rem;margin:70px 0 26px">More from ${esc(sellerName(user))}</h2><div class="grid">${others.map((o, i) => offerCard(user, o, i)).join('')}</div>` : '';
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
   const ld = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: offer.title, description: String(offer.description || offer.title), image: g, offers: { '@type': 'Offer', price: Number(offer.price || 0).toFixed(2), priceCurrency: 'EUR', availability: 'https://schema.org/InStock', seller: { '@type': 'Organization', name: user.siteName } } }).replace(/</g, '\\u003c');
-  const body = `<script type="application/ld+json">${ld}</script><div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a href="/site/${esc(user.slug)}/messages">&#9993; Messages</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
-<main class="wrap" style="padding-top:110px">
+  const body = `<script type="application/ld+json">${ld}</script><div class="prog" id="prog"></div>${siteBar(user, 'offer')}
+<main class="wrap">
 <a class="crumb" href="/site/${esc(user.slug)}#offers">&larr; Back to all offers</a>
 <div class="detail">
   <div class="gal">${main}</div>
   <div class="info">
     <h1>${esc(offer.title)}</h1>
-    <div class="price">${eur(offer.price)}</div><br>
-    <button type="button" class="heart lg" data-id="${offer._id}" aria-pressed="false">${HEART_PATH}<span class="t"></span></button><button type="button" class="share" id="shareBtn">&#8599; Share this offer</button>
+    <div class="price">${eur(offer.price)}</div>
+    <div class="actions">
+      <a class="abtn pri" href="/site/${esc(user.slug)}/messages?offer=${offer._id}">${MSG_SVG}Message</a>
+      ${phoneRaw ? `<a class="abtn" href="tel:${esc(phoneRaw)}">${PHONE_SVG}<span class="t2">Call</span></a>` : ''}
+      <button type="button" class="heart lg" data-id="${offer._id}" aria-pressed="false" aria-label="Save">${HEART_PATH}<span class="t"></span></button>
+      <button type="button" class="share abtn" id="shareBtn" aria-label="Share">${SHARE_SVG}<span class="t2">Share</span></button>
+    </div>
+    <a class="seller" href="/site/${esc(user.slug)}"><span class="sav">${esc(sellerName(user).charAt(0).toUpperCase())}</span><div><b>${esc(sellerName(user))}</b><small>${[user.siteName, user.city].filter(Boolean).map(esc).join(' &middot; ')}</small></div><em>View shop</em></a>
     ${offer.description ? `<p class="short">${esc(offer.description)}</p>` : ''}
     ${offer.longDescription ? `<p class="long">${esc(offer.longDescription)}</p>` : ''}
     <div class="glass req" id="request">
@@ -1595,52 +2055,471 @@ function renderOfferPage(user, offer, others, sent) {
         <button class="btn" type="submit">Send request</button>
       </form>
     </div>
-    <div class="glass chat" id="chat" data-offer="${offer._id}" style="margin-top:20px">
-      <h2>Chat with ${esc(([user.firstName, user.lastName].filter(Boolean).join(" ").trim()) || user.siteName)}</h2>
-      <p class="hint">Write to the seller. Your conversations are also available in Messages.</p><a class="callbtn" href="/site/${esc(user.slug)}/messages">&#9993; Open messages</a>
-      <form id="chatStart">
-        <input id="chName" placeholder="Your name" required maxlength="60">
-        <input id="chEmail" type="email" placeholder="Email (optional, we tell you when they reply)" maxlength="120">
-        <textarea id="chText" placeholder="Write your message..." required maxlength="1500"></textarea>
-        <div class="chips"><button type="button">Is this available?</button><button type="button">Can you customize it for me?</button><button type="button">What is the delivery or pickup time?</button></div>
-        <button class="btn" type="submit">Send message</button>
-        <div class="err" id="chErr" style="color:#ff8aa5;font-size:.88rem"></div>
-      </form>
-      <div id="chatThread" style="display:none"><a class="callbtn" href="/site/${esc(user.slug)}/messages">&#9993; Continue in Messages</a>
-        <div class="msgs" id="chatMsgs" aria-live="polite"></div>
-        <form class="sendrow" id="chatSend"><label class="attachbtn" title="Attach photo or file">&#128206;<input type="file" id="chFile" accept="image/*,.pdf,.txt" style="display:none"></label><textarea id="chReply" placeholder="Write a message..." maxlength="1500" required></textarea><button class="btn" type="submit">Send</button></form>
-        ${phoneRaw ? `<a class="callbtn" href="tel:${esc(phoneRaw)}">&#9742; Call ${esc(user.siteName)}</a>` : ''}
-      </div>
-    </div>
   </div>
 </div>
 <div style="margin-top:80px">${aboutBlock(user)}</div>
 ${more}
 </main>
 <div class="lb" id="lb"><img id="lbImg" alt=""></div>
-<div class="stick"><b>${eur(offer.price)}</b><a href="#request">Request this offer</a></div>
-${phoneRaw ? `<a class="fab" href="tel:${esc(phoneRaw)}">&#9742; Call</a>` : ''}
-<footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
-  return pageShell(user, { title: `${offer.title} - ${user.siteName}`, desc: String(offer.description || offer.title).slice(0, 160), body });
+<div class="stick"><b>${eur(offer.price)}</b><a class="alt" href="#request">Request</a><a href="/site/${esc(user.slug)}/messages?offer=${offer._id}">Message</a></div>
+<footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>`;
+  return pageShell(user, { title: `${offer.title} - ${user.siteName}`, desc: String(offer.description || offer.title).slice(0, 160), body, cls: 'offerpage' });
 }
 
 function renderFavoritesPage(user) {
-  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a href="/site/${esc(user.slug)}/messages">&#9993; Messages</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
-<main class="wrap" style="padding-top:110px">
+  const body = `<div class="prog" id="prog"></div>${siteBar(user, 'fav')}
+<main class="wrap">
 <a class="crumb" href="/site/${esc(user.slug)}#offers">&larr; Back to all offers</a>
 <h2>Your favorites</h2><p class="sub">Offers you saved with the heart. They are kept in this browser only, so no account is needed.</p>
 <div class="grid" id="favList"><p class="none">Loading...</p></div>
-
 </main>
 <footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
   return pageShell(user, { title: `Favorites - ${user.siteName}`, desc: `Offers you saved at ${user.siteName}`, body });
 }
 
+// ---------- Header bar shared by all public pages: brand + icon buttons (Saved, Messages) ----------
+const MSG_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+const PHONE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+const PIN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+function siteBar(user, kind) {
+  const s = esc(user.slug);
+  const first = kind === 'home'
+    ? '<a class="hide-m" href="#offers">Offers</a><a class="hide-m" href="#about">About</a>'
+    : `<a class="hide-m" href="/site/${s}#offers">All offers</a>`;
+  return `<header class="bar"><b>${esc(user.siteName)}</b><nav>${first}<a class="navi" href="/site/${s}/favorites" aria-label="Saved offers">${HEART_PATH}<span class="lab">Saved</span><span class="nbadge" id="favCount"></span></a><a class="navi" href="/site/${s}/messages" aria-label="Messages">${MSG_SVG}<span class="lab">Messages</span><span class="nbadge" id="msgBadge"></span></a></nav></header>`;
+}
+
+// ---------- Messages page (opens from the Messages button): list of chats + the open chat, photos/files and voice calls ----------
+// This function runs in the visitor's browser (it is sent as text), so it must not use anything from the server.
+function messengerClient() {
+  var root = document.getElementById('msgr');
+  var slug = root.getAttribute('data-slug');
+  var biz = root.getAttribute('data-biz');
+  var KEY = 'chats:' + slug, NKEY = 'vname:' + slug, EKEY = 'vmail:' + slug;
+  var $ = function (id) { return document.getElementById(id); };
+  var P = {
+    clip: '<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+    phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+    send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+    back: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+    file: '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/>',
+    chat: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+    mic: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>',
+    micoff: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="1" y1="1" x2="23" y2="23"/>'
+  };
+  function ic(n) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + P[n] + '</svg>'; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; }); }
+  function saved() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } }
+  function putSaved(a) { try { localStorage.setItem(KEY, JSON.stringify(a.slice(0, 20))); } catch (e) {} }
+  function jfetch(url, opts) {
+    return fetch(url, opts).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, d: d }; }); });
+  }
+  function post(url, body) { return jfetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+  var tt;
+  function toast(m) { var t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(tt); tt = setTimeout(function () { t.style.display = 'none'; }, 3500); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function hhmm(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function fmtTime(v) { var x = new Date(v), n = new Date(); return x.toDateString() === n.toDateString() ? hhmm(x) : pad(x.getDate()) + '.' + pad(x.getMonth() + 1); }
+  function dayLabel(d) {
+    var n = new Date(), y = new Date(Date.now() - 864e5);
+    if (d.toDateString() === n.toDateString()) return 'Today';
+    if (d.toDateString() === y.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  }
+  function size(n) { return n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
+  function preview(m) {
+    if (!m) return '';
+    if (m.from === 'system') return m.text;
+    var who = m.from === 'customer' ? 'You: ' : '';
+    if (m.att && m.att.name && !m.text) return who + '📎 ' + m.att.name;
+    return who + (m.text || '');
+  }
+  function fitBar() { var bar = document.querySelector('.bar'); if (bar) document.querySelector('.mwrap').style.top = bar.offsetHeight + 'px'; }
+  fitBar(); addEventListener('resize', fitBar);
+  document.querySelectorAll('[data-ic]').forEach(function (b) { b.innerHTML = ic(b.getAttribute('data-ic')); });
+
+  var convs = [], cur = null, count = -1, pollT = null, newOffer = null, CALL = null, ICE = null;
+
+  // ----- list of conversations -----
+  function badge() {
+    var n = 0; convs.forEach(function (c) { n += c.unread || 0; });
+    var b = $('msgBadge'); if (b) b.textContent = n || '';
+  }
+  function renderList() {
+    var box = $('mList');
+    if (!convs.length) { box.innerHTML = '<p class="none" style="padding:18px">No conversations yet. Open an offer and tap Message to write to ' + esc(biz) + '.</p>'; return; }
+    box.innerHTML = convs.map(function (c) {
+      var av = c.offerImage ? '<img src="' + esc(c.offerImage) + '" alt="">' : esc(String(c.offerTitle || '?').charAt(0).toUpperCase());
+      var on = cur && String(cur.id) === String(c.id) ? ' on' : '';
+      return '<button type="button" class="citem' + on + '" data-id="' + esc(c.id) + '"><span class="cav">' + av + '</span>' +
+        '<span class="cmid"><small>' + esc(biz) + '</small><b>' + esc(c.offerTitle) + '</b><span>' + esc(preview(c.last)) + '</span></span>' +
+        '<span class="cend"><span>' + (c.lastAt ? esc(fmtTime(c.lastAt)) : '') + '</span>' + (c.unread ? '<i class="nbadge" style="font-style:normal">' + c.unread + '</i>' : '') + '</span></button>';
+    }).join('');
+  }
+  function loadList(cb) {
+    var s = saved();
+    if (!s.length) { convs = []; renderList(); badge(); if (cb) cb(); return; }
+    post('/site/' + slug + '/chat/list', { chats: s }).then(function (x) {
+      if (x.ok) convs = x.d.conversations || [];
+      convs.forEach(function (c) { if (cur && String(c.id) === String(cur.id)) c.unread = 0; });
+      renderList(); badge();
+      var r = convs.filter(function (c) { return c.ringing; })[0];
+      if (r && !CALL) { if (!cur || String(cur.id) !== String(r.id)) openConv(r.id); startIncoming(); }
+      if (cb) cb();
+    }).catch(function () { if (cb) cb(); });
+  }
+
+  // ----- the open chat -----
+  function showPane(title, img, price, offerId) {
+    $('mEmpty').style.display = 'none'; $('mPane').style.display = 'flex';
+    $('mAv').textContent = biz.charAt(0).toUpperCase(); $('mName').textContent = biz;
+    var o = $('mOffer'); o.href = '/site/' + slug + '/offer/' + offerId;
+    o.innerHTML = (img ? '<img src="' + esc(img) + '" alt="">' : '<span class="ph2">' + esc(String(title || '?').charAt(0).toUpperCase()) + '</span>') +
+      '<div><b>' + esc(title) + '</b>' + (price != null ? '<span>&euro;' + Number(price).toFixed(2) + '</span>' : '') + '</div>';
+  }
+  function showList() {
+    cur = null; newOffer = null; clearInterval(pollT);
+    root.setAttribute('data-view', 'list');
+    $('mPane').style.display = 'none'; $('mEmpty').style.display = 'flex';
+    renderList();
+  }
+  function openConv(id, fromUser) {
+    var s = saved().filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!s) return;
+    cur = { id: String(id), token: s.token, offerId: s.offerId };
+    newOffer = null; count = -1;
+    var c = convs.filter(function (x) { return String(x.id) === String(id); })[0] || {};
+    showPane(c.offerTitle || '', c.offerImage, c.offerPrice, c.offerId || s.offerId);
+    $('mNew').style.display = 'none'; $('mSend').style.display = 'flex'; $('mCall').style.display = '';
+    $('mBody').innerHTML = '';
+    root.setAttribute('data-view', 'thread');
+    if (fromUser) { try { history.pushState({ t: 1 }, ''); } catch (e) {} }
+    renderList(); pull();
+    clearInterval(pollT); pollT = setInterval(function () { if (!document.hidden) pull(); }, 3000);
+  }
+  function openNew(offerId) {
+    cur = null; count = -1; clearInterval(pollT);
+    fetch('/site/' + slug + '/offers.json?ids=' + encodeURIComponent(offerId)).then(function (r) { return r.json(); }).then(function (d) {
+      var o = (d.offers || [])[0];
+      if (!o) { toast('This offer is no longer available.'); showList(); return; }
+      newOffer = o; showPane(o.title, o.image, o.price, o.id);
+      $('mBody').innerHTML = '<p class="hint">Write your first message to ' + esc(biz) + '. Their reply will show up right here.</p>';
+      $('mSend').style.display = 'none'; $('mNew').style.display = 'grid'; $('mCall').style.display = 'none';
+      try { $('nName').value = localStorage.getItem(NKEY) || ''; $('nMail').value = localStorage.getItem(EKEY) || ''; } catch (e) {}
+      root.setAttribute('data-view', 'thread');
+    }).catch(function () { toast('Could not open the offer.'); });
+  }
+  function forget(id) {
+    putSaved(saved().filter(function (x) { return String(x.id) !== String(id); }));
+    convs = convs.filter(function (c) { return String(c.id) !== String(id); });
+    showList(); badge();
+  }
+  function pull() {
+    if (!cur) return;
+    var c = cur;
+    jfetch('/site/' + slug + '/chat/' + c.id + '?token=' + encodeURIComponent(c.token)).then(function (x) {
+      if (cur !== c) return;
+      if (x.status === 404) { forget(c.id); return; }
+      if (!x.ok) return;
+      var m = x.d.messages || [];
+      if (m.length !== count) draw(m);
+      if (x.d.call && x.d.call.status === 'ringing' && x.d.call.caller === 'seller' && !CALL) startIncoming();
+    }).catch(function () {});
+  }
+  function draw(msgs) {
+    var box = $('mBody');
+    var stick = count < 0 || box.scrollHeight - box.scrollTop - box.clientHeight < 100;
+    var html = '', lastDay = '';
+    msgs.forEach(function (m) {
+      var d = new Date(m.at), day = d.toDateString();
+      if (day !== lastDay) { lastDay = day; html += '<div class="dsep">' + esc(dayLabel(d)) + '</div>'; }
+      var t = hhmm(d);
+      if (m.from === 'system') { html += '<div class="bub sys">' + esc(m.text) + '<small>' + t + '</small></div>'; return; }
+      var inner = '';
+      if (m.att && m.att.url) {
+        if (/^image\//.test(m.att.mime || '')) inner += '<a href="' + esc(m.att.url) + '" target="_blank" rel="noopener"><img class="att-img" src="' + esc(m.att.url) + '" alt="' + esc(m.att.name) + '"></a>';
+        else inner += '<a class="att-file" href="' + esc(m.att.url) + '" target="_blank" rel="noopener">' + ic('file') + '<span>' + esc(m.att.name) + '<small>' + esc(size(m.att.size || 0)) + '</small></span></a>';
+      }
+      if (m.text) inner += '<div>' + esc(m.text) + '</div>';
+      html += '<div class="bub ' + (m.from === 'customer' ? 'me' : 'them') + '">' + inner + '<small>' + t + '</small></div>';
+    });
+    box.innerHTML = html || '<p class="hint">No messages yet.</p>';
+    count = msgs.length;
+    if (stick) {
+      box.scrollTop = box.scrollHeight;
+      box.querySelectorAll('img.att-img').forEach(function (im) { im.addEventListener('load', function () { box.scrollTop = box.scrollHeight; }); });
+    }
+  }
+
+  // ----- sending: text, photos and files -----
+  var ta = $('mText');
+  function grow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 130) + 'px'; }
+  ta.addEventListener('input', function () { grow(ta); });
+  ta.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey && matchMedia('(pointer:fine)').matches) { e.preventDefault(); $('mSend').requestSubmit(); }
+  });
+  $('mSend').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var t = ta.value.trim(); if (!t || !cur) return;
+    var c = cur; ta.value = ''; grow(ta);
+    post('/site/' + slug + '/chat/' + c.id + '/send', { token: c.token, text: t }).then(function (x) {
+      if (x.ok && x.d.messages) { if (cur === c) draw(x.d.messages); loadList(); }
+      else { ta.value = t; toast(x.d.message || 'Could not send.'); }
+    }).catch(function () { ta.value = t; toast('Connection problem. Please try again.'); });
+  });
+  function upload(c, f, caption) {
+    if (f.size > 8 * 1024 * 1024) { toast('"' + f.name + '" is too big (max 8 MB).'); return Promise.resolve(); }
+    var fd = new FormData(); fd.append('token', c.token); fd.append('text', caption || ''); fd.append('file', f, f.name || 'photo.png');
+    var h = $('mHint'); h.textContent = 'Sending ' + (f.name || 'photo') + '...'; h.style.display = 'block';
+    return fetch('/site/' + slug + '/chat/' + c.id + '/attach', { method: 'POST', body: fd })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (x) { h.style.display = 'none'; if (x.ok && x.d.messages) { if (cur === c) draw(x.d.messages); } else toast(x.d.message || 'Could not send the file.'); })
+      .catch(function () { h.style.display = 'none'; toast('Connection problem. Please try again.'); });
+  }
+  function sendFiles(files) {
+    if (!cur || !files.length) return;
+    var c = cur, cap = ta.value.trim(); ta.value = ''; grow(ta);
+    var chain = Promise.resolve();
+    files.slice(0, 5).forEach(function (f, i) { chain = chain.then(function () { return upload(c, f, i === 0 ? cap : ''); }); });
+    chain.then(function () { loadList(); });
+  }
+  $('mAtt').addEventListener('click', function () { $('mFile').click(); });
+  $('mFile').addEventListener('change', function () { var fs = [].slice.call(this.files); this.value = ''; sendFiles(fs); });
+  ta.addEventListener('paste', function (e) {
+    var fs = e.clipboardData && e.clipboardData.files ? [].slice.call(e.clipboardData.files) : [];
+    if (fs.length) { e.preventDefault(); sendFiles(fs); }
+  });
+
+  // ----- first message of a new conversation -----
+  document.querySelectorAll('#mNew .chips button').forEach(function (b) { b.addEventListener('click', function () { $('nText').value = b.textContent; }); });
+  $('mNew').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = $('nErr'), btn = $('nBtn'); err.textContent = '';
+    var name = $('nName').value.trim(), text = $('nText').value.trim(), mail = $('nMail').value.trim();
+    if (!newOffer) return;
+    if (!name) { err.textContent = 'Please enter your name.'; return; }
+    if (!text) { err.textContent = 'Please write a message.'; return; }
+    btn.disabled = true;
+    var offerId = String(newOffer.id);
+    post('/site/' + slug + '/chat/start', { offerId: offerId, name: name, email: mail, text: text }).then(function (x) {
+      btn.disabled = false;
+      if (!x.ok) { err.textContent = x.d.message || 'Could not send.'; return; }
+      try { localStorage.setItem(NKEY, name); localStorage.setItem(EKEY, mail); } catch (e2) {}
+      var a = saved().filter(function (c) { return String(c.offerId) !== offerId; });
+      a.unshift({ offerId: offerId, id: x.d.id, token: x.d.token }); putSaved(a);
+      $('nText').value = '';
+      try { history.replaceState(null, '', '/site/' + slug + '/messages'); } catch (e3) {}
+      loadList(function () { openConv(x.d.id); });
+    }).catch(function () { btn.disabled = false; err.textContent = 'Connection problem. Please try again.'; });
+  });
+
+  // ----- voice calls (WebRTC): the server only passes the setup messages, the audio goes directly between the two browsers -----
+  var ov = $('callOv'), ring = null;
+  function callSupported() { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.RTCPeerConnection); }
+  function getIce(cb) {
+    if (ICE) return cb();
+    fetch('/api/ice').then(function (r) { return r.json(); }).then(function (d) { ICE = d.iceServers || []; cb(); })
+      .catch(function () { ICE = [{ urls: 'stun:stun.l.google.com:19302' }]; cb(); });
+  }
+  function ringtone(on, mode) {
+    if (ring) { clearInterval(ring.t); try { ring.ctx.close(); } catch (e) {} ring = null; }
+    if (!on) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext, ctx = new AC();
+      var beep = function () { var o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = mode === 'in' ? 880 : 440; g.gain.value = 0.06; o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.35); };
+      beep(); ring = { ctx: ctx, t: setInterval(beep, mode === 'in' ? 1500 : 3000) };
+    } catch (e) {}
+  }
+  function setState(t) { $('callState').textContent = t; }
+  function setPhase(p) {
+    if (CALL) CALL.phase = p;
+    $('cMute').style.display = p === 'in' ? 'none' : '';
+    $('cAccept').style.display = p === 'in' ? '' : 'none';
+  }
+  function newCall(role) {
+    return { conv: cur, role: role, id: null, after: 0, pc: null, stream: null, queue: [], pending: [], remoteSet: false, offer: null, t0: 0, muted: false, timer: null, tick: null, busy: false, ended: false, phase: role };
+  }
+  function ovOpen(c, text, phase) {
+    CALL = c; $('callName').textContent = biz; $('callAv').textContent = biz.charAt(0).toUpperCase();
+    $('cMute').classList.remove('on'); $('cMute').innerHTML = ic('mic'); $('cAccept').disabled = false;
+    setState(text); setPhase(phase); ov.classList.remove('live'); ov.classList.add('open');
+  }
+  function cUrl(c, tail) { return '/site/' + slug + '/chat/' + c.conv.id + '/call' + tail; }
+  function signal(c, type, data) { return post(cUrl(c, '/signal'), { token: c.conv.token, callId: c.id, type: type, data: data }); }
+  function closeCall(c) {
+    if (c.ended) return; c.ended = true;
+    clearInterval(c.timer); clearInterval(c.tick); ringtone(false);
+    try { if (c.pc) c.pc.close(); } catch (e) {}
+    if (c.stream) c.stream.getTracks().forEach(function (t) { t.stop(); });
+    $('remoteAudio').srcObject = null;
+    ov.classList.remove('open', 'live');
+    if (CALL === c) CALL = null;
+    pull(); loadList();
+  }
+  function endRemote(c, reason) {
+    if (c.ended) return;
+    toast(reason === 'declined' ? 'Call declined' : (reason === 'missed' || reason === 'cancelled') ? (c.role === 'in' ? 'Missed call' : 'No answer') : 'Call ended');
+    closeCall(c);
+  }
+  function makePc(c) {
+    var pc = new RTCPeerConnection({ iceServers: ICE }); c.pc = pc;
+    c.stream.getTracks().forEach(function (t) { pc.addTrack(t, c.stream); });
+    pc.onicecandidate = function (e) {
+      if (!e.candidate) return;
+      var cd = e.candidate.toJSON ? e.candidate.toJSON() : e.candidate;
+      if (c.id) signal(c, 'candidate', cd); else c.queue.push(cd);
+    };
+    pc.ontrack = function (e) { var a = $('remoteAudio'); a.srcObject = e.streams[0]; var p = a.play(); if (p && p.catch) p.catch(function () {}); };
+    pc.onconnectionstatechange = function () {
+      if (pc.connectionState === 'connected') connected(c);
+      else if (pc.connectionState === 'failed') { toast('Connection failed. Try again.'); if (c.id) signal(c, 'hangup'); closeCall(c); }
+    };
+    return pc;
+  }
+  function connected(c) {
+    if (c.t0 || c.ended) return;
+    c.t0 = Date.now(); ringtone(false); setPhase('live'); ov.classList.add('live'); setState('00:00');
+    c.tick = setInterval(function () { var s = Math.floor((Date.now() - c.t0) / 1000); setState(pad(Math.floor(s / 60)) + ':' + pad(s % 60)); }, 1000);
+  }
+  function addCand(c, d) {
+    if (c.pc && c.remoteSet) c.pc.addIceCandidate(new RTCIceCandidate(d)).catch(function () {}); else c.pending.push(d);
+  }
+  function flush(c) { c.pending.splice(0).forEach(function (d) { c.pc.addIceCandidate(new RTCIceCandidate(d)).catch(function () {}); }); }
+  function onSignal(c, s) {
+    if (s.type === 'offer' && c.role === 'in') { c.offer = s.data; $('cAccept').disabled = false; }
+    else if (s.type === 'answer' && c.role === 'out' && c.pc) {
+      setState('Connecting...');
+      c.pc.setRemoteDescription(new RTCSessionDescription(s.data)).then(function () { c.remoteSet = true; flush(c); }).catch(function () {});
+    } else if (s.type === 'candidate') addCand(c, s.data);
+  }
+  function pollCall(c) {
+    if (c.busy || c.ended) return; c.busy = true;
+    jfetch(cUrl(c, '?after=' + c.after + '&token=' + encodeURIComponent(c.conv.token))).then(function (x) {
+      c.busy = false; if (c.ended || !x.ok) return;
+      var k = x.d.call;
+      if (!k) { if (c.id || c.role === 'in') endRemote(c, 'ended'); return; }
+      if (c.role === 'in' && !c.id && k.status === 'ringing') c.id = k.id;
+      if (c.id && k.id !== c.id) { endRemote(c, 'ended'); return; }
+      (x.d.signals || []).forEach(function (s) { c.after = Math.max(c.after, s.n); onSignal(c, s); });
+      if (k.status === 'ended') endRemote(c, k.reason);
+    }).catch(function () { c.busy = false; });
+  }
+  function startPoll(c) { c.timer = setInterval(function () { pollCall(c); }, 1000); pollCall(c); }
+
+  function startOutgoing() {
+    if (CALL || !cur) return;
+    if (!callSupported()) { toast('Calls are not supported in this browser.'); return; }
+    var c = newCall('out'); ovOpen(c, 'Calling...', 'out');
+    getIce(function () {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        if (c.ended) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
+        c.stream = stream; var pc = makePc(c);
+        return pc.createOffer().then(function (o) { return pc.setLocalDescription(o); })
+          .then(function () { return post(cUrl(c, '/signal'), { token: c.conv.token, type: 'offer', data: pc.localDescription }); })
+          .then(function (x) {
+            if (c.ended) return;
+            if (!x.ok) { toast(x.d.message || 'Could not start the call.'); closeCall(c); return; }
+            c.id = x.d.callId; c.queue.splice(0).forEach(function (cd) { signal(c, 'candidate', cd); });
+            ringtone(true, 'out'); startPoll(c);
+          });
+      }, function () { toast('Allow the microphone to make calls.'); closeCall(c); })
+        .catch(function () { toast('The call failed. Please try again.'); closeCall(c); });
+    });
+  }
+  function startIncoming() {
+    if (CALL || !cur) return;
+    var c = newCall('in'); ovOpen(c, 'Incoming call', 'in'); $('cAccept').disabled = true; ringtone(true, 'in'); startPoll(c);
+  }
+  $('mCall').addEventListener('click', startOutgoing);
+  $('cAccept').addEventListener('click', function () {
+    var c = CALL; if (!c || c.role !== 'in' || !c.offer || !c.id) return;
+    if (!callSupported()) { toast('Calls are not supported in this browser.'); signal(c, 'decline'); closeCall(c); return; }
+    ringtone(false); $('cAccept').disabled = true; setState('Connecting...');
+    getIce(function () {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        if (c.ended) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
+        c.stream = stream; var pc = makePc(c);
+        return pc.setRemoteDescription(new RTCSessionDescription(c.offer))
+          .then(function () { c.remoteSet = true; flush(c); return pc.createAnswer(); })
+          .then(function (a) { return pc.setLocalDescription(a); })
+          .then(function () { return signal(c, 'answer', pc.localDescription); })
+          .then(function (x) { if (!x.ok) { toast(x.d.message || 'Could not answer.'); closeCall(c); } else setPhase('live'); });
+      }, function () { toast('Allow the microphone to answer calls.'); signal(c, 'decline'); closeCall(c); })
+        .catch(function () { toast('The call failed.'); closeCall(c); });
+    });
+  });
+  $('cDecline').addEventListener('click', function () {
+    var c = CALL; if (!c) return;
+    if (c.id) signal(c, c.phase === 'in' ? 'decline' : 'hangup');
+    closeCall(c);
+  });
+  $('cMute').addEventListener('click', function () {
+    var c = CALL; if (!c || !c.stream) return;
+    c.muted = !c.muted;
+    c.stream.getAudioTracks().forEach(function (t) { t.enabled = !c.muted; });
+    this.classList.toggle('on', c.muted); this.innerHTML = ic(c.muted ? 'micoff' : 'mic');
+  });
+
+  // ----- navigation and start -----
+  $('mList').addEventListener('click', function (e) { var b = e.target.closest('.citem'); if (b) openConv(b.getAttribute('data-id'), true); });
+  $('mBack').addEventListener('click', function () { if (history.state && history.state.t) history.back(); else showList(); });
+  addEventListener('popstate', function () { showList(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { pull(); loadList(); } });
+  setInterval(function () { if (!document.hidden) loadList(); }, 3000);
+  var want = new URLSearchParams(location.search).get('offer');
+  loadList(function () {
+    if (want) {
+      var ex = convs.filter(function (c) { return String(c.offerId) === want; })[0];
+      if (ex) { if (!cur) openConv(ex.id); } else if (!cur) openNew(want);
+    } else if (convs.length && !cur && matchMedia('(min-width:861px)').matches) openConv(convs[0].id);
+  });
+}
+const MSG_JS = '(' + messengerClient.toString() + ')();';
+
 function renderMessagesPage(user) {
- const seller = esc(([user.firstName,user.lastName].filter(Boolean).join(' ').trim()) || user.siteName);
- const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a href="/site/${esc(user.slug)}/favorites">&#9825; Saved</a><a href="/site/${esc(user.slug)}/messages">&#9993; Messages</a></nav></header>
- <main class="wrap" style="padding-top:110px"><h2>Messages</h2><p class="sub">Your conversations with ${seller}.</p><div class="message-layout"><aside id="chatList"><p class="none">Loading...</p></aside><section class="glass message-pane" id="messagePane"><p class="none">Select a conversation to read and reply.</p></section></div></main>`;
- return pageShell(user,{title:`Messages - ${user.siteName}`,desc:'Your messages',body});
+  const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
+  const body = `${siteBar(user, 'msg')}
+<div class="mwrap"><div class="msgr" id="msgr" data-view="list" data-slug="${esc(user.slug)}" data-biz="${esc(sellerName(user))}" data-phone="${esc(phoneRaw)}">
+  <aside class="mside"><div class="mside-h"><h2>Messages</h2></div><div class="mlist" id="mList"><p class="none" style="padding:18px">Loading...</p></div></aside>
+  <section class="mmain">
+    <div class="mempty" id="mEmpty"><div class="bigico">${MSG_SVG}</div><p>Select a conversation to see it.<br>Open an offer and tap <b>Message</b> to start a new one.</p></div>
+    <div class="mpane" id="mPane" style="display:none">
+      <div class="mhead">
+        <button type="button" class="ibtn mback" id="mBack" data-ic="back" aria-label="Back to messages"></button>
+        <span class="cav" id="mAv">G</span>
+        <div class="mtitle"><b id="mName"></b></div>
+        <button type="button" class="ibtn go" id="mCall" data-ic="phone" aria-label="Call ${esc(sellerName(user))}"></button>
+      </div>
+      <a class="moffer" id="mOffer" href="#"></a>
+      <div class="mbody" id="mBody"></div>
+      <div class="mhint" id="mHint" style="display:none"></div>
+      <form class="mcomposer" id="mSend">
+        <input type="file" id="mFile" multiple hidden>
+        <button type="button" class="ibtn" id="mAtt" data-ic="clip" aria-label="Attach a photo or file"></button>
+        <textarea id="mText" rows="1" maxlength="1500" placeholder="Write a message..."></textarea>
+        <button type="submit" class="ibtn go" data-ic="send" aria-label="Send"></button>
+      </form>
+      <form class="mnew" id="mNew" style="display:none">
+        <div class="two"><input id="nName" placeholder="Your name" required maxlength="60"><input id="nMail" type="email" placeholder="Email (optional)" maxlength="120"></div>
+        <textarea id="nText" placeholder="Write your message..." required maxlength="1500"></textarea>
+        <div class="chips"><button type="button">Is this available?</button><button type="button">Can you customize it for me?</button><button type="button">What is the delivery or pickup time?</button></div>
+        <div class="err" id="nErr"></div>
+        <button class="btn" type="submit" id="nBtn">Send message</button>
+      </form>
+    </div>
+  </section>
+</div></div>
+<div class="callov" id="callOv"><div class="callbox"><div class="callav" id="callAv">G</div><h3 id="callName"></h3><p id="callState"></p>
+  <div class="callbtns">
+    <button type="button" class="cbtn" id="cMute" data-ic="mic" aria-label="Mute"></button>
+    <button type="button" class="cbtn red" id="cDecline" data-ic="phone" aria-label="End call"></button>
+    <button type="button" class="cbtn green" id="cAccept" data-ic="phone" aria-label="Answer"></button>
+  </div></div></div>
+<audio id="remoteAudio" autoplay playsinline></audio>
+<div class="toast" id="toast" style="display:none"></div>
+<script>${MSG_JS}</script>`;
+  return pageShell(user, { title: `Messages - ${user.siteName}`, desc: `Your conversations with ${user.siteName}`, body, cls: 'mpage' });
 }
 
 const SITE_CSP = [
@@ -1666,9 +2545,15 @@ app.get('/site/:slug', async (req, res) => {
   }
 });
 
-app.get('/site/:slug/messages', async (req,res) => {
- try { const user = await siteBySlug(req.params.slug); if(!user) return res.status(404).send('Site not found.'); res.setHeader('Content-Security-Policy',SITE_CSP); res.send(renderMessagesPage(user)); }
- catch(e){res.status(500).send('Server error');}
+app.get('/site/:slug/messages', async (req, res) => {
+  try {
+    const user = await User.findOne({ slug: req.params.slug });
+    if (!user || !user.published) return res.status(404).send('Site not found.');
+    res.setHeader('Content-Security-Policy', SITE_CSP);
+    res.setHeader('Permissions-Policy', 'microphone=(self)');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(renderMessagesPage(user));
+  } catch (err) { res.status(500).send('Server error'); }
 });
 
 app.get('/site/:slug/favorites', async (req, res) => {
@@ -1767,7 +2652,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/privacy', '/terms', '/reset'];
+const PAGE_ROUTES = ['/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/privacy', '/terms', '/reset'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
