@@ -166,7 +166,7 @@ const Order = mongoose.model('Order', OrderSchema);
 // ---------- Themes and fonts (shared look with the builder) ----------
 // a/b = gradient colors, ink = readable accent on white, on = text color on the gradient
 const THEMES = {
-  gold: { a: '#c7a46b', b: '#86612f', ink: '#a58149', on: '#15120c' },
+  gold: { a: '#ffd700', b: '#ff8c00', ink: '#b45309', on: '#1a1a1a' },
   'neon-blue': { a: '#00f2fe', b: '#4facfe', ink: '#0369a1', on: '#06222e' },
   emerald: { a: '#00f5a0', b: '#00d9f5', ink: '#047857', on: '#06281c' },
   ruby: { a: '#ff0844', b: '#ff7a59', ink: '#be123c', on: '#ffffff' },
@@ -865,15 +865,51 @@ async function googleResults(query, city) {
   return null; // no Google access configured
 }
 
+// Compose a short, product-specific draft from Google search snippets.
+// Search results are untrusted: never copy markup or claim an exact specification.
+function searchDescription(title, items) {
+  const stop = new Set(['and','the','for','with','this','that','from','your','или','това','този','както','които','цена','цени','цена:','лв','eur','euro','магазин','онлайн','купи','продажба','внос','new']);
+  const words = String(title).toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 3 && !stop.has(w));
+  const matching = (items || []).filter(x => {
+    const txt = ((x.texts || []).join(' ') + ' ' + (x.name || '')).toLowerCase();
+    return words.some(w => txt.includes(w));
+  });
+  const snippets = matching.flatMap(x => (x.texts || []).filter(Boolean))
+    .map(t => String(t).replace(/<[^>]*>/g,' ').replace(/https?:\/\/\S+/g,' ').replace(/\s+/g,' ').trim())
+    .filter(t => t.length > 45 && t.length < 1000 && !/^\s*(?:\d+[.,]?\d*\s*(?:€|лв|eur))\s*$/i.test(t));
+  const sentence = snippets.flatMap(t => t.split(/(?<=[.!?])\s+/)).find(t =>
+    t.length >= 40 && t.length <= 240 && words.some(w => t.toLowerCase().includes(w)) &&
+    !/cookie|privacy policy|доставка|в наличност|купи сега|промоция|безплатна доставка|register|login/i.test(t)
+  );
+  if (!sentence) return null;
+  // Google descriptions are informational drafts: don't present unrelated commercial boilerplate.
+  return `${String(title).trim()}. ${sentence.replace(/[.!?\s]+$/, '')}.`.slice(0, 450);
+}
+
+app.post('/api/ai/product-description', authenticateToken, async (req, res) => {
+  const query = String((req.body && req.body.query) || '').trim().slice(0, 120);
+  if (query.length < 3) return res.status(400).json({ message: 'Enter a product name (at least 3 characters).' });
+  try {
+    const results = await googleResults(query, 'Bulgaria');
+    if (results === null) return res.status(503).json({ message: 'Google search is not configured on the server. Set SERPAPI_KEY or GOOGLE_API_KEY and GOOGLE_CX.' });
+    const description = searchDescription(query, results);
+    if (!description) return res.json({ description: '', message: 'Not enough reliable information found for this product. Please write the description yourself.' });
+    return res.json({ description, source: 'Google search snippets', message: 'Draft from search results. Review the details before publishing.' });
+  } catch (err) {
+    console.error('Product description search failed:', err.message);
+    return res.status(502).json({ message: 'Could not fetch Google results right now. Please try again.' });
+  }
+});
+
 app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
   const query = String((req.body && req.body.query) || '').trim().slice(0, 120);
   const city = String((req.body && req.body.city) || '').trim().slice(0, 80) || 'Bulgaria';
   if (!query) return res.status(400).json({ message: 'Enter a title first.' });
-  const fallbackDesc = `Professional ${query} in ${city}. Quality work, fair prices and reliable service.`;
+  // No generic description: use matching Google snippets when available.
   try {
     const items = await googleResults(query, city);
     if (items === null) {
-      return res.json({ estimated: true, description: fallbackDesc, message: 'Live price search is not set up on the server yet (SERPAPI_KEY or GOOGLE_API_KEY + GOOGLE_CX is missing). Please enter the price manually.' });
+      return res.json({ estimated: true, description: null, message: 'Live price search is not set up on the server yet (SERPAPI_KEY or GOOGLE_API_KEY + GOOGLE_CX is missing). Please enter the price manually.' });
     }
     const found = []; // { price, name, url }
     items.forEach(it => {
@@ -882,7 +918,7 @@ app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
       if (prices.length) found.push({ price: Number(prices[0]), name: it.name || hostOf(it.url), url: it.url });
     });
     if (found.length < 2) {
-      return res.json({ estimated: true, description: fallbackDesc, message: `Google returned ${items.length} results for "${query}" in ${city}, but only ${found.length} showed a price (at least 2 are needed). Try a more common product name, or enter the price manually.` });
+      return res.json({ estimated: true, description: searchDescription(query, items), message: `Google returned ${items.length} results for "${query}" in ${city}, but only ${found.length} showed a price (at least 2 are needed). Try a more common product name, or enter the price manually.` });
     }
     // drop outliers: keep prices within 0.33x to 3x of the median
     const sorted = found.map(f => f.price).sort((a, b) => a - b);
@@ -893,7 +929,7 @@ app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
     res.json({
       estimated: false,
       minPrice: Math.min(...ps), maxPrice: Math.max(...ps), avgPrice: Math.round(avg * 100) / 100,
-      description: fallbackDesc,
+      description: searchDescription(query, items),
       city,
       sampleSize: kept.length,
       sources: kept.slice(0, 6).map(f => ({ name: f.name, price: f.price, url: f.url }))
@@ -901,7 +937,7 @@ app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
   } catch (err) {
     const why = String(err.serpError || (err.response && err.response.data && (err.response.data.error && (err.response.data.error.message || err.response.data.error))) || err.message || 'unknown error').slice(0, 200);
     console.error('Market price error:', why);
-    res.json({ estimated: true, description: fallbackDesc, message: `The Google price search failed: ${why}. You can enter the price manually.` });
+    res.json({ estimated: true, description: null, message: `The Google price search failed: ${why}. You can enter the price manually.` });
   }
 });
 
@@ -953,7 +989,6 @@ const ConversationSchema = new mongoose.Schema({
   unreadCustomer: { type: Number, default: 0 },
   lastAt: { type: Date, default: Date.now },
   sellerMailedAt: Date,
-  call: { state: { type: String, default: "idle" }, by: String, offer: mongoose.Schema.Types.Mixed, answer: mongoose.Schema.Types.Mixed, startedAt: Date, updatedAt: Date },
   customerMailedAt: Date
 });
 const Conversation = mongoose.model('Conversation', ConversationSchema);
@@ -1107,49 +1142,6 @@ app.get('/site/:slug/chat/:id/file/:fileId',chatLimiter,async(req,res)=>{
 app.get('/api/conversations/:id/file/:fileId',authenticateToken,async(req,res)=>{
  try{const c=await Conversation.findOne({_id:req.params.id,userId:req.user.id});if(!c)return res.sendStatus(403);const f=await ChatFile.findOne({_id:req.params.fileId,conversationId:c._id});if(!f)return res.sendStatus(404);res.set('Content-Type',f.mime);res.set('X-Content-Type-Options','nosniff');res.set('Content-Disposition',`attachment; filename="${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}"`);res.send(f.data);}catch(e){res.sendStatus(404);}
 });
-
-// WebRTC voice calling. The database carries session descriptions only, never microphone audio.
-// Both sides must keep this chat open; ICE gathering completes before SDP is submitted.
-async function callParticipant(req, res, seller) {
-  if (!mongoose.isValidObjectId(req.params.id)) { res.status(404).json({message:'Not found'}); return null; }
-  let c;
-  if (seller) c = await Conversation.findOne({_id:req.params.id,userId:req.user.id});
-  else {
-    const owner=await siteBySlug(req.params.slug);
-    c=owner && await Conversation.findOne({_id:req.params.id,userId:owner._id});
-    if(c&&!tokenOk(c,(req.body&&req.body.token)||req.query.token))c=null;
-  }
-  if(!c)res.status(403).json({message:'Conversation access denied'});
-  return c;
-}
-async function callAction(req,res,seller){
- try {
-  const c=await callParticipant(req,res,seller);if(!c)return;
-  const role=seller?'seller':'customer', b=req.body||{}, action=String(b.action||'');
-  const prior=c.call||{}, state=prior.state||'idle';
-  const stale=prior.startedAt && Date.now()-new Date(prior.startedAt).getTime()>5*60*1000;
-  if(action==='start'){
-   if(!b.offer||b.offer.type!=='offer'||typeof b.offer.sdp!=='string'||b.offer.sdp.length>100000)return res.status(400).json({message:'Invalid offer'});
-   if(['ringing','active'].includes(state)&&!stale)return res.status(409).json({message:'Already in a call'});
-   c.call={state:'ringing',by:role,offer:{type:'offer',sdp:b.offer.sdp},answer:null,startedAt:new Date(),updatedAt:new Date()};
-  } else if(action==='answer'){
-   if(state!=='ringing'||prior.by===role)return res.status(409).json({message:'No incoming call'});
-   if(!b.answer||b.answer.type!=='answer'||typeof b.answer.sdp!=='string'||b.answer.sdp.length>100000)return res.status(400).json({message:'Invalid answer'});
-   c.call={...prior,state:'active',answer:{type:'answer',sdp:b.answer.sdp},updatedAt:new Date()};
-  } else if(action==='end'){
-   c.call={state:'ended',by:role,offer:null,answer:null,startedAt:prior.startedAt,updatedAt:new Date()};
-  } else return res.status(400).json({message:'Unknown action'});
-  await c.save();res.json({call:c.call});
- }catch(err){console.error('Call error',err);res.status(500).json({message:'Call failed'});}
-}
-app.get('/site/:slug/chat/:id/call',chatLimiter,async(req,res)=>{
- try{const c=await callParticipant(req,res,false);if(c)res.json({call:c.call||{state:'idle'}});}catch(e){res.status(500).json({message:'Unable to check call'});}
-});
-app.post('/site/:slug/chat/:id/call',chatLimiter,(req,res)=>callAction(req,res,false));
-app.get('/api/conversations/:id/call',authenticateToken,async(req,res)=>{
- try{const c=await callParticipant(req,res,true);if(c)res.json({call:c.call||{state:'idle'}});}catch(e){res.status(500).json({message:'Unable to check call'});}
-});
-app.post('/api/conversations/:id/call',authenticateToken,(req,res)=>callAction(req,res,true));
 
 // Public offers by id (for the Saved page, which keeps the ids in the visitor's own browser)
 app.get('/site/:slug/offers.json', chatLimiter, async (req, res) => {
@@ -1377,14 +1369,6 @@ body::after{content:'';position:fixed;inset:0;z-index:100;pointer-events:none;op
 @media(max-width:700px){html,body{max-width:100%;overflow-x:clip}.wrap{width:100%;padding:92px 12px 50px}.bar{gap:8px;padding:10px 12px}.bar nav{gap:5px;flex-wrap:wrap;justify-content:flex-end}.bar nav a{font-size:.73rem;padding:7px 8px}.detail,.grid{min-width:0;grid-template-columns:minmax(0,1fr)}.glass,.gal,.detail>*{min-width:0;max-width:100%}.req,.chat{padding:16px}.stick a{padding:10px 12px;font-size:.82rem}.fab{bottom:85px}.sendrow textarea{min-width:0;flex:1}.sendrow .btn{padding:12px}.msgs{height: min(55vh,450px)}}
 .message-layout{display:grid;grid-template-columns:minmax(220px,32%) minmax(0,1fr);gap:14px;min-height:65vh;margin-top:28px}.message-layout #chatList{min-width:0}.message-layout .msgrow{width:100%;text-align:left;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer}.message-pane{display:flex;flex-direction:column;min-width:0;padding:18px}.message-pane .msgs{flex:1;min-height:250px;height:50vh}.message-head{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:10px;flex-wrap:wrap}.message-head small{color:var(--mute)}.attachbtn{padding:10px;background:transparent;color:var(--paper);border:1px solid var(--line2);border-radius:9px;cursor:pointer}.message-pane .bub a{display:block;color:inherit;text-decoration:underline;overflow-wrap:anywhere}
 @media(max-width:700px){.message-layout{display:block;position:relative}.message-pane{display:none}.message-pane.visible{display:flex;position:fixed;inset:65px 0 0;z-index:70;background:var(--deep);border-radius:0;padding:12px}.message-pane.visible .msgs{height:auto;flex:1}.message-layout .msgrow{margin-bottom:8px}.message-head small{font-size:.78rem}}
-/* Muted champagne-gold: messaging actions */
-.message-pane .btn,.chat .btn,.call-action{background:linear-gradient(120deg,#c4a270,#99733d)!important;color:#16120d!important;box-shadow:none!important;border:1px solid #ac884e!important;text-shadow:none!important}
-.message-pane .btn:hover,.chat .btn:hover,.call-action:hover{filter:brightness(1.09)}
-.message-head{justify-content:space-between}.call-actions{display:flex;gap:8px;align-items:center;margin-left:auto}
-.call-action{font:600 13px inherit;padding:9px 12px;border-radius:11px;cursor:pointer}
-.call-notice{padding:12px 14px;background:#232119;border:1px solid #846b44;border-radius:12px;margin:8px 0;color:#eee2cc;font-size:14px}
-.call-notice button{margin:6px 8px 0 0}.message-pane .sendrow{align-items:center}
-@media(max-width:700px){.call-action{font-size:12px;padding:8px 9px}.message-head{flex-wrap:wrap}.call-actions{max-width:100%}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}`;
 }
 
@@ -1442,37 +1426,11 @@ const SITE_JS = `(function(){
         var hb=mk('button','heart');hb.type='button';hb.dataset.id=o.id;hb.setAttribute('aria-label','Remove from favorites');hb.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 5 6 5c2 0 3.4 1.1 4 2.2.6-1.1 2-2.2 4-2.2 3.3 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z"/></svg>';pic.appendChild(hb);
         a.appendChild(pic);var inn=mk('div','in');inn.appendChild(mk('h3',null,o.title));inn.appendChild(mk('p',null,o.description||''));inn.appendChild(mk('span','more','View details'));a.appendChild(inn);fl.appendChild(a)});
       if(!shown)fl.innerHTML='<p class="none">Those offers are no longer available.</p>';paintFavs();tiltAll()}).catch(function(){fl.innerHTML='<p class="none">Could not load your saved offers. Please refresh.</p>'})}
-
-  // Browser-to-browser microphone calling (WebRTC).
-  // Works best on HTTPS and requires both people to have the same conversation open.
-  function createVoiceCall(head, id, token) {
-    if(!head || !id)return;
-    var role='customer', endpoint='/site/'+slug+'/chat/'+id+'/call', pc=null,local=null,remote=null,last='',busy=false,stopped=false;
-    var buttons=mk('div','call-actions'), callBtn=mk('button','call-action','☎ Обади се'), notice=mk('div','call-notice');
-    callBtn.type='button';buttons.appendChild(callBtn);head.appendChild(buttons);notice.style.display='none';head.parentNode.insertBefore(notice,head.nextSibling);
-    var tick=null;
-    function status(t){notice.textContent=t;notice.style.display='block';}
-    function api(action,extra){return fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({token:token,action:action},extra||{}))}).then(function(r){return r.json().then(function(d){if(!r.ok)throw Error(d.message||'Call error');return d})})}
-    function cleanup(){if(pc){pc.ontrack=null;pc.close();pc=null}if(local){local.getTracks().forEach(function(t){t.stop()});local=null}if(remote){remote.remove();remote=null}callBtn.disabled=false;callBtn.textContent='☎ Обади се'}
-    function stop(){stopped=true;clearInterval(tick);cleanup()}
-    function ready(){return new Promise(function(resolve,reject){if(pc.iceGatheringState==='complete')return resolve();var timeout=setTimeout(function(){pc.removeEventListener('icegatheringstatechange',f);resolve()},9000);function f(){if(pc.iceGatheringState==='complete'){clearTimeout(timeout);pc.removeEventListener('icegatheringstatechange',f);resolve()}}pc.addEventListener('icegatheringstatechange',f)})}
-    async function setup(){if(!navigator.mediaDevices||!window.RTCPeerConnection)throw Error('Нужен е HTTPS и браузър с поддръжка на обаждания.');local=await navigator.mediaDevices.getUserMedia({audio:true,video:false});pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});local.getTracks().forEach(function(t){pc.addTrack(t,local)});remote=document.createElement('audio');remote.autoplay=true;remote.playsInline=true;document.body.appendChild(remote);pc.ontrack=function(e){remote.srcObject=e.streams[0]};pc.onconnectionstatechange=function(){if(pc&&['failed','disconnected'].includes(pc.connectionState))status('Връзката е прекъсната.')}}
-    function end(){api('end').catch(function(){});cleanup();status('Разговорът приключи.');last='ended'}
-    callBtn.onclick=async function(){if(pc){end();return}try{callBtn.disabled=true;await setup();var offer=await pc.createOffer();await pc.setLocalDescription(offer);await ready();await api('start',{offer:{type:'offer',sdp:pc.localDescription.sdp}});last='ringing';callBtn.textContent='■ Затвори';status('Звъни на продавача…')}catch(e){status(e.message);cleanup()}finally{callBtn.disabled=false}};
-    async function check(){if(stopped||busy)return;busy=true;try{var r=await fetch(endpoint+'?token='+encodeURIComponent(token));if(!r.ok)return;var d=await r.json(),c=d.call||{state:'idle'};
-      if(c.state==='ringing'&&c.by!==role&&!pc&&last!=='accepting'){last='accepting';status('Входящо обаждане от продавача');var yes=mk('button','call-action','Приеми'),no=mk('button','attachbtn','Откажи');notice.appendChild(yes);notice.appendChild(no);yes.onclick=async function(){yes.disabled=true;try{await setup();await pc.setRemoteDescription(c.offer);var a=await pc.createAnswer();await pc.setLocalDescription(a);await ready();await api('answer',{answer:{type:'answer',sdp:pc.localDescription.sdp}});last='active';callBtn.textContent='■ Затвори';status('Разговорът е свързан')}catch(e){status(e.message);cleanup()}};no.onclick=function(){end()}}
-      if(c.state==='active'&&c.by===role&&pc&&!pc.currentRemoteDescription&&c.answer){await pc.setRemoteDescription(c.answer);last='active';status('Разговорът е свързан')}
-      if((c.state==='ended'||c.state==='idle')&&pc){cleanup();status('Разговорът приключи.');last=c.state}
-    }catch(e){}finally{busy=false}}
-    tick=setInterval(check,2500);check();return stop;
-  }
-
   var cl=document.getElementById('chatList');
   if(cl){var saved=[];try{saved=JSON.parse(localStorage.getItem('chats:'+slug)||'[]')}catch(e){}
     var pane=document.getElementById('messagePane');
     function openMessage(c,mine){
       pane.textContent='';var head=mk('div','message-head');head.appendChild(mk('b',null,document.body.dataset.seller||'Seller'));head.appendChild(mk('small',null,c.offerTitle));pane.appendChild(head);
-      if(window.stopCustomerCall)window.stopCustomerCall();window.stopCustomerCall=createVoiceCall(head,mine.id,mine.token);
       var view=mk('div','msgs');pane.appendChild(view);var form=mk('form','sendrow');var attach=mk('input');attach.type='file';attach.accept='image/*,.pdf,.txt';attach.style.display='none';
       var pick=mk('button','attachbtn','+');pick.type='button';pick.title='Attach photo or file';pick.onclick=function(){attach.click()};form.appendChild(pick);form.appendChild(attach);
       var input=mk('textarea');input.placeholder='Write a message...';input.maxLength=1500;form.appendChild(input);var send=mk('button','btn','Send');send.type='submit';form.appendChild(send);pane.appendChild(form);
@@ -1842,6 +1800,6 @@ app.get('/logo.jpg', (req, res) => {
   if (!file) return res.status(404).end();
   res.sendFile(file);
 });
- 
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
