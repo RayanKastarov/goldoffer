@@ -106,6 +106,7 @@ const UserSchema = new mongoose.Schema({
   category: String,
   city: String,
   theme: { type: String, default: 'gold' },
+  layout: { type: String, enum: ['signature','editorial','market'], default: 'signature' },
   font: { type: String, default: 'sans' },
   published: { type: Boolean, default: false },
   categoryLabel: String,
@@ -357,7 +358,7 @@ const offerLimitFor = (u) => (u.subscriptionStatus === 'active' ? PAID_OFFER_LIM
 const publicUser = (u) => ({
   id: u._id, firstName: u.firstName, lastName: u.lastName, email: u.email,
   subscriptionStatus: u.subscriptionStatus, siteName: u.siteName, sellerBio: u.sellerBio || '', verificationStatus: u.verificationStatus || 'none', slug: u.slug,
-  category: u.category, city: u.city, theme: u.theme, font: u.font, published: u.published,
+  category: u.category, city: u.city, theme: u.theme, layout: u.layout || 'signature', font: u.font, published: u.published,
   siteUrl: u.slug && u.published ? `${PUBLIC_BASE}/site/${u.slug}` : null,
   offerLimit: offerLimitFor(u),
   categoryLabel: u.categoryLabel, phone: u.phone, address: u.address, hours: u.hours,
@@ -678,6 +679,7 @@ app.put('/api/site', authenticateToken, async (req, res) => {
     if (b.notifyEmail !== undefined) user.notifyEmail = isEmail(b.notifyEmail) ? String(b.notifyEmail).trim() : '';
     if (typeof b.notifyOn === 'boolean') user.notifyOn = b.notifyOn;
     if (Object.keys(THEMES).includes(theme)) user.theme = theme;
+    if (['signature','editorial','market'].includes(b.layout)) user.layout = b.layout;
     if (Object.keys(FONTS).includes(font)) user.font = font;
     if (!user.slug && user.siteName) user.slug = await uniqueSlug(user.siteName, user._id);
     if (publish === true) {
@@ -2009,7 +2011,7 @@ function pageShell(user, { title, desc, body, cls }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}</style></head><body class="${cls || ''}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+<style>${siteCss(t, f)}</style></head><body class="${cls || ''} layout-${esc(user.layout || 'signature')}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${body}
 <script>${SITE_JS}</script>
 </body></html>`;
@@ -2155,9 +2157,9 @@ function renderSite(user, offers, sent) {
     <div class="story-canvas" data-story-canvas>
       <div class="story-media">${renderMedia(heroMediaB, secondOffer ? secondOffer.title : user.siteName, 'story-main')}</div>
       <div class="story-panel">
-        <span class="cine-eyebrow">CUSTOM LINK EXPERIENCE</span>
-        <h2>Your own page, with motion and presence.</h2>
-        <p>${esc(user.siteName)} is not just a list of offers. It feels like a real brand page with movement, story and direct contact.</p>
+        <span class="cine-eyebrow">THE STORY BEHIND THE BUSINESS</span>
+        <h2>${esc(user.siteName)} — made to stand out.</h2>
+        <p>${esc(story)}</p>
         <div class="story-stats"><div><b>${offers.length}</b><span>Offers</span></div><div><b>${esc(user.city || 'Global')}</b><span>Location</span></div><div><b>${phoneRaw ? 'Live call' : 'Direct line'}</b><span>Contact</span></div></div>
       </div>
     </div>
@@ -2165,19 +2167,19 @@ function renderSite(user, offers, sent) {
 </section>
 
 <section class="reveal-band wrap">
-  <div class="sec-head"><h2>Why this site feels different</h2><span>Designed to look alive, not crowded.</span></div>
+  <div class="sec-head"><h2>Discover ${esc(user.siteName)}</h2><span>A closer look at what we offer.</span></div>
   <div class="copylines">
-    <p class="copyline">A hero section that breathes and moves as you scroll.</p>
-    <p class="copyline">Big readable messages that light up when they enter the screen.</p>
-    <p class="copyline">A clean structure where every action has its own place.</p>
+    <p class="copyline">${esc(story)}</p>
+    <p class="copyline">${esc(user.categoryLabel || user.category || 'Explore the collection')} ${user.city ? 'in ' + esc(user.city) : 'for you'}.</p>
+    <p class="copyline">Explore our work, and get in touch when you find something you like.</p>
   </div>
 </section>
 
 <section class="cine-feature wrap">
   <div class="feature-grid">
-    <div class="feature-card dark rv"><span class="cine-eyebrow">DISCOVER</span><h3>Offers with a stronger visual identity</h3><p>The public page now feels more like a premium brand site, with layered media, depth and cleaner sections.</p></div>
+    <div class="feature-card dark rv"><span class="cine-eyebrow">DISCOVER</span><h3>Discover our latest offers</h3><p>Find something that suits you. Explore the collection, ask questions and connect directly.</p></div>
     <div class="feature-card media rv">${heroTiles ? `<div class="pics three">${heroTiles}</div>` : `<div class="feature-fallback">Publish offers to see your visual layout here.</div>`}</div>
-    <div class="feature-card light rv"><span class="cine-eyebrow">SELLER PROFILE</span><h3>Message, call and trust the seller</h3><p>Customers can move from the homepage into the seller profile, messages and saved items without the page feeling overloaded.</p><a class="feature-link" href="/site/${esc(user.slug)}/profile">View seller profile →</a></div>
+    <div class="feature-card light rv"><span class="cine-eyebrow">SELLER PROFILE</span><h3>Meet ${esc(seller)}</h3><p>Learn about the person behind this site, read feedback and get in touch directly.</p><a class="feature-link" href="/site/${esc(user.slug)}/profile">View seller profile →</a></div>
   </div>
 </section>
 
@@ -2201,13 +2203,36 @@ function renderSite(user, offers, sent) {
 .reveal-band{padding-top:22px;padding-bottom:10px}.copylines{display:grid;gap:16px;margin-top:20px;max-width:980px}.copyline{font-size:clamp(1.35rem,2.9vw,2.55rem);line-height:1.18;letter-spacing:-.04em;color:rgba(255,255,255,.22);transition:color .45s ease,text-shadow .45s ease,transform .45s ease;max-width:26ch}.copyline.on{color:#f3f6fb;text-shadow:0 0 18px rgba(255,204,54,.2);transform:translateX(8px)}
 .cine-feature{padding-top:20px;padding-bottom:20px}.feature-grid{display:grid;grid-template-columns:1.05fr 1.2fr 1.05fr;gap:18px}.feature-card{border-radius:30px;padding:28px;min-height:300px;border:1px solid rgba(255,255,255,.1)}.feature-card.dark{background:linear-gradient(150deg,#131a23,#0c1118)}.feature-card.light{background:linear-gradient(155deg,#f1efe8,#ddd7cb);color:#111}.feature-card.media{padding:18px;background:linear-gradient(180deg,#f3f2ef,#dadad7)}.feature-card h3{font-size:clamp(1.5rem,2.4vw,2.35rem);line-height:1.08;margin:12px 0 14px}.feature-card p{line-height:1.72;color:inherit;opacity:.82}.feature-link{display:inline-block;margin-top:18px;font-weight:700;color:inherit;text-decoration:none}.feature-fallback{min-height:100%;display:grid;place-items:center;text-align:center;color:#2c3440}.feature-card.media .pics{height:100%}.feature-card.media .tile{min-height:100%}
 .go-shop-search{display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap;margin:18px 0 24px}.go-shop-search input{width:min(100%,430px);border-radius:14px;padding:13px 17px;background:#fff;color:#15191f;border:1px solid #dce0e4;font:inherit;box-shadow:0 3px 18px rgba(0,0,0,.035)}.go-shop-search input:focus{outline:2px solid #f7c42f}.go-shop-search span{font-size:13px;color:#707781}
+/* Three true templates, independent from theme color and font settings. */
+.layout-editorial .cine-hero{background:#ece9e2;color:#15171c;padding-top:120px}
+.layout-editorial .cine-wrap{grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);gap:64px}
+.layout-editorial .cine-copy h1,.layout-editorial .cine-copy .cine-sub{color:#17191e}
+.layout-editorial .cine-copy h1{font-family:Georgia,serif;font-weight:500;letter-spacing:-.065em}
+.layout-editorial .cine-eyebrow{color:#9b6a1a}
+.layout-editorial .cine-meta span,.layout-editorial .offer-pills a{background:#ffffffb5;color:#222;border-color:#c9c6bf}
+.layout-editorial .cine-noise{opacity:.08}.layout-editorial .hero-fade{background:linear-gradient(180deg,transparent 75%,#ece9e2)}
+.layout-editorial .cine-visual{transform:none!important}.layout-editorial .stack-outline{display:none}
+.layout-editorial .main-screen{inset:18px 12px 10px 12px;border-radius:8px}
+.layout-editorial .float-card{border-radius:7px}.layout-editorial .fc-a{left:-30px;top:12px}.layout-editorial .fc-b{right:-18px;top:36%}
+.layout-editorial .story-canvas{grid-template-columns:1fr 1fr;background:#efeee8;color:#141820}
+.layout-editorial .story-panel h2,.layout-editorial .story-panel p{color:#20242c}
+.layout-editorial .story-stats div{background:#ffffff;border:1px solid #d9d6cb}.layout-editorial .story-stats b{color:#141820}
+.layout-editorial .feature-grid{grid-template-columns:1fr 1.6fr}.layout-editorial .feature-card.light{grid-column:1/-1;min-height:200px}
+.layout-market .cine-hero{background:linear-gradient(145deg,#071b21,#0c1220 70%)}
+.layout-market .cine-wrap{grid-template-columns:1fr;gap:20px}.layout-market .cine-copy{text-align:center;margin:auto;max-width:930px}
+.layout-market .cine-copy h1{max-width:none}.layout-market .cine-sub{margin:auto}.layout-market .cine-meta,.layout-market .offer-pills,.layout-market .cine-copy .actions{justify-content:center}
+.layout-market .cine-visual{width:min(100%,930px);margin:auto;min-height:430px}.layout-market .main-screen{inset:35px 120px 30px 120px;border-radius:26px}
+.layout-market .stack-outline{inset:20px 90px}.layout-market .fc-a{top:12px;left:80px}.layout-market .fc-b{top:80px;right:65px}.layout-market .fc-c{right:100px}
+.layout-market .story-canvas{background:#0a2028}.layout-market .feature-grid{grid-template-columns:1.5fr 1fr}.layout-market .feature-card.dark{grid-column:1/-1;min-height:200px}
+@media(max-width:1080px){.layout-editorial .cine-wrap,.layout-editorial .story-canvas,.layout-editorial .feature-grid,.layout-market .feature-grid{grid-template-columns:1fr}.layout-editorial .feature-card.light,.layout-market .feature-card.dark{grid-column:auto}}
+@media(max-width:720px){.layout-editorial .cine-hero{padding-top:90px}.layout-editorial .main-screen{inset:24px 10px}.layout-editorial .fc-a{left:0}.layout-market .main-screen{inset:34px 24px}.layout-market .stack-outline{inset:22px 18px}.layout-market .fc-a{left:2px}.layout-market .fc-b{right:2px}.layout-market .fc-c{right:30px}}
 @media(max-width:1080px){.cine-wrap,.story-canvas,.feature-grid{grid-template-columns:1fr}.cine-visual{min-height:430px}.feature-card{min-height:0}.story-shell{height:auto;padding:8px 0 0}.story-stick{position:relative;top:auto;height:auto}.story-canvas{width:min(100% - 32px,1220px)}.story-media{min-height:300px}.feature-grid{display:grid;gap:16px}.copylines{max-width:none}.copyline{max-width:30ch}}
 @media(max-width:720px){.cine-hero{padding-top:92px}.cine-wrap{width:calc(100% - 24px);gap:24px}.cine-copy h1{font-size:clamp(2.7rem,16vw,4.2rem);max-width:12ch}.cine-sub{font-size:.98rem}.cine-visual{min-height:330px}.main-screen{inset:40px 14px 40px}.stack-outline{inset:26px 6px}.float-card{width:84px;height:84px;border-radius:20px}.fc-a{top:8px;left:2px}.fc-b{right:0;top:86px}.fc-c{right:36px;bottom:2px;width:74px;height:74px}.screen-caption{left:22px;right:22px;bottom:8px;padding:10px 12px;border-radius:14px}.story-canvas{width:calc(100% - 24px);border-radius:24px}.story-panel{padding:22px}.story-panel h2{font-size:1.85rem}.story-stats{grid-template-columns:1fr}.copyline{font-size:1.4rem;max-width:100%}.go-shop-search input{width:100%}.feature-card{padding:22px;border-radius:24px}}
 </style>
 <script>(function(){var inp=document.getElementById('goOfferSearch'),grid=document.getElementById('goOfferGrid'),count=document.getElementById('goFound'),empty=document.getElementById('goNoResults');if(inp&&grid){var items=[].slice.call(grid.querySelectorAll('.card'));inp.addEventListener('input',function(){var q=inp.value.trim().toLocaleLowerCase(),n=0;items.forEach(function(el){var show=el.textContent.toLocaleLowerCase().includes(q);el.style.display=show?'':'none';if(show)n++;});count.textContent=n+' offers';empty.style.display=n?'none':'block';});}
 var lines=[].slice.call(document.querySelectorAll('.copyline'));if(lines.length&&'IntersectionObserver' in window){var io=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting)entry.target.classList.add('on');})},{threshold:.45});lines.forEach(function(el){io.observe(el)})}else{lines.forEach(function(el){el.classList.add('on')})}
-var shell=document.querySelector('[data-story-shell]'),canvas=document.querySelector('[data-story-canvas]');if(shell&&canvas&&window.matchMedia('(min-width: 801px)').matches){var ticking=false;var run=function(){ticking=false;var rect=shell.getBoundingClientRect(),vh=window.innerHeight||1,total=Math.max(1,shell.offsetHeight-vh),p=Math.min(1,Math.max(0,-rect.top/total));var scale=1-p*.12,shift=p*26;canvas.style.transform='translate3d(0,'+shift+'px,0) scale('+scale+')';canvas.style.borderRadius=(34+p*14)+'px';};addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(run)}},{passive:true});run();}
-var stack=document.querySelector('[data-cine-stack]');if(stack&&matchMedia('(pointer:fine)').matches){stack.addEventListener('pointermove',function(e){var r=stack.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;stack.style.transform='rotateY('+(x*7)+'deg) rotateX('+(-y*5)+'deg)'});stack.addEventListener('pointerleave',function(){stack.style.transform=''})}})()</script>`;
+var shell=document.querySelector('[data-story-shell]'),canvas=document.querySelector('[data-story-canvas]');if(shell&&canvas&&window.matchMedia('(min-width: 801px)').matches&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){var ticking=false;var run=function(){ticking=false;var rect=shell.getBoundingClientRect(),vh=window.innerHeight||1,total=Math.max(1,shell.offsetHeight-vh),p=Math.min(1,Math.max(0,-rect.top/total));var scale=1-p*.12,shift=p*26;canvas.style.transform='translate3d(0,'+shift+'px,0) scale('+scale+')';canvas.style.borderRadius=(34+p*14)+'px';};addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(run)}},{passive:true});run();}
+var stack=document.querySelector('[data-cine-stack]');if(stack&&matchMedia('(pointer:fine)').matches&&!matchMedia('(prefers-reduced-motion: reduce)').matches){stack.addEventListener('pointermove',function(e){var r=stack.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;stack.style.transform='rotateY('+(x*7)+'deg) rotateX('+(-y*5)+'deg)'});stack.addEventListener('pointerleave',function(){stack.style.transform=''})}})()</script>`;
   return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body });
 }
 

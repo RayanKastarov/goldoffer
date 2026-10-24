@@ -648,6 +648,21 @@
 .go-admin{margin-top:30px}.go-admin p{color:#aeb8c8;margin:14px 0}.go-admin-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px;border-bottom:1px solid #303949}.go-admin-row span{flex:1;min-width:160px;overflow-wrap:anywhere}
 @media(max-width:700px){.go-workspace{padding:96px 14px 70px}.go-setting-grid{grid-template-columns:1fr}.go-setting-grid a{min-height:90px;padding:20px}.go-workspace .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.go-workspace .stat{min-width:0;padding:16px}.go-workspace .stat .v{font-size:clamp(18px,5vw,27px)}.go-workhead h1{font-size:34px}}
 @media(prefers-reduced-motion:reduce){.go-setting-grid a{transition:none!important}.rv{opacity:1!important;transform:none!important}}
+
+/* Site layout picker and real-time mini-preview */
+.go-layout-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 20px}
+.go-layout-choice{background:#141b26;color:#edf0f5;border:1px solid #384050;border-radius:16px;padding:10px;cursor:pointer;text-align:left;min-width:0;display:flex;flex-direction:column;gap:5px}
+.go-layout-choice.on{border-color:#ffcf2c;box-shadow:0 0 0 2px #ffcf2c26}
+.go-layout-choice b{font-size:13px}.go-layout-choice small{font-size:11px;color:#aeb9c9;line-height:1.3}
+.go-layout-art{height:74px;width:100%;border-radius:9px;display:flex;gap:5px;padding:9px;overflow:hidden;background:#101820}
+.go-layout-art i{display:block;border-radius:5px;flex:1;background:linear-gradient(140deg,#ffdf0a,#ff9400)}
+.go-layout-art i:first-child{flex:.65;background:#293646}
+.go-layout-editorial{background:#ede9de}.go-layout-editorial i{background:#c7b6a1;border-radius:1px}.go-layout-editorial i:first-child{background:#fff}
+.go-layout-market{background:#0b2730;flex-direction:column}.go-layout-market i:first-child{flex:1;background:#284a5e}.go-layout-market i:last-child{background:#20c8b5;flex:1}
+.preview[data-layout=editorial] .screen{background:#f1eee6!important;color:#191919!important}.preview[data-layout=editorial] .screen .top{background:#ded9c9!important;color:#191919!important}
+.preview[data-layout=market] .screen{background:#102a33!important;color:#fff!important}.preview[data-layout=market] .screen .top{text-align:center;background:#174455!important}
+.preview[data-layout=market] .screen .body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(max-width:650px){.go-layout-choices{grid-template-columns:1fr 1fr}.go-layout-choice:last-child{grid-column:1/-1}.go-layout-art{height:56px}}
 </style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
@@ -965,6 +980,13 @@
             <div class="field"><label>About your business (shown on seller profile)</label><textarea id="sellerBio" rows="3" maxlength="650" placeholder="What do you offer? What makes your business special?"></textarea></div>
             <button type="button" class="btn-ghost" onclick="suggestSellerBio()">✦ Suggest a business intro</button>
             <p class="note" style="margin-top:8px">The suggestion uses your own details. Review before publishing.</p>
+            <label style="display:block;margin-top:18px">Website layout</label>
+            <p class="note">Choose a real page layout, not just a color. Preview changes instantly.</p>
+            <div class="go-layout-choices" id="layoutChoices">
+              <button type="button" class="go-layout-choice on" data-layout="signature" onclick="selectLayout('signature')"><span class="go-layout-art go-layout-signature"><i></i><i></i></span><b>Signature</b><small>Cinematic, dark &amp; expressive</small></button>
+              <button type="button" class="go-layout-choice" data-layout="editorial" onclick="selectLayout('editorial')"><span class="go-layout-art go-layout-editorial"><i></i><i></i></span><b>Editorial</b><small>Light, elegant &amp; spacious</small></button>
+              <button type="button" class="go-layout-choice" data-layout="market" onclick="selectLayout('market')"><span class="go-layout-art go-layout-market"><i></i><i></i></span><b>Modern Market</b><small>Centered, visual &amp; bold</small></button>
+            </div>
             <label>Color theme</label>
             <div class="swatches" id="swatches"></div>
             <label>Font style</label>
@@ -1351,7 +1373,7 @@
       cards: [['Portrait session', '45 minutes, 15 edited photos.', '80.00', 'Photographer'], ['Wedding day', 'Full-day coverage and gallery.', '650.00', 'Event planner'], ['Brand photos', 'For your site and social media.', '180.00', 'Videographer']] }
   ];
 
-  const S = { photos: {}, token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', font: 'sans', mode: 'signup', chart: null };
+  const S = { photos: {}, token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', layout: 'signature', font: 'sans', mode: 'signup', chart: null };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
   const money = (n) => Number(n || 0).toFixed(2);
@@ -1874,6 +1896,7 @@
     if (u.city) $('city').value = u.city;
     if (u.category) { setCategory(u.category); renderProfs(); }
     if (u.theme) applyTheme(u.theme);
+    selectLayout(u.layout || 'signature');
     if (u.font) applyFont(u.font);
     try { const d = await api('/api/offers'); S.offers = d.offers; } catch (e) {}
     renderPreview(); renderOfferList();
@@ -1912,7 +1935,7 @@
     if (!$('siteName').value.trim()) return notify('Please enter a site name.');
     try {
       const d = await api('/api/site', { method: 'PUT', body: JSON.stringify({
-        siteName: $('siteName').value.trim(), sellerBio: $('sellerBio').value.trim(), category: S.category, city: $('city').value.trim(), theme: S.theme, font: S.font }) });
+        siteName: $('siteName').value.trim(), sellerBio: $('sellerBio').value.trim(), category: S.category, city: $('city').value.trim(), theme: S.theme, layout: S.layout, font: S.font }) });
       S.user = d.user;
     } catch (e) { return notify(e.message, 'Error'); }
     if (S.backToLive) { S.backToLive = false; showLive(); notify('Your design was updated. The live site shows it now.'); }
@@ -2067,12 +2090,19 @@
   }
 
   // ---------- Preview (real data only) ----------
+  function selectLayout(layout) {
+    if (!['signature','editorial','market'].includes(layout)) return;
+    S.layout = layout;
+    document.querySelectorAll('.go-layout-choice').forEach(b=>{const on=b.dataset.layout===layout;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});
+    renderPreview();
+  }
   function renderPreview() {
     const name = $('siteName').value.trim() || (S.user && S.user.siteName) || '';
     $('pvName').textContent = name || 'Your brand';
     $('pvCat').textContent = S.category || 'Business category';
     $('pvUrl').textContent = (S.user && S.user.siteUrl) ? S.user.siteUrl.replace('https://', '') : 'your-site';
     const box = $('pvOffers');
+    document.querySelector('.preview')?.setAttribute('data-layout', S.layout || 'signature');
     if (!S.offers.length) { box.innerHTML = '<div class="empty">No offers added yet.<br>Your real offers will appear here.</div>'; return; }
     box.innerHTML = S.offers.map(o =>
       '<div class="p-item">' + (o.imageUrl ? '<img src="' + esc(o.imageUrl) + '" alt="">' : '') +
