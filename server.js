@@ -602,18 +602,28 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
 
 // Profile biography draft uses the business owner's provided information only.
 // It is not represented as researched or AI-authored factual content.
-app.post('/api/site/bio-suggestion', authenticateToken, async (req, res) => {
+app.post('/api/site/bio-suggestion', authenticateToken, async (req,res)=>{
   try {
-    const b = req.body || {};
-    const brand = String(b.siteName || '').trim().slice(0,80);
-    const activity = String(b.category || '').trim().slice(0,90);
-    const town = String(b.city || '').trim().slice(0,90);
-    const details = String(b.details || '').trim().replace(/\s+/g,' ').slice(0,360);
-    if (!brand || (!activity && !details)) return res.status(400).json({message:'Add your business name and at least one detail first.'});
-    const lead = brand + (activity ? ' offers ' + activity.toLowerCase() : ' welcomes you') + (town ? ' in ' + town : '') + '.';
-    const bio = [lead, details ? details.replace(/[.!?]+$/,'') + '.' : '', 'Browse our offers and get in touch to ask a question.'].filter(Boolean).join(' ');
-    res.json({bio, source:'Your business details', needsReview:true});
-  } catch(e) {res.status(500).json({message:'Unable to suggest a bio'});}
+    const b=req.body||{};
+    const brand=String(b.siteName||'').trim().slice(0,80);
+    const category=String(b.category||'').trim().slice(0,80);
+    const city=String(b.city||'').trim().slice(0,80);
+    const details=String(b.details||'').trim().slice(0,650);
+    if(!brand||(!category&&!details))return res.status(400).json({message:'Add a business name and some details first.'});
+    let bio='',source='Business details';
+    if(process.env.OPENAI_API_KEY){
+      try {
+        const response=await axios.post('https://api.openai.com/v1/chat/completions',{
+          model:process.env.OPENAI_MODEL||'gpt-4o-mini', temperature:0.5,max_tokens:200,
+          messages:[{role:'system',content:'Write a polished, concise business introduction in English, max 65 words. Use only user-provided facts; do not invent certifications, reviews, pricing, experience, quality guarantees, opening hours, shipping, delivery, ingredients or product specifications. Return only the paragraph.'},{role:'user',content:JSON.stringify({brand,category,city,details})}]
+        },{timeout:12000,headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'}});
+        bio=String(response.data?.choices?.[0]?.message?.content||'').trim().slice(0,650);
+        if(bio)source='AI draft based on your information';
+      }catch(e){console.warn('AI draft unavailable:',e.message);}
+    }
+    if(!bio){bio=[brand+(category?' — '+category:'' )+(city?' in '+city:'' )+'.', details?details.replace(/[.!?]+$/,'')+'.':'', 'Contact the seller to learn more.'].filter(Boolean).join(' ').slice(0,650);}
+    res.json({bio,source,needsReview:true});
+  }catch(e){res.status(500).json({message:'Unable to suggest a bio.'});}
 });
 // Verification is a request, NEVER automatic approval. Approval requires manual identity checks.
 app.post('/api/site/request-verification', authenticateToken, async(req,res)=>{
@@ -623,6 +633,27 @@ app.post('/api/site/request-verification', authenticateToken, async(req,res)=>{
     if(user.verificationStatus==='none' || user.verificationStatus==='rejected') {user.verificationStatus='pending';await user.save();}
     res.json({status:user.verificationStatus,message:'Your request has been recorded. Verification is not automatic.'});
   }catch(e){res.status(500).json({message:'Could not submit verification request'});}
+});
+// Manual verification workflow: only an authenticated account whose email matches
+// ADMIN_EMAIL in Render can review applications. Never auto-approve profiles.
+async function requireGoldAdmin(req,res,next) {
+  const email = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!email) return res.status(503).json({message:'ADMIN_EMAIL is not configured.'});
+  const current = await User.findById(req.user.id).select('email').lean();
+  if (!current || current.email !== email) return res.status(403).json({message:'Administrator access required.'});
+  next();
+}
+app.get('/api/admin/verification-requests', authenticateToken, requireGoldAdmin, async(req,res)=>{
+  try { const users=await User.find({verificationStatus:'pending'}).select('firstName lastName email siteName slug createdAt verificationStatus').sort({createdAt:1}).limit(100).lean(); res.json({requests:users}); }
+  catch(e){res.status(500).json({message:'Could not load verification requests.'});}
+});
+app.post('/api/admin/verification-requests/:id',authenticateToken,requireGoldAdmin,async(req,res)=>{
+  if(!mongoose.isValidObjectId(req.params.id))return res.status(400).json({message:'Invalid ID'});
+  if(!['approved','rejected'].includes(req.body?.decision))return res.status(400).json({message:'Choose approved or rejected.'});
+  try { const user=await User.findOneAndUpdate({_id:req.params.id,verificationStatus:'pending'},{$set:{verificationStatus:req.body.decision}},{new:true}).select('siteName verificationStatus');
+    if(!user)return res.status(404).json({message:'Pending request not found'});
+    res.json({user});
+  }catch(e){res.status(500).json({message:'Could not update verification.'});}
 });
 // ---------- Site settings / publishing ----------
 app.put('/api/site', authenticateToken, async (req, res) => {
@@ -2054,36 +2085,119 @@ function renderSite(user, offers, sent) {
   const hours = String(user.hours || '').split('\n')[0].trim();
   const q = mapQuery(user);
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
-  const tiles = withPics.map((o, i) => {
+  const seller = sellerName(user);
+  const story = user.sellerBio || [user.categoryLabel || user.category, user.city].filter(Boolean).join(' in ') || 'Independent business built with GoldOffer.';
+  const visualOffers = offers.filter(o => galleryOf(o).length);
+  const leadOffer = visualOffers[0] || offers[0] || null;
+  const secondOffer = visualOffers[1] || visualOffers[0] || offers[1] || leadOffer;
+  const thirdOffer = visualOffers[2] || visualOffers[1] || offers[2] || leadOffer;
+  const fourthOffer = visualOffers[3] || visualOffers[2] || leadOffer;
+  const leadMedia = leadOffer ? galleryOf(leadOffer)[0] : '';
+  const sideMediaA = secondOffer ? galleryOf(secondOffer)[0] : '';
+  const sideMediaB = thirdOffer ? galleryOf(thirdOffer)[0] : '';
+  const sideMediaC = fourthOffer ? galleryOf(fourthOffer)[0] : '';
+  const isVideo = (u) => /\.(mp4|webm|ogg)(?:$|[?#])/i.test(String(u || ''));
+  const renderMedia = (u, alt, extra = '') => {
+    if (!u) return `<div class="cine-ph ${extra}">${esc(String((alt || user.siteName || '?')).charAt(0).toUpperCase())}</div>`;
+    return isVideo(u)
+      ? `<video class="${extra}" src="${esc(u)}" autoplay muted loop playsinline preload="metadata"></video>`
+      : `<img class="${extra}" src="${esc(u)}" alt="${esc(alt || '')}" loading="lazy">`;
+  };
+  const offerPills = offers.slice(0, 3).map(o => `<a href="/site/${esc(user.slug)}/offer/${o._id}">${esc(o.title)}</a>`).join('');
+  const heroTiles = [leadOffer, secondOffer, thirdOffer].filter(Boolean).slice(0, 3).map((o, i) => {
     const g = galleryOf(o);
-    const cls = withPics.length === 1 ? 't3' : withPics.length === 2 ? ['t1', 't2'][i] : ['t2', 't1', 't3'][i];
-    return `<a class="tile ${cls}" href="/site/${esc(user.slug)}/offer/${o._id}" aria-label="${esc(o.title)}">${g.length ? `<img src="${esc(g[0])}" alt="" loading="lazy">` : `<div class="ph">${esc(String(o.title || '?').charAt(0).toUpperCase())}</div>`}<span class="tg"><span>${esc(o.title)}</span><b>${eur(o.price)}</b></span></a>`;
+    const cls = ['t2', 't1', 't3'][i] || 't2';
+    return `<a class="tile ${cls}" href="/site/${esc(user.slug)}/offer/${o._id}" aria-label="${esc(o.title)}">${g.length ? renderMedia(g[0], o.title) : `<div class="ph">${esc(String(o.title || '?').charAt(0).toUpperCase())}</div>`}<span class="tg"><span>${esc(o.title)}</span><b>${eur(o.price)}</b></span></a>`;
   }).join('');
   const cards = offers.length === 0 ? '<p class="none">No offers yet. Please check back soon.</p>' : offers.map((o, i) => offerCard(user, o, i)).join('');
   const body = `<div class="prog" id="prog"></div>${siteBar(user, 'home')}
-<section class="shop"><div class="shop-in">
-  <div class="shop-txt">
-    <h1>${esc(user.siteName)}</h1>
-    ${sub ? `<p class="shop-sub">${sub}</p>` : ''}
-    ${hours ? `<p class="shop-open">${esc(hours)}</p>` : ''}
-    <div class="actions">
-      <a class="abtn pri" href="/site/${esc(user.slug)}/messages">${MSG_SVG}Message us</a>
-      ${phoneRaw ? `<a class="abtn" href="tel:${esc(phoneRaw)}">${PHONE_SVG}Call</a>` : ''}
-      ${q ? `<a class="abtn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener">${PIN_SVG}Directions</a>` : ''}
+<section class="cine-hero">
+  <div class="cine-noise"></div>
+  <div class="cine-wrap">
+    <div class="cine-copy rv in-view" style="--d:80ms">
+      <span class="cine-eyebrow">${esc((user.categoryLabel || user.category || 'GoldOffer site').toUpperCase())}</span>
+      <h1>${esc(user.siteName)}</h1>
+      <p class="cine-sub">${esc(story)}</p>
+      <div class="cine-meta">${sub ? `<span>${sub}</span>` : ''}${hours ? `<span>${esc(hours)}</span>` : ''}<span>${offers.length} offers live</span></div>
+      <div class="actions">
+        <a class="abtn pri" href="/site/${esc(user.slug)}/messages">${MSG_SVG}Message us</a>
+        ${phoneRaw ? `<a class="abtn" href="tel:${esc(phoneRaw)}">${PHONE_SVG}Call</a>` : ''}
+        ${q ? `<a class="abtn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener">${PIN_SVG}Directions</a>` : ''}
+      </div>
+      ${offerPills ? `<div class="offer-pills">${offerPills}</div>` : ''}
+    </div>
+    <div class="cine-visual rv in-view" style="--d:180ms" data-cine-stack>
+      <div class="stack-outline s1"></div>
+      <div class="stack-outline s2"></div>
+      <div class="stack-outline s3"></div>
+      <div class="main-screen">${renderMedia(leadMedia, leadOffer ? leadOffer.title : user.siteName)}</div>
+      ${sideMediaA ? `<div class="float-card fc-a">${renderMedia(sideMediaA, secondOffer ? secondOffer.title : user.siteName)}</div>` : ''}
+      ${sideMediaB ? `<div class="float-card fc-b">${renderMedia(sideMediaB, thirdOffer ? thirdOffer.title : user.siteName)}</div>` : ''}
+      ${sideMediaC ? `<div class="float-card fc-c">${renderMedia(sideMediaC, fourthOffer ? fourthOffer.title : user.siteName)}</div>` : ''}
+      <div class="screen-caption"><strong>${esc(leadOffer ? leadOffer.title : user.siteName)}</strong><span>${leadOffer ? eur(leadOffer.price) : esc(sub || 'Explore the website')}</span></div>
     </div>
   </div>
-  ${tiles ? `<div class="pics${withPics.length === 1 ? ' one' : ''}">${tiles}</div>` : ''}
-</div></section>
+  <div class="hero-fade"></div>
+</section>
+
+<section class="story-shell" data-story-shell>
+  <div class="story-stick">
+    <div class="story-canvas" data-story-canvas>
+      <div class="story-media">${renderMedia(leadMedia || sideMediaA, leadOffer ? leadOffer.title : user.siteName, 'story-main')}</div>
+      <div class="story-panel">
+        <span class="cine-eyebrow">CUSTOM LINK EXPERIENCE</span>
+        <h2>Your own page, with motion and presence.</h2>
+        <p>${esc(user.siteName)} is not just a list of offers. It feels like a real brand page with movement, story and direct contact.</p>
+        <div class="story-stats"><div><b>${offers.length}</b><span>Offers</span></div><div><b>${esc(user.city || 'Global')}</b><span>Location</span></div><div><b>${phoneRaw ? 'Live' : 'Direct'}</b><span>Contact</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="reveal-band wrap">
+  <div class="sec-head"><h2>Why this site feels different</h2><span>Designed to look alive, not crowded.</span></div>
+  <div class="copylines">
+    <p class="copyline">A hero section that breathes and moves as you scroll.</p>
+    <p class="copyline">Big readable messages that light up when they enter the screen.</p>
+    <p class="copyline">A clean structure where every action has its own place.</p>
+  </div>
+</section>
+
+<section class="cine-feature wrap">
+  <div class="feature-grid">
+    <div class="feature-card dark rv"><span class="cine-eyebrow">DISCOVER</span><h3>Offers with a stronger visual identity</h3><p>The public page now looks more like a premium brand site, with layered media, depth and clearer sections.</p></div>
+    <div class="feature-card media rv">${heroTiles ? `<div class="pics three">${heroTiles}</div>` : `<div class="feature-fallback">Publish offers to see your visual layout here.</div>`}</div>
+    <div class="feature-card light rv"><span class="cine-eyebrow">SELLER PROFILE</span><h3>Message, call and trust the seller</h3><p>Customers can quickly move from the homepage into the seller profile, messages and saved items without the page feeling overloaded.</p><a class="feature-link" href="/site/${esc(user.slug)}/profile">View seller profile →</a></div>
+  </div>
+</section>
+
 <main class="wrap top" id="offers">
-<div class="sec-head"><h2>Offers</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/profile#reviews" style="color:inherit;text-decoration:underline">Seller reviews</a></span></div>
-<div class="go-shop-search"><input id="goOfferSearch" type="search" autocomplete="off" aria-label="Search offers" placeholder="Search offers by name or description..."><span id="goFound">${offers.length} offers</span></div>
-${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
-<div class="grid" id="goOfferGrid">${cards}</div><p id="goNoResults" style="display:none;padding:28px 0;color:#707781">No matching offers.</p></main>
-<style>.go-shop-search{display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap;margin:18px 0 24px}.go-shop-search input{width:min(100%,430px);border-radius:14px;padding:13px 17px;background:#fff;color:#15191f;border:1px solid #dce0e4;font:inherit;box-shadow:0 3px 18px rgba(0,0,0,.035)}.go-shop-search input:focus{outline:2px solid #f7c42f}.go-shop-search span{font-size:13px;color:#707781}@media(max-width:600px){.go-shop-search input{width:100%}}</style>
-<script>(function(){var inp=document.getElementById('goOfferSearch'),grid=document.getElementById('goOfferGrid'),count=document.getElementById('goFound'),empty=document.getElementById('goNoResults');if(!inp||!grid)return;var items=[].slice.call(grid.querySelectorAll('.card'));inp.addEventListener('input',function(){var q=inp.value.trim().toLocaleLowerCase(),n=0;items.forEach(function(el){var show=el.textContent.toLocaleLowerCase().includes(q);el.style.display=show?'':'none';if(show)n++;});count.textContent=n+' offers';empty.style.display=n?'none':'block';});})();</script>
+  <div class="sec-head"><h2>Offers</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/profile#reviews" style="color:inherit;text-decoration:underline">Seller reviews</a></span></div>
+  <div class="go-shop-search"><input id="goOfferSearch" type="search" autocomplete="off" aria-label="Search offers" placeholder="Search offers by name or description..."><span id="goFound">${offers.length} offers</span></div>
+  ${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
+  <div class="grid" id="goOfferGrid">${cards}</div><p id="goNoResults" style="display:none;padding:28px 0;color:#707781">No matching offers.</p>
+</main>
+
 <section class="wrap" style="padding-top:42px"><a href="/site/${esc(user.slug)}/profile" style="display:flex;gap:15px;align-items:center;border:1px solid #364151;border-radius:18px;background:#161c25;padding:18px 20px;text-decoration:none"><span style="display:grid;place-items:center;width:52px;height:52px;border-radius:14px;background:linear-gradient(120deg,#ffda00,#ff9900);color:#15100b;font-size:24px;font-weight:800">${esc(sellerName(user).charAt(0).toUpperCase())}</span><span style="flex:1;min-width:0"><b style="display:block;color:#fff">Meet ${esc(sellerName(user))}</b><small style="color:#b1bdcc">Seller profile · Offers · Reviews</small></span><strong style="color:#ffcb31">View profile →</strong></a></section>
 <section class="wrap findus" id="about" style="padding-top:60px"><div class="sec-head"><h2>Find us</h2></div>${aboutBlock(user)}</section>
-<footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>`;
+<footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>
+<style>
+.cine-hero{position:relative;overflow:hidden;padding:110px 0 70px;background:radial-gradient(1200px circle at 78% 22%,rgba(255,200,32,.13),transparent 32%),radial-gradient(900px circle at 18% 10%,rgba(255,255,255,.06),transparent 28%),linear-gradient(180deg,#05070b 0%,#070b12 100%)}
+.cine-noise,.hero-fade{position:absolute;inset:0;pointer-events:none}.cine-noise{opacity:.25;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px);background-size:12px 12px;mask-image:linear-gradient(180deg,rgba(0,0,0,.7),transparent)}.hero-fade{background:linear-gradient(180deg,transparent 68%,#070b12 100%)}
+.cine-wrap{width:min(100% - 40px,1220px);margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,560px);align-items:center;gap:44px;position:relative;z-index:2}
+.cine-copy h1{font-size:clamp(3rem,8vw,6.8rem);line-height:.92;letter-spacing:-.05em;margin:8px 0 18px;max-width:10ch}.cine-eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:800;letter-spacing:.18em;color:#ffcb36}.cine-eyebrow::before{content:'';width:18px;height:1px;background:currentColor;opacity:.7}.cine-sub{max-width:630px;font-size:clamp(1.02rem,2vw,1.28rem);line-height:1.65;color:#c7ced8}.cine-meta{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0 22px}.cine-meta span,.offer-pills a{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#f2f4f8;font-size:13px;text-decoration:none;backdrop-filter:blur(10px)}.offer-pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.offer-pills a:hover{border-color:#ffcf35;color:#ffcf35}
+.cine-visual{position:relative;min-height:520px;perspective:1600px}.stack-outline,.main-screen,.float-card{position:absolute;border-radius:34px}.stack-outline{inset:38px 24px 38px 34px;border:1px solid rgba(255,255,255,.3);opacity:.45;transform-origin:center;pointer-events:none}.stack-outline.s1{transform:rotate(-6deg) translate(-18px,10px)}.stack-outline.s2{transform:rotate(4deg) translate(18px,-14px)}.stack-outline.s3{transform:rotate(-1.5deg) translate(0,0)}.main-screen{inset:68px 48px 58px 58px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:#0d1219;box-shadow:0 28px 70px rgba(0,0,0,.5)}.main-screen img,.main-screen video,.float-card img,.float-card video,.story-main{width:100%;height:100%;object-fit:cover;display:block}.cine-ph{display:grid;place-items:center;width:100%;height:100%;background:linear-gradient(135deg,#ffdc00,#ff9800);color:#111;font-size:92px;font-weight:900}.float-card{width:124px;height:124px;overflow:hidden;border:1px solid rgba(255,255,255,.16);box-shadow:0 18px 44px rgba(0,0,0,.4);background:#10151d}.fc-a{top:16px;left:22px}.fc-b{right:12px;top:120px}.fc-c{right:80px;bottom:18px;width:110px;height:110px}.screen-caption{position:absolute;left:78px;right:78px;bottom:18px;display:flex;justify-content:space-between;gap:18px;padding:14px 18px;border-radius:18px;background:linear-gradient(180deg,rgba(8,11,16,.24),rgba(8,11,16,.84));backdrop-filter:blur(16px);color:#fff}.screen-caption strong{font-size:14px}.screen-caption span{font-size:13px;color:#ffcb36}
+.story-shell{position:relative;height:180vh}.story-stick{position:sticky;top:10vh;height:80vh;display:flex;align-items:center}.story-canvas{width:min(100% - 40px,1220px);margin:0 auto;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr);gap:0;border:1px solid rgba(255,255,255,.12);border-radius:34px;overflow:hidden;background:linear-gradient(135deg,#0e131b,#131924 55%,#0c1017);box-shadow:0 28px 90px rgba(0,0,0,.48);transform-origin:center top}.story-media{min-height:560px;background:#0e1219}.story-panel{padding:clamp(28px,4vw,46px);display:flex;flex-direction:column;justify-content:center}.story-panel h2{font-size:clamp(2rem,4vw,4.1rem);line-height:.98;letter-spacing:-.05em;margin:12px 0 18px}.story-panel p{font-size:1.06rem;line-height:1.8;color:#c3c9d3}.story-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:22px}.story-stats div{padding:16px;border-radius:18px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}.story-stats b{display:block;font-size:1.35rem;color:#fff}.story-stats span{font-size:.82rem;color:#98a1af}
+.reveal-band{padding-top:26px;padding-bottom:16px}.copylines{display:grid;gap:20px;margin-top:24px}.copyline{font-size:clamp(1.8rem,4vw,4rem);line-height:1.02;letter-spacing:-.05em;color:rgba(255,255,255,.22);transition:color .45s ease,text-shadow .45s ease,transform .45s ease;max-width:13ch}.copyline.on{color:#f3f6fb;text-shadow:0 0 18px rgba(255,204,54,.2);transform:translateX(8px)}
+.cine-feature{padding-top:20px;padding-bottom:20px}.feature-grid{display:grid;grid-template-columns:1.05fr 1.2fr 1.05fr;gap:18px}.feature-card{border-radius:30px;padding:28px;min-height:320px;border:1px solid rgba(255,255,255,.1)}.feature-card.dark{background:linear-gradient(150deg,#131a23,#0c1118)}.feature-card.light{background:linear-gradient(155deg,#f1efe8,#ddd7cb);color:#111}.feature-card.media{padding:18px;background:linear-gradient(180deg,#f3f2ef,#dadad7)}.feature-card h3{font-size:clamp(1.6rem,2.6vw,2.6rem);line-height:1.05;margin:12px 0 14px}.feature-card p{line-height:1.75;color:inherit;opacity:.82}.feature-link{display:inline-block;margin-top:18px;font-weight:700;color:inherit;text-decoration:none}.feature-fallback{min-height:100%;display:grid;place-items:center;text-align:center;color:#2c3440}.feature-card.media .pics{height:100%}.feature-card.media .tile{min-height:100%}
+.go-shop-search{display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap;margin:18px 0 24px}.go-shop-search input{width:min(100%,430px);border-radius:14px;padding:13px 17px;background:#fff;color:#15191f;border:1px solid #dce0e4;font:inherit;box-shadow:0 3px 18px rgba(0,0,0,.035)}.go-shop-search input:focus{outline:2px solid #f7c42f}.go-shop-search span{font-size:13px;color:#707781}
+@media(max-width:1080px){.cine-wrap,.story-canvas,.feature-grid{grid-template-columns:1fr}.cine-visual{min-height:460px}.feature-card{min-height:0}.story-shell{height:auto;padding:8px 0 0}.story-stick{position:relative;top:auto;height:auto}.story-canvas{width:min(100% - 32px,1220px)}.story-media{min-height:320px}.feature-grid{display:grid;gap:16px}}
+@media(max-width:720px){.cine-hero{padding-top:92px}.cine-wrap{width:calc(100% - 24px);gap:26px}.cine-copy h1{font-size:clamp(2.7rem,16vw,4.4rem);max-width:12ch}.cine-sub{font-size:1rem}.cine-visual{min-height:340px}.main-screen{inset:38px 12px 38px}.stack-outline{inset:26px 6px}.float-card{width:84px;height:84px;border-radius:20px}.fc-a{top:8px;left:2px}.fc-b{right:0;top:86px}.fc-c{right:36px;bottom:2px;width:74px;height:74px}.screen-caption{left:22px;right:22px;bottom:8px;padding:10px 12px;border-radius:14px}.story-canvas{width:calc(100% - 24px);border-radius:24px}.story-panel{padding:22px}.story-panel h2{font-size:2rem}.story-stats{grid-template-columns:1fr}.copyline{font-size:2rem;max-width:15ch}.go-shop-search input{width:100%}.feature-card{padding:22px;border-radius:24px}}
+</style>
+<script>(function(){var inp=document.getElementById('goOfferSearch'),grid=document.getElementById('goOfferGrid'),count=document.getElementById('goFound'),empty=document.getElementById('goNoResults');if(inp&&grid){var items=[].slice.call(grid.querySelectorAll('.card'));inp.addEventListener('input',function(){var q=inp.value.trim().toLocaleLowerCase(),n=0;items.forEach(function(el){var show=el.textContent.toLocaleLowerCase().includes(q);el.style.display=show?'':'none';if(show)n++;});count.textContent=n+' offers';empty.style.display=n?'none':'block';});}
+var lines=[].slice.call(document.querySelectorAll('.copyline'));if(lines.length&&'IntersectionObserver' in window){var io=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting)entry.target.classList.add('on');})},{threshold:.45});lines.forEach(function(el){io.observe(el)})}else{lines.forEach(function(el){el.classList.add('on')})}
+var shell=document.querySelector('[data-story-shell]'),canvas=document.querySelector('[data-story-canvas]');if(shell&&canvas&&window.matchMedia('(min-width: 801px)').matches){var ticking=false;var run=function(){ticking=false;var rect=shell.getBoundingClientRect(),vh=window.innerHeight||1,total=Math.max(1,shell.offsetHeight-vh),p=Math.min(1,Math.max(0,-rect.top/total));var scale=1-p*.16,shift=p*34;canvas.style.transform='translate3d(0,'+shift+'px,0) scale('+scale+')';canvas.style.borderRadius=(34+p*18)+'px';};addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(run)}},{passive:true});run();}
+var stack=document.querySelector('[data-cine-stack]');if(stack&&matchMedia('(pointer:fine)').matches){stack.addEventListener('pointermove',function(e){var r=stack.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;stack.style.transform='rotateY('+(x*8)+'deg) rotateX('+(-y*6)+'deg)'});stack.addEventListener('pointerleave',function(){stack.style.transform=''})}})()</script>`;
   return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body });
 }
 
@@ -2785,7 +2899,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset'];
+const PAGE_ROUTES = ['/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
