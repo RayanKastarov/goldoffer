@@ -166,7 +166,7 @@ const Order = mongoose.model('Order', OrderSchema);
 // ---------- Themes and fonts (shared look with the builder) ----------
 // a/b = gradient colors, ink = readable accent on white, on = text color on the gradient
 const THEMES = {
-  gold: { a: '#ffd700', b: '#ff8c00', ink: '#b45309', on: '#1a1a1a' },
+  gold: { a: '#c7a46b', b: '#86612f', ink: '#a58149', on: '#15120c' },
   'neon-blue': { a: '#00f2fe', b: '#4facfe', ink: '#0369a1', on: '#06222e' },
   emerald: { a: '#00f5a0', b: '#00d9f5', ink: '#047857', on: '#06281c' },
   ruby: { a: '#ff0844', b: '#ff7a59', ink: '#be123c', on: '#ffffff' },
@@ -948,14 +948,18 @@ const ConversationSchema = new mongoose.Schema({
   customerName: String,
   customerEmail: String,          // optional, only used to say "you have a reply"
   tokenHash: String,              // the visitor proves who they are with a secret kept in their browser
-  messages: [{ from: String, text: String, at: { type: Date, default: Date.now }, _id: false }],
+  messages: [{ from: String, text: String, attachmentId: mongoose.Schema.Types.ObjectId, attachmentName: String, attachmentType: String, at: { type: Date, default: Date.now }, _id: false }],
   unreadSeller: { type: Number, default: 0 },
   unreadCustomer: { type: Number, default: 0 },
   lastAt: { type: Date, default: Date.now },
   sellerMailedAt: Date,
+  call: { state: { type: String, default: "idle" }, by: String, offer: mongoose.Schema.Types.Mixed, answer: mongoose.Schema.Types.Mixed, startedAt: Date, updatedAt: Date },
   customerMailedAt: Date
 });
 const Conversation = mongoose.model('Conversation', ConversationSchema);
+
+const ChatFile = mongoose.model('ChatFile',new mongoose.Schema({ conversationId:{type:mongoose.Schema.Types.ObjectId,index:true}, name:String,mime:String,data:Buffer,createdAt:{type:Date,default:Date.now} }));
+const chatUpload = multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024},fileFilter:(req,file,cb)=>cb(null,/^(image\/(jpeg|png|webp|gif)|application\/pdf|text\/plain)$/.test(file.mimetype))});
 
 const startLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 const chatLimiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
@@ -1040,7 +1044,7 @@ app.get('/site/:slug/chat/:id', chatLimiter, async (req, res) => {
     const conv = user && await Conversation.findOne({ _id: req.params.id, userId: user._id });
     if (!conv || !tokenOk(conv, req.query.token)) return res.status(404).json({ message: 'Conversation not found.' });
     if (conv.unreadCustomer) { conv.unreadCustomer = 0; await conv.save(); }
-    res.json({ messages: conv.messages, businessName: user.siteName });
+    res.json({ messages: conv.messages, businessName: ([user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.siteName) });
   } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
 
@@ -1075,6 +1079,77 @@ app.post('/site/:slug/chat/:id/send', chatLimiter, async (req, res) => {
     res.json({ messages: conv.messages });
   } catch (err) { res.status(500).json({ message: 'Could not send your message. Please try again.' }); }
 });
+
+// Attachment access is limited to the seller or the browser holding the conversation token.
+app.post('/site/:slug/chat/:id/file', chatLimiter, chatUpload.single('file'), async(req,res)=>{
+ try { const user=await siteBySlug(req.params.slug);const c=user&&await Conversation.findOne({_id:req.params.id,userId:user._id});
+ if(!c||!tokenOk(c,req.body.token))return res.status(403).json({message:'Not authorized'});
+ if(!req.file)return res.status(400).json({message:'Choose JPG, PNG, WebP, GIF, PDF or TXT up to 5 MB.'});
+ if(c.messages.length>=MAX_MSGS)return res.status(400).json({message:'Conversation full'});
+ const f=await ChatFile.create({conversationId:c._id,name:path.basename(req.file.originalname).slice(0,120),mime:req.file.mimetype,data:req.file.buffer});
+ c.messages.push({from:'customer',text:'',attachmentId:f._id,attachmentName:f.name,attachmentType:f.mime});c.unreadSeller++;c.lastAt=new Date();await c.save();res.json({messages:c.messages});
+ }catch(e){res.status(500).json({message:'Could not attach file'});}
+});
+app.post('/api/conversations/:id/file',authenticateToken,chatUpload.single('file'),async(req,res)=>{
+ try {const c=await Conversation.findOne({_id:req.params.id,userId:req.user.id});if(!c)return res.status(404).json({message:'Not found'});
+ if(!req.file)return res.status(400).json({message:'Choose JPG, PNG, WebP, GIF, PDF or TXT up to 5 MB.'});
+ if(c.messages.length>=MAX_MSGS)return res.status(400).json({message:'Conversation full'});
+ const f=await ChatFile.create({conversationId:c._id,name:path.basename(req.file.originalname).slice(0,120),mime:req.file.mimetype,data:req.file.buffer});
+ c.messages.push({from:'seller',text:'',attachmentId:f._id,attachmentName:f.name,attachmentType:f.mime});c.unreadCustomer++;c.lastAt=new Date();await c.save();res.json({conversation:{...briefConv(c,true),messages:c.messages}});
+ }catch(e){res.status(500).json({message:'Could not attach file'});}
+});
+app.get('/site/:slug/chat/:id/file/:fileId',chatLimiter,async(req,res)=>{
+ try {const user=await siteBySlug(req.params.slug);const c=user&&await Conversation.findOne({_id:req.params.id,userId:user._id});if(!c||!tokenOk(c,req.query.token))return res.sendStatus(403);
+ const f=await ChatFile.findOne({_id:req.params.fileId,conversationId:c._id});if(!f)return res.sendStatus(404);
+ res.set('Content-Type',f.mime);res.set('X-Content-Type-Options','nosniff');res.set('Content-Disposition',`attachment; filename="${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}"`);res.send(f.data);
+ }catch(e){res.sendStatus(404);}
+});
+app.get('/api/conversations/:id/file/:fileId',authenticateToken,async(req,res)=>{
+ try{const c=await Conversation.findOne({_id:req.params.id,userId:req.user.id});if(!c)return res.sendStatus(403);const f=await ChatFile.findOne({_id:req.params.fileId,conversationId:c._id});if(!f)return res.sendStatus(404);res.set('Content-Type',f.mime);res.set('X-Content-Type-Options','nosniff');res.set('Content-Disposition',`attachment; filename="${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}"`);res.send(f.data);}catch(e){res.sendStatus(404);}
+});
+
+// WebRTC voice calling. The database carries session descriptions only, never microphone audio.
+// Both sides must keep this chat open; ICE gathering completes before SDP is submitted.
+async function callParticipant(req, res, seller) {
+  if (!mongoose.isValidObjectId(req.params.id)) { res.status(404).json({message:'Not found'}); return null; }
+  let c;
+  if (seller) c = await Conversation.findOne({_id:req.params.id,userId:req.user.id});
+  else {
+    const owner=await siteBySlug(req.params.slug);
+    c=owner && await Conversation.findOne({_id:req.params.id,userId:owner._id});
+    if(c&&!tokenOk(c,(req.body&&req.body.token)||req.query.token))c=null;
+  }
+  if(!c)res.status(403).json({message:'Conversation access denied'});
+  return c;
+}
+async function callAction(req,res,seller){
+ try {
+  const c=await callParticipant(req,res,seller);if(!c)return;
+  const role=seller?'seller':'customer', b=req.body||{}, action=String(b.action||'');
+  const prior=c.call||{}, state=prior.state||'idle';
+  const stale=prior.startedAt && Date.now()-new Date(prior.startedAt).getTime()>5*60*1000;
+  if(action==='start'){
+   if(!b.offer||b.offer.type!=='offer'||typeof b.offer.sdp!=='string'||b.offer.sdp.length>100000)return res.status(400).json({message:'Invalid offer'});
+   if(['ringing','active'].includes(state)&&!stale)return res.status(409).json({message:'Already in a call'});
+   c.call={state:'ringing',by:role,offer:{type:'offer',sdp:b.offer.sdp},answer:null,startedAt:new Date(),updatedAt:new Date()};
+  } else if(action==='answer'){
+   if(state!=='ringing'||prior.by===role)return res.status(409).json({message:'No incoming call'});
+   if(!b.answer||b.answer.type!=='answer'||typeof b.answer.sdp!=='string'||b.answer.sdp.length>100000)return res.status(400).json({message:'Invalid answer'});
+   c.call={...prior,state:'active',answer:{type:'answer',sdp:b.answer.sdp},updatedAt:new Date()};
+  } else if(action==='end'){
+   c.call={state:'ended',by:role,offer:null,answer:null,startedAt:prior.startedAt,updatedAt:new Date()};
+  } else return res.status(400).json({message:'Unknown action'});
+  await c.save();res.json({call:c.call});
+ }catch(err){console.error('Call error',err);res.status(500).json({message:'Call failed'});}
+}
+app.get('/site/:slug/chat/:id/call',chatLimiter,async(req,res)=>{
+ try{const c=await callParticipant(req,res,false);if(c)res.json({call:c.call||{state:'idle'}});}catch(e){res.status(500).json({message:'Unable to check call'});}
+});
+app.post('/site/:slug/chat/:id/call',chatLimiter,(req,res)=>callAction(req,res,false));
+app.get('/api/conversations/:id/call',authenticateToken,async(req,res)=>{
+ try{const c=await callParticipant(req,res,true);if(c)res.json({call:c.call||{state:'idle'}});}catch(e){res.status(500).json({message:'Unable to check call'});}
+});
+app.post('/api/conversations/:id/call',authenticateToken,(req,res)=>callAction(req,res,true));
 
 // Public offers by id (for the Saved page, which keeps the ids in the visitor's own browser)
 app.get('/site/:slug/offers.json', chatLimiter, async (req, res) => {
@@ -1299,6 +1374,17 @@ body::after{content:'';position:fixed;inset:0;z-index:100;pointer-events:none;op
 @keyframes wheel{0%{opacity:0;transform:translateY(0)}30%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
 @keyframes slide{to{transform:translateX(-50%)}}
 @media (max-width:860px){.detail,.about{grid-template-columns:1fr}.gal{position:static}.bar{padding:12px 16px}.wrap{padding:90px 18px 40px}}
+@media(max-width:700px){html,body{max-width:100%;overflow-x:clip}.wrap{width:100%;padding:92px 12px 50px}.bar{gap:8px;padding:10px 12px}.bar nav{gap:5px;flex-wrap:wrap;justify-content:flex-end}.bar nav a{font-size:.73rem;padding:7px 8px}.detail,.grid{min-width:0;grid-template-columns:minmax(0,1fr)}.glass,.gal,.detail>*{min-width:0;max-width:100%}.req,.chat{padding:16px}.stick a{padding:10px 12px;font-size:.82rem}.fab{bottom:85px}.sendrow textarea{min-width:0;flex:1}.sendrow .btn{padding:12px}.msgs{height: min(55vh,450px)}}
+.message-layout{display:grid;grid-template-columns:minmax(220px,32%) minmax(0,1fr);gap:14px;min-height:65vh;margin-top:28px}.message-layout #chatList{min-width:0}.message-layout .msgrow{width:100%;text-align:left;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer}.message-pane{display:flex;flex-direction:column;min-width:0;padding:18px}.message-pane .msgs{flex:1;min-height:250px;height:50vh}.message-head{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:10px;flex-wrap:wrap}.message-head small{color:var(--mute)}.attachbtn{padding:10px;background:transparent;color:var(--paper);border:1px solid var(--line2);border-radius:9px;cursor:pointer}.message-pane .bub a{display:block;color:inherit;text-decoration:underline;overflow-wrap:anywhere}
+@media(max-width:700px){.message-layout{display:block;position:relative}.message-pane{display:none}.message-pane.visible{display:flex;position:fixed;inset:65px 0 0;z-index:70;background:var(--deep);border-radius:0;padding:12px}.message-pane.visible .msgs{height:auto;flex:1}.message-layout .msgrow{margin-bottom:8px}.message-head small{font-size:.78rem}}
+/* Muted champagne-gold: messaging actions */
+.message-pane .btn,.chat .btn,.call-action{background:linear-gradient(120deg,#c4a270,#99733d)!important;color:#16120d!important;box-shadow:none!important;border:1px solid #ac884e!important;text-shadow:none!important}
+.message-pane .btn:hover,.chat .btn:hover,.call-action:hover{filter:brightness(1.09)}
+.message-head{justify-content:space-between}.call-actions{display:flex;gap:8px;align-items:center;margin-left:auto}
+.call-action{font:600 13px inherit;padding:9px 12px;border-radius:11px;cursor:pointer}
+.call-notice{padding:12px 14px;background:#232119;border:1px solid #846b44;border-radius:12px;margin:8px 0;color:#eee2cc;font-size:14px}
+.call-notice button{margin:6px 8px 0 0}.message-pane .sendrow{align-items:center}
+@media(max-width:700px){.call-action{font-size:12px;padding:8px 9px}.message-head{flex-wrap:wrap}.call-actions{max-width:100%}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}`;
 }
 
@@ -1356,12 +1442,52 @@ const SITE_JS = `(function(){
         var hb=mk('button','heart');hb.type='button';hb.dataset.id=o.id;hb.setAttribute('aria-label','Remove from favorites');hb.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 5 6 5c2 0 3.4 1.1 4 2.2.6-1.1 2-2.2 4-2.2 3.3 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z"/></svg>';pic.appendChild(hb);
         a.appendChild(pic);var inn=mk('div','in');inn.appendChild(mk('h3',null,o.title));inn.appendChild(mk('p',null,o.description||''));inn.appendChild(mk('span','more','View details'));a.appendChild(inn);fl.appendChild(a)});
       if(!shown)fl.innerHTML='<p class="none">Those offers are no longer available.</p>';paintFavs();tiltAll()}).catch(function(){fl.innerHTML='<p class="none">Could not load your saved offers. Please refresh.</p>'})}
+
+  // Browser-to-browser microphone calling (WebRTC).
+  // Works best on HTTPS and requires both people to have the same conversation open.
+  function createVoiceCall(head, id, token) {
+    if(!head || !id)return;
+    var role='customer', endpoint='/site/'+slug+'/chat/'+id+'/call', pc=null,local=null,remote=null,last='',busy=false,stopped=false;
+    var buttons=mk('div','call-actions'), callBtn=mk('button','call-action','☎ Обади се'), notice=mk('div','call-notice');
+    callBtn.type='button';buttons.appendChild(callBtn);head.appendChild(buttons);notice.style.display='none';head.parentNode.insertBefore(notice,head.nextSibling);
+    var tick=null;
+    function status(t){notice.textContent=t;notice.style.display='block';}
+    function api(action,extra){return fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({token:token,action:action},extra||{}))}).then(function(r){return r.json().then(function(d){if(!r.ok)throw Error(d.message||'Call error');return d})})}
+    function cleanup(){if(pc){pc.ontrack=null;pc.close();pc=null}if(local){local.getTracks().forEach(function(t){t.stop()});local=null}if(remote){remote.remove();remote=null}callBtn.disabled=false;callBtn.textContent='☎ Обади се'}
+    function stop(){stopped=true;clearInterval(tick);cleanup()}
+    function ready(){return new Promise(function(resolve,reject){if(pc.iceGatheringState==='complete')return resolve();var timeout=setTimeout(function(){pc.removeEventListener('icegatheringstatechange',f);resolve()},9000);function f(){if(pc.iceGatheringState==='complete'){clearTimeout(timeout);pc.removeEventListener('icegatheringstatechange',f);resolve()}}pc.addEventListener('icegatheringstatechange',f)})}
+    async function setup(){if(!navigator.mediaDevices||!window.RTCPeerConnection)throw Error('Нужен е HTTPS и браузър с поддръжка на обаждания.');local=await navigator.mediaDevices.getUserMedia({audio:true,video:false});pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});local.getTracks().forEach(function(t){pc.addTrack(t,local)});remote=document.createElement('audio');remote.autoplay=true;remote.playsInline=true;document.body.appendChild(remote);pc.ontrack=function(e){remote.srcObject=e.streams[0]};pc.onconnectionstatechange=function(){if(pc&&['failed','disconnected'].includes(pc.connectionState))status('Връзката е прекъсната.')}}
+    function end(){api('end').catch(function(){});cleanup();status('Разговорът приключи.');last='ended'}
+    callBtn.onclick=async function(){if(pc){end();return}try{callBtn.disabled=true;await setup();var offer=await pc.createOffer();await pc.setLocalDescription(offer);await ready();await api('start',{offer:{type:'offer',sdp:pc.localDescription.sdp}});last='ringing';callBtn.textContent='■ Затвори';status('Звъни на продавача…')}catch(e){status(e.message);cleanup()}finally{callBtn.disabled=false}};
+    async function check(){if(stopped||busy)return;busy=true;try{var r=await fetch(endpoint+'?token='+encodeURIComponent(token));if(!r.ok)return;var d=await r.json(),c=d.call||{state:'idle'};
+      if(c.state==='ringing'&&c.by!==role&&!pc&&last!=='accepting'){last='accepting';status('Входящо обаждане от продавача');var yes=mk('button','call-action','Приеми'),no=mk('button','attachbtn','Откажи');notice.appendChild(yes);notice.appendChild(no);yes.onclick=async function(){yes.disabled=true;try{await setup();await pc.setRemoteDescription(c.offer);var a=await pc.createAnswer();await pc.setLocalDescription(a);await ready();await api('answer',{answer:{type:'answer',sdp:pc.localDescription.sdp}});last='active';callBtn.textContent='■ Затвори';status('Разговорът е свързан')}catch(e){status(e.message);cleanup()}};no.onclick=function(){end()}}
+      if(c.state==='active'&&c.by===role&&pc&&!pc.currentRemoteDescription&&c.answer){await pc.setRemoteDescription(c.answer);last='active';status('Разговорът е свързан')}
+      if((c.state==='ended'||c.state==='idle')&&pc){cleanup();status('Разговорът приключи.');last=c.state}
+    }catch(e){}finally{busy=false}}
+    tick=setInterval(check,2500);check();return stop;
+  }
+
   var cl=document.getElementById('chatList');
   if(cl){var saved=[];try{saved=JSON.parse(localStorage.getItem('chats:'+slug)||'[]')}catch(e){}
-    if(!saved.length){cl.innerHTML='<p class="none">No conversations yet. Open an offer and use the chat box to write to the business.</p>'}
+    var pane=document.getElementById('messagePane');
+    function openMessage(c,mine){
+      pane.textContent='';var head=mk('div','message-head');head.appendChild(mk('b',null,document.body.dataset.seller||'Seller'));head.appendChild(mk('small',null,c.offerTitle));pane.appendChild(head);
+      if(window.stopCustomerCall)window.stopCustomerCall();window.stopCustomerCall=createVoiceCall(head,mine.id,mine.token);
+      var view=mk('div','msgs');pane.appendChild(view);var form=mk('form','sendrow');var attach=mk('input');attach.type='file';attach.accept='image/*,.pdf,.txt';attach.style.display='none';
+      var pick=mk('button','attachbtn','+');pick.type='button';pick.title='Attach photo or file';pick.onclick=function(){attach.click()};form.appendChild(pick);form.appendChild(attach);
+      var input=mk('textarea');input.placeholder='Write a message...';input.maxLength=1500;form.appendChild(input);var send=mk('button','btn','Send');send.type='submit';form.appendChild(send);pane.appendChild(form);
+      function draw(messages){view.textContent='';messages.forEach(function(m){var bub=mk('div','bub '+(m.from==='customer'?'me':'them'));if(m.text)bub.appendChild(mk('div',null,m.text));if(m.attachmentId){var a=mk('a',null,'📎 '+m.attachmentName);a.href='/site/'+slug+'/chat/'+mine.id+'/file/'+m.attachmentId+'?token='+encodeURIComponent(mine.token);bub.appendChild(a)}bub.appendChild(mk('small',null,new Date(m.at).toLocaleString()));view.appendChild(bub)});view.scrollTop=view.scrollHeight;}
+      function refresh(){fetch('/site/'+slug+'/chat/'+mine.id+'?token='+encodeURIComponent(mine.token)).then(function(r){return r.json()}).then(function(x){if(x.messages)draw(x.messages)}).catch(function(){})}
+      form.onsubmit=function(e){e.preventDefault();var text=input.value.trim();if(!text)return;send.disabled=true;fetch('/site/'+slug+'/chat/'+mine.id+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:mine.token,text:text})}).then(function(r){return r.json()}).then(function(x){if(x.messages){input.value='';draw(x.messages)}else alert(x.message||'Error')}).finally(function(){send.disabled=false})};
+      attach.onchange=function(){if(!attach.files[0])return;var data=new FormData();data.append('token',mine.token);data.append('file',attach.files[0]);fetch('/site/'+slug+'/chat/'+mine.id+'/file',{method:'POST',body:data}).then(function(r){return r.json()}).then(function(x){if(x.messages)draw(x.messages);else alert(x.message||'Upload failed')}).catch(function(){alert('Upload failed')});attach.value=''};
+      refresh();if(window.messageTimer)clearInterval(window.messageTimer);window.messageTimer=setInterval(function(){if(!document.hidden)refresh()},5000);
+      if(window.matchMedia('(max-width:700px)').matches){pane.classList.add('visible');var back=mk('button','attachbtn','← Back');back.onclick=function(){pane.classList.remove('visible')};head.prepend(back)}
+    }
+    if(!saved.length){cl.innerHTML='<p class="none">No conversations yet. Open an offer and send a message.</p>'}
     else fetch('/site/'+slug+'/chat/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chats:saved})}).then(function(r){return r.json()}).then(function(d){cl.textContent='';var list=d.conversations||[];
       if(!list.length){cl.innerHTML='<p class="none">No conversations yet.</p>';return}
-      list.forEach(function(c){var a=mk('a','msgrow');a.href='/site/'+slug+'/offer/'+c.offerId+'#chat';var l=mk('div');l.appendChild(mk('b',null,c.offerTitle));l.appendChild(mk('span',null,c.last?(c.last.from==='seller'?'Business: ':'You: ')+String(c.last.text).slice(0,90):''));a.appendChild(l);if(c.unread)a.appendChild(mk('span','newdot',c.unread+' new'));cl.appendChild(a)})}).catch(function(){})}
+      list.forEach(function(c){var mine=saved.find(function(x){return x.id===c.id});var b=mk('button','msgrow');b.type='button';b.appendChild(mk('b',null,document.body.dataset.seller||'Seller'));b.appendChild(mk('small',null,c.offerTitle));b.appendChild(mk('span',null,c.last?(c.last.from==='seller'?'Seller: ':'You: ')+(c.last.text||c.last.attachmentName||'').slice(0,70):''));b.onclick=function(){openMessage(c,mine)};cl.appendChild(b)});
+      if(list.length===1&&!window.matchMedia('(max-width:700px)').matches)openMessage(list[0],saved.find(function(x){return x.id===list[0].id}));}).catch(function(){cl.textContent='Could not load conversations.'})}
   paintFavs();
   var cw=document.getElementById('chat');
   if(cw){
@@ -1369,7 +1495,7 @@ const SITE_JS = `(function(){
     function chats(){try{return JSON.parse(localStorage.getItem(ckey)||'[]')}catch(e){return[]}}
     function putChats(a){try{localStorage.setItem(ckey,JSON.stringify(a.slice(0,20)))}catch(e){}}
     var mine=chats().filter(function(x){return x.offerId===offerId})[0],count=-1,timer=null;
-    function bubble(m){var d=mk('div','bub '+(m.from==='customer'?'me':'them'));d.appendChild(mk('div',null,m.text));d.appendChild(mk('small',null,new Date(m.at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})));return d}
+    function bubble(m){var d=mk('div','bub '+(m.from==='customer'?'me':'them'));if(m.text)d.appendChild(mk('div',null,m.text));if(m.attachmentId){var a=mk('a',null,'📎 '+m.attachmentName);a.href='/site/'+slug+'/chat/'+mine.id+'/file/'+m.attachmentId+'?token='+encodeURIComponent(mine.token);d.appendChild(a)}d.appendChild(mk('small',null,new Date(m.at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})));return d}
     function draw(msgs){var stick=count<0||box.scrollHeight-box.scrollTop-box.clientHeight<90;box.textContent='';msgs.forEach(function(m){box.appendChild(bubble(m))});count=msgs.length;if(stick)box.scrollTop=box.scrollHeight}
     function pull(){fetch('/site/'+slug+'/chat/'+mine.id+'?token='+encodeURIComponent(mine.token)).then(function(r){if(r.status===404){forget();return null}return r.json()}).then(function(d){if(d&&d.messages&&d.messages.length!==count)draw(d.messages)}).catch(function(){})}
     function forget(){clearInterval(timer);putChats(chats().filter(function(x){return x.offerId!==offerId}));mine=null;count=-1;thread.style.display='none';startF.style.display='grid'}
@@ -1381,6 +1507,7 @@ const SITE_JS = `(function(){
       .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}})}).then(function(x){btn.disabled=false;if(!x.ok){cerr.textContent=x.d.message||'Could not send.';return}
         mine={offerId:offerId,id:x.d.id,token:x.d.token};putChats([mine].concat(chats().filter(function(c){return c.offerId!==offerId})));openThread()}).catch(function(){btn.disabled=false;cerr.textContent='Connection problem. Please try again.'})});
     var sf=document.getElementById('chatSend'),ta=document.getElementById('chReply');
+    document.getElementById('chFile').addEventListener('change',function(){var f=this.files[0];if(!f||!mine)return;var fd=new FormData();fd.append('file',f);fd.append('token',mine.token);fetch('/site/'+slug+'/chat/'+mine.id+'/file',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){if(d.messages)draw(d.messages);else alert(d.message||'Upload failed')}).catch(function(){alert('Upload failed')});this.value='';});
     ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sf.requestSubmit()}});
     sf.addEventListener('submit',function(e){e.preventDefault();var t=ta.value.trim();if(!t||!mine)return;ta.value='';
       fetch('/site/'+slug+'/chat/'+mine.id+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:mine.token,text:t})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}})}).then(function(x){if(x.ok&&x.d.messages)draw(x.d.messages);else{ta.value=t;alert(x.d.message||'Could not send.')}}).catch(function(){ta.value=t})});
@@ -1410,7 +1537,7 @@ function pageShell(user, { title, desc, body }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}</style></head><body data-slug="${esc(user.slug)}">
+<style>${siteCss(t, f)}</style></head><body data-slug="${esc(user.slug)}" data-seller="${esc(([user.firstName,user.lastName].filter(Boolean).join(" ").trim()) || user.siteName)}">
 ${body}
 <script>${SITE_JS}</script>
 </body></html>`;
@@ -1452,7 +1579,7 @@ function renderSite(user, offers, sent) {
   const meta = [user.category, user.city].filter(Boolean).map(esc).join(' &middot; ');
   const cards = offers.length === 0 ? '<p class="none">No offers yet. Please check back soon.</p>' : offers.map((o, i) => offerCard(user, o, i)).join('');
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
-  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="#offers">Offers</a><a href="#about">About</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
+  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="#offers">Offers</a><a href="#about">About</a><a href="/site/${esc(user.slug)}/messages">&#9993; Messages</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
 <section class="hero"><div class="spot"></div>${heroBg}<div class="layer blob b1" data-depth=".3"></div><div class="layer blob b2" data-depth="-.12"></div><div class="layer gridbg" data-depth=".22"></div><div class="layer ring" data-depth=".08"></div><div class="layer ring r2" data-depth=".12"></div>
 <div class="hero-in">
 ${meta ? `<div class="chip">${meta}</div>` : ''}
@@ -1481,7 +1608,7 @@ function renderOfferPage(user, offer, others, sent) {
   const more = others.length ? `<h2 class="rv" style="font-size:1.8rem;margin:70px 0 26px">More from ${esc(user.siteName)}</h2><div class="grid">${others.map((o, i) => offerCard(user, o, i)).join('')}</div>` : '';
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
   const ld = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: offer.title, description: String(offer.description || offer.title), image: g, offers: { '@type': 'Offer', price: Number(offer.price || 0).toFixed(2), priceCurrency: 'EUR', availability: 'https://schema.org/InStock', seller: { '@type': 'Organization', name: user.siteName } } }).replace(/</g, '\\u003c');
-  const body = `<script type="application/ld+json">${ld}</script><div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
+  const body = `<script type="application/ld+json">${ld}</script><div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a href="/site/${esc(user.slug)}/messages">&#9993; Messages</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
 <main class="wrap" style="padding-top:110px">
 <a class="crumb" href="/site/${esc(user.slug)}#offers">&larr; Back to all offers</a>
 <div class="detail">
@@ -1511,8 +1638,8 @@ function renderOfferPage(user, offer, others, sent) {
       </form>
     </div>
     <div class="glass chat" id="chat" data-offer="${offer._id}" style="margin-top:20px">
-      <h2>Chat with ${esc(user.siteName)}</h2>
-      <p class="hint">Ask a question or explain exactly what you want. Their reply shows up right here.</p>
+      <h2>Chat with ${esc(([user.firstName, user.lastName].filter(Boolean).join(" ").trim()) || user.siteName)}</h2>
+      <p class="hint">Write to the seller. Your conversations are also available in Messages.</p><a class="callbtn" href="/site/${esc(user.slug)}/messages">&#9993; Open messages</a>
       <form id="chatStart">
         <input id="chName" placeholder="Your name" required maxlength="60">
         <input id="chEmail" type="email" placeholder="Email (optional, we tell you when they reply)" maxlength="120">
@@ -1521,9 +1648,9 @@ function renderOfferPage(user, offer, others, sent) {
         <button class="btn" type="submit">Send message</button>
         <div class="err" id="chErr" style="color:#ff8aa5;font-size:.88rem"></div>
       </form>
-      <div id="chatThread" style="display:none">
+      <div id="chatThread" style="display:none"><a class="callbtn" href="/site/${esc(user.slug)}/messages">&#9993; Continue in Messages</a>
         <div class="msgs" id="chatMsgs" aria-live="polite"></div>
-        <form class="sendrow" id="chatSend"><textarea id="chReply" placeholder="Write a message..." maxlength="1500" required></textarea><button class="btn" type="submit">Send</button></form>
+        <form class="sendrow" id="chatSend"><label class="attachbtn" title="Attach photo or file">&#128206;<input type="file" id="chFile" accept="image/*,.pdf,.txt" style="display:none"></label><textarea id="chReply" placeholder="Write a message..." maxlength="1500" required></textarea><button class="btn" type="submit">Send</button></form>
         ${phoneRaw ? `<a class="callbtn" href="tel:${esc(phoneRaw)}">&#9742; Call ${esc(user.siteName)}</a>` : ''}
       </div>
     </div>
@@ -1540,16 +1667,22 @@ ${phoneRaw ? `<a class="fab" href="tel:${esc(phoneRaw)}">&#9742; Call</a>` : ''}
 }
 
 function renderFavoritesPage(user) {
-  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
+  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a href="/site/${esc(user.slug)}/messages">&#9993; Messages</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
 <main class="wrap" style="padding-top:110px">
 <a class="crumb" href="/site/${esc(user.slug)}#offers">&larr; Back to all offers</a>
 <h2>Your favorites</h2><p class="sub">Offers you saved with the heart. They are kept in this browser only, so no account is needed.</p>
 <div class="grid" id="favList"><p class="none">Loading...</p></div>
-<h2 style="margin-top:80px">Your messages</h2><p class="sub">Conversations you started with ${esc(user.siteName)} from this browser.</p>
-<div id="chatList"><p class="none">Loading...</p></div>
+
 </main>
 <footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
   return pageShell(user, { title: `Favorites - ${user.siteName}`, desc: `Offers you saved at ${user.siteName}`, body });
+}
+
+function renderMessagesPage(user) {
+ const seller = esc(([user.firstName,user.lastName].filter(Boolean).join(' ').trim()) || user.siteName);
+ const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a href="/site/${esc(user.slug)}/favorites">&#9825; Saved</a><a href="/site/${esc(user.slug)}/messages">&#9993; Messages</a></nav></header>
+ <main class="wrap" style="padding-top:110px"><h2>Messages</h2><p class="sub">Your conversations with ${seller}.</p><div class="message-layout"><aside id="chatList"><p class="none">Loading...</p></aside><section class="glass message-pane" id="messagePane"><p class="none">Select a conversation to read and reply.</p></section></div></main>`;
+ return pageShell(user,{title:`Messages - ${user.siteName}`,desc:'Your messages',body});
 }
 
 const SITE_CSP = [
@@ -1573,6 +1706,11 @@ app.get('/site/:slug', async (req, res) => {
   } catch (err) {
     res.status(500).send('Server error');
   }
+});
+
+app.get('/site/:slug/messages', async (req,res) => {
+ try { const user = await siteBySlug(req.params.slug); if(!user) return res.status(404).send('Site not found.'); res.setHeader('Content-Security-Policy',SITE_CSP); res.send(renderMessagesPage(user)); }
+ catch(e){res.status(500).send('Server error');}
 });
 
 app.get('/site/:slug/favorites', async (req, res) => {
@@ -1704,6 +1842,6 @@ app.get('/logo.jpg', (req, res) => {
   if (!file) return res.status(404).end();
   res.sendFile(file);
 });
-
+ 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));

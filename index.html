@@ -21,12 +21,12 @@
       --paper: #f1eee8; --soft: #c4cad5; --mute: #8b94a5;
       --iris: #8b7bff; --lagoon: #4fe3cf; --amber: #ffb454; --danger: #ff7a7a;
       --lt: #e9e9e6; --lt2: #f4f4f1; --ltext: #0b0e14; --lmute: #586070; --lline: rgba(10,14,20,.12);
-      --ta: #ffd700; --tb: #ff8c00; --tink: #b45309; --ton: #1a1a1a;
+      --ta: #c7a46b; --tb: #86612f; --tink: #a58149; --ton: #1a1a1a;
       --pfont: 'Inter', sans-serif;
       --display: 'Bricolage Grotesque', 'Inter', sans-serif;
       --nav-h: 72px;
     }
-    body.theme-gold { --ta:#ffd700; --tb:#ff8c00; --tink:#b45309; --ton:#1a1a1a; }
+    body.theme-gold { --ta:#c7a46b; --tb:#86612f; --tink:#a58149; --ton:#1a1a1a; }
     body.theme-neon-blue { --ta:#00f2fe; --tb:#4facfe; --tink:#0369a1; --ton:#06222e; }
     body.theme-emerald { --ta:#00f5a0; --tb:#00d9f5; --tink:#047857; --ton:#06281c; }
     body.theme-ruby { --ta:#ff0844; --tb:#ff7a59; --tink:#be123c; --ton:#ffffff; }
@@ -561,6 +561,10 @@
       .toast { opacity: 1; }
       html { scroll-behavior: auto; }
     }
+  .seller-call-btn{background:linear-gradient(120deg,#c3a270,#95703a);color:#14110b;border:1px solid #a8844c;border-radius:9px;padding:8px 12px;cursor:pointer;font:600 13px Inter,sans-serif;box-shadow:none}
+  .seller-call-btn:hover{filter:brightness(1.08)}
+  #convForm .btn{background:linear-gradient(120deg,#c3a270,#95703a)!important;color:#14110b!important;box-shadow:none!important}
+  @media(max-width:700px){#convHead{flex-wrap:wrap;gap:8px}.seller-call-btn{font-size:12px;padding:8px}}
   </style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
@@ -1052,7 +1056,7 @@
             <div class="conv-head" id="convHead">Select a conversation</div>
             <div class="conv-msgs" id="convMsgs"></div>
             <form id="convForm" class="conv-form" onsubmit="sendReply(event)" style="display:none">
-              <textarea id="convText" rows="2" maxlength="1500" placeholder="Write a reply..." required></textarea>
+              <input type="file" id="convFile" accept="image/*,.pdf,.txt" style="max-width:140px;width:100%" title="Attach photo or file"><textarea id="convText" rows="2" maxlength="1500" placeholder="Write a reply..." required></textarea>
               <button class="btn" type="submit">Send</button>
             </form>
           </div>
@@ -1966,8 +1970,8 @@
       const box = $('convMsgs');
       const stick = !quiet || box.scrollHeight - box.scrollTop - box.clientHeight < 90;
       $('convHead').innerHTML = '<div>' + esc(c.customerName) + '<br><small>' + esc(c.offerTitle) + (c.customerEmail ? ' &middot; ' + esc(c.customerEmail) : '') + '</small></div>' +
-        '<button class="btn-ghost" style="padding:5px 10px;font-size:.75rem" onclick="deleteConv(\'' + esc(c.id) + '\')">Delete</button>';
-      box.innerHTML = c.messages.map(m => '<div class="cbub ' + (m.from === 'seller' ? 'me' : 'cust') + '">' + esc(m.text) + '<small>' + esc(timeAgo(m.at)) + '</small></div>').join('');
+        '<div class="call-actions"><button class="seller-call-btn" type="button" onclick="startSellerCall()">☎ Обади се</button><button class="btn-ghost" style="padding:5px 10px;font-size:.75rem" onclick="deleteConv(\'' + esc(c.id) + '\')">Delete</button></div>';
+      box.innerHTML = c.messages.map(m => '<div class="cbub ' + (m.from === 'seller' ? 'me' : 'cust') + '">' + esc(m.text || '') + (m.attachmentId ? '<button type="button" class="btn-ghost" onclick="downloadConvFile(\'' + esc(m.attachmentId) + '\',\'' + esc(m.attachmentName) + '\')">📎 ' + esc(m.attachmentName) + '</button>' : '') + '<small>' + esc(timeAgo(m.at)) + '</small></div>').join('');
       if (stick) box.scrollTop = box.scrollHeight;
       $('convForm').style.display = 'flex';
       if (!quiet) renderConvList();
@@ -1981,6 +1985,17 @@
     try { await api('/api/conversations/' + S.openConv + '/reply', { method: 'POST', body: JSON.stringify({ text: t }) }); await openConv(S.openConv, false); loadInbox(); }
     catch (err) { $('convText').value = t; notify(err.message, 'Error'); }
   }
+  async function downloadConvFile(id,name){
+    if(!S.openConv)return;
+    try{const r=await fetch(API+'/api/conversations/'+S.openConv+'/file/'+id,{headers:{Authorization:'Bearer '+S.token}});if(!r.ok)throw Error('Cannot download file');const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name||'attachment';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){notify(e.message,'File')}
+  }
+  async function uploadConversationFile(){
+    const field=$('convFile');if(!field||!field.files[0]||!S.openConv)return;
+    const data=new FormData();data.append('file',field.files[0]);
+    try {const res=await fetch(API+'/api/conversations/'+S.openConv+'/file',{method:'POST',headers:{Authorization:'Bearer '+S.token},body:data});const d=await res.json();if(!res.ok)throw Error(d.message||'Upload failed');field.value='';await openConv(S.openConv,false);loadInbox();}
+    catch(err){notify(err.message,'Attachment')}
+  }
+  document.addEventListener('change',e=>{if(e.target&&e.target.id==='convFile')uploadConversationFile()});
   async function deleteConv(id) {
     if (!confirm('Delete this conversation for good?')) return;
     try { await api('/api/conversations/' + id, { method: 'DELETE' }); S.openConv = null; $('convMsgs').innerHTML = ''; $('convHead').textContent = 'Select a conversation'; $('convForm').style.display = 'none'; loadInbox(); }
@@ -2061,6 +2076,26 @@
     if (new URLSearchParams(location.search).get('paid')) notify('Thank you. Your subscription is being activated.', 'Payment received');
     if (new URLSearchParams(location.search).get('forgot') === '1' && !S.token) { openAuth('login'); openForgot(); history.replaceState(null, '', location.pathname); }
   }
+
+  // Voice calls in seller dashboard: SDP exchanged through authenticated API.
+  let sellerVoice=null, sellerAudio=null, sellerStream=null, sellerCallState='', sellerLastId=null, sellerBusy=false;
+  async function sellerCallApi(id,action,extra){const opts={method:'POST',body:JSON.stringify({action,...(extra||{})})};return api('/api/conversations/'+id+'/call',opts)}
+  function sellerCallMessage(t){let e=document.getElementById('seller-call-status');if(!e){e=document.createElement('div');e.id='seller-call-status';e.style.cssText='padding:10px;color:#dec497;font-size:13px';document.getElementById('convHead').after(e)}e.textContent=t}
+  function closeSellerVoice(){if(sellerVoice){sellerVoice.close();sellerVoice=null}if(sellerStream){sellerStream.getTracks().forEach(t=>t.stop());sellerStream=null}if(sellerAudio){sellerAudio.remove();sellerAudio=null}let b=document.querySelector('.seller-call-btn');if(b)b.textContent='☎ Обади се'}
+  async function sellerVoiceSetup(){if(!navigator.mediaDevices?.getUserMedia||!window.RTCPeerConnection)throw Error('Обажданията изискват HTTPS и достъп до микрофон.');sellerStream=await navigator.mediaDevices.getUserMedia({audio:true});sellerVoice=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});sellerStream.getTracks().forEach(t=>sellerVoice.addTrack(t,sellerStream));sellerAudio=document.createElement('audio');sellerAudio.autoplay=true;document.body.appendChild(sellerAudio);sellerVoice.ontrack=e=>sellerAudio.srcObject=e.streams[0]}
+  function sellerIce(){return new Promise(resolve=>{if(sellerVoice.iceGatheringState==='complete')return resolve();const done=()=>{if(sellerVoice.iceGatheringState==='complete'){clearTimeout(t);sellerVoice.removeEventListener('icegatheringstatechange',done);resolve()}};const t=setTimeout(()=>{sellerVoice.removeEventListener('icegatheringstatechange',done);resolve()},9000);sellerVoice.addEventListener('icegatheringstatechange',done)})}
+  async function startSellerCall(){if(!S.openConv)return;if(sellerVoice){await sellerCallApi(S.openConv,'end').catch(()=>{});closeSellerVoice();sellerCallMessage('Разговорът приключи.');return}try{await sellerVoiceSetup();const offer=await sellerVoice.createOffer();await sellerVoice.setLocalDescription(offer);await sellerIce();await sellerCallApi(S.openConv,'start',{offer:{type:'offer',sdp:sellerVoice.localDescription.sdp}});sellerLastId=S.openConv;sellerCallState='ringing';sellerCallMessage('Звъни на купувача…');document.querySelector('.seller-call-btn').textContent='■ Затвори'}catch(e){sellerCallMessage(e.message);closeSellerVoice()}}
+  async function sellerPollCall(){const id=S.openConv;if(!id||!S.token||currentPage!=='dashboard'||sellerBusy)return;if(sellerVoice&&sellerLastId!==id){closeSellerVoice();sellerCallState=''}sellerBusy=true;try{const d=await api('/api/conversations/'+id+'/call'),c=d.call||{state:'idle'};
+    if(c.state==='ringing'&&c.by==='customer'&&!sellerVoice&&sellerCallState!=='accepting'){
+      sellerCallState='accepting';sellerCallMessage('Входящо обаждане от купувача');let bar=document.getElementById('seller-call-status');let accept=document.createElement('button'),reject=document.createElement('button');accept.className=reject.className='seller-call-btn';accept.textContent='Приеми';reject.textContent='Откажи';bar.append(accept,reject);
+      accept.onclick=async()=>{accept.disabled=true;try{await sellerVoiceSetup();await sellerVoice.setRemoteDescription(c.offer);const answer=await sellerVoice.createAnswer();await sellerVoice.setLocalDescription(answer);await sellerIce();await sellerCallApi(id,'answer',{answer:{type:'answer',sdp:sellerVoice.localDescription.sdp}});sellerLastId=id;sellerCallState='active';sellerCallMessage('Разговорът е свързан');document.querySelector('.seller-call-btn').textContent='■ Затвори'}catch(e){sellerCallMessage(e.message);closeSellerVoice()}};
+      reject.onclick=async()=>{await sellerCallApi(id,'end').catch(()=>{});sellerCallState='ended';sellerCallMessage('Обаждането е отказано')};
+    }
+    if(c.state==='active'&&c.by==='seller'&&sellerVoice&&!sellerVoice.currentRemoteDescription&&c.answer){await sellerVoice.setRemoteDescription(c.answer);sellerCallState='active';sellerCallMessage('Разговорът е свързан')}
+    if((c.state==='idle'||c.state==='ended')&&sellerVoice){closeSellerVoice();sellerCallState=c.state;sellerCallMessage('Разговорът приключи')}
+  }catch(e){}finally{sellerBusy=false}}
+  setInterval(sellerPollCall,2500);
+
   init();
 </script>
 </body>
