@@ -891,19 +891,35 @@ function searchDescription(title, items) {
   return `${String(title).trim()}. ${sentence.replace(/[.!?\s]+$/, '')}.`.slice(0, 450);
 }
 
-app.post('/api/ai/product-description', authenticateToken, async (req, res) => {
-  const query = String((req.body && req.body.query) || '').trim().slice(0, 120);
-  if (query.length < 3) return res.status(400).json({ message: 'Enter a product name (at least 3 characters).' });
-  try {
-    const results = await googleResults(query, 'Bulgaria');
-    if (results === null) return res.status(503).json({ message: 'Google search is not configured on the server. Set SERPAPI_KEY or GOOGLE_API_KEY and GOOGLE_CX.' });
-    const description = searchDescription(query, results);
-    if (!description) return res.json({ description: '', message: 'Not enough reliable information found for this product. Please write the description yourself.' });
-    return res.json({ description, source: 'Google search snippets', message: 'Draft from search results. Review the details before publishing.' });
-  } catch (err) {
-    console.error('Product description search failed:', err.message);
-    return res.status(502).json({ message: 'Could not fetch Google results right now. Please try again.' });
+// Draft descriptions from owner-provided facts. Google is optional and never overrides the owner's details.
+function cleanOwnerFacts(value, max = 800) {
+  return String(value || '').replace(/<[^>]*>/g, ' ').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0,max);
+}
+function uniqueProductDraft(title, details, existing) {
+  const product = cleanOwnerFacts(title,120);
+  const facts = cleanOwnerFacts(details,700);
+  const current = cleanOwnerFacts(existing,500);
+  if (facts) {
+    const chunks = facts.split(/(?<=[.!?])\s+|[;•]+/).map(s=>s.trim().replace(/[.!?]+$/,'')).filter(Boolean).slice(0,4);
+    const txt=chunks.join('. ');
+    return (product + ' — ' + txt + (/[.!?]$/.test(txt)?'':'.')).slice(0,500);
   }
+  if (current && !/^Professional\b.*Quality work, fair prices and reliable service\.?$/i.test(current)) return current;
+  return null;
+}
+app.post('/api/ai/product-description', authenticateToken, async (req, res) => {
+  const b=req.body || {};
+  const query=cleanOwnerFacts(b.query,120);
+  if(query.length<3)return res.status(400).json({message:'Enter a product name (at least 3 characters).'});
+  const ownDraft=uniqueProductDraft(query,b.details,b.existingDescription);
+  if(ownDraft)return res.json({description:ownDraft,source:'Your product details',message:'Draft based on the information you provided. Check it before publishing.'});
+  try {
+    const results=await googleResults(query,'Bulgaria');
+    if(results===null)return res.json({description:'',message:'Add a few facts about this product to generate its description. Google search is not configured.'});
+    const description=searchDescription(query,results);
+    if(!description)return res.json({description:'',message:'Add details such as condition, materials, size or what is included. No reliable Google text was found.'});
+    return res.json({description,source:'Google search snippets',message:'Search-based draft. Verify all specifications before publishing.'});
+  }catch(err){console.error('Product description search failed:',err.message);return res.json({description:'',message:'Google is temporarily unavailable. Enter product details and try again.'});}
 });
 
 app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
@@ -1940,7 +1956,28 @@ function pageShell(user, { title, desc, body, cls }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}</style></head><body class="${cls || ''}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+<style>${siteCss(t, f)}
+@media(max-width:700px){
+ html,body{width:100%;max-width:100%;overflow-x:clip}
+ .bar{gap:8px;flex-wrap:wrap;min-height:64px;height:auto}
+ .bar nav{gap:6px;display:flex;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+ .bar nav a{padding:8px 11px;font-size:.8rem;white-space:nowrap}
+ .shop{padding:86px 16px 20px}.shop-in{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;min-height:auto}
+ .shop h1{font-size:clamp(2.25rem,11vw,4rem);line-height:1.08;overflow-wrap:anywhere}
+ .pics{max-width:360px;margin:0 auto}
+ .wrap,.shop,.detail,.about{max-width:100%;min-width:0}
+ .detail>* ,.about>*{min-width:0}
+ .actions{display:flex;gap:9px;flex-wrap:wrap}
+ .actions a,.actions button{max-width:100%}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .grid>*{min-width:0}
+ .card{min-width:0;overflow:hidden}
+ .card h3,.card p{overflow-wrap:anywhere}
+ .mcomposer{gap:8px;padding:10px}
+ .mcomposer textarea{font-size:16px;min-width:0}
+}
+@media(max-width:380px){.grid{grid-template-columns:minmax(0,1fr)}.bar nav a{font-size:.75rem;padding:7px 8px}}
+</style></head><body class="${cls || ''}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${body}
 <script>${SITE_JS}</script>
 </body></html>`;

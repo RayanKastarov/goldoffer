@@ -630,7 +630,40 @@
     .cbtn.on { background: #fff; color: #111; }
     .cbtn:disabled { opacity: .5; }
     @keyframes callpulse { 0% { box-shadow: 0 0 0 0 rgba(255,190,30,.5); } 70% { box-shadow: 0 0 0 28px rgba(255,190,30,0); } 100% { box-shadow: 0 0 0 0 rgba(255,190,30,0); } }
-  </style>
+  
+/* GoldOffer Studio: responsive workspace + phone preview */
+.pv-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;flex-wrap:wrap}
+.pv-toolbar strong,.pv-toolbar span{display:block}.pv-toolbar strong{font-size:.93rem}.pv-toolbar span{font-size:.72rem;color:var(--mute);margin-top:2px}
+.pv-modes{display:flex;background:#080c12;border:1px solid var(--line2);border-radius:12px;padding:4px;gap:3px}
+.pv-modes button{border:0;background:transparent;border-radius:9px;padding:8px 11px;color:var(--soft);font-weight:600;font-size:.78rem;cursor:pointer}
+.pv-modes button.active{background:linear-gradient(120deg,#ffdf00,#ff9b00);color:#14110b}
+.pv-device{width:100%;transition:width .3s ease,box-shadow .3s ease;margin:auto;overflow:hidden;border-radius:13px}
+.pv-device.phone-mode{width:min(100%,360px);border:7px solid #292f3a;border-radius:27px;box-shadow:0 18px 45px rgba(0,0,0,.48)}
+.pv-device.phone-mode .screen{min-height:440px;max-height:550px;overflow-y:auto}
+.pv-device.phone-mode .screen .body{display:grid;grid-template-columns:1fr!important}
+.helper-copy{display:block;color:var(--mute);font-size:.79rem;margin-top:6px}
+#v-builder,#v-dashboard,#v-messages{max-width:100vw}
+@media(max-width:760px){
+ html,body{max-width:100%;overflow-x:clip}
+ .layout,.dash-grid,.inbox,.stats{min-width:0}
+ .layout>* ,.dash-grid>* ,.inbox>*{min-width:0}
+ .preview{padding:12px;border-radius:18px}
+ .pv-toolbar{align-items:flex-start}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px}
+ .stat{padding:15px!important;min-width:0}
+ .stat .v{font-size:clamp(1.3rem,5vw,2rem)!important;overflow-wrap:anywhere}
+ .add-box{padding:16px!important}
+ .field input,.field textarea,.field select{min-width:0;width:100%;max-width:100%;font-size:16px}
+ .offer-row{flex-wrap:wrap;gap:12px}
+ .offer-row .acts{width:100%;justify-content:flex-end}
+ .conv-form{display:flex;flex-wrap:wrap;gap:8px}
+ .conv-form textarea{flex:1 1 100%;order:-1;min-width:0!important}
+ .nav-end{gap:6px}.nav-end .btn,.nav-end .btn-ghost{padding:8px 10px}
+ .screen img,.p-item img{max-width:100%}
+}
+@media(max-width:390px){.stats{grid-template-columns:1fr 1fr!important}.pv-modes{width:100%;justify-content:center}.pv-modes button{flex:1}}
+@media(prefers-reduced-motion:reduce){.pv-device{transition:none}}
+</style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
 
@@ -961,11 +994,12 @@
               <div class="field"><label>Title</label><input type="text" id="oTitle" placeholder="e.g. Oil change"></div>
               <div style="display:flex;gap:9px;flex-wrap:wrap">
                 <button class="btn-ghost" id="aiBtn" onclick="lookupPrice()">Check market price</button>
-                <button class="btn-ghost" id="descBtn" onclick="lookupDescription()">✦ Generate description from Google</button>
+                <button class="btn-ghost" id="descBtn" onclick="lookupDescription()">✦ Improve description</button>
               </div>
               <div class="range" id="oRange"></div>
               <div class="field" style="margin-top:12px"><label>Price (EUR)</label><input type="number" id="oPrice" min="0" step="0.01" placeholder="e.g. 25"></div>
-              <div class="field"><label>Short description</label><input type="text" id="oDesc" maxlength="500" placeholder="One or two lines shown on the card"></div>
+              <div class="field"><label>Product details / what makes it special</label><textarea id="oFacts" maxlength="1000" rows="3" placeholder="Example: homemade butter biscuits, baked fresh, 500g box. Only write facts you know."></textarea><small class="helper-copy">Optional. Your description will use these details, not generic marketing text.</small></div>
+              <div class="field"><label>Short description</label><input type="text" id="oDesc" maxlength="500" placeholder="A unique sentence for this offer"></div>
               <div class="field"><label>Full description (optional)</label><textarea id="oLong" maxlength="4000" rows="5" placeholder="Everything a customer should know: what is included, sizes, materials, how it works..."></textarea></div>
               <div class="field"><label>Photos (optional, up to 8)</label><input type="file" id="oImg" accept="image/*" multiple onchange="previewPhotos()">
                 <div id="oExisting" class="thumbs-row"></div>
@@ -996,11 +1030,14 @@
           </div>
         </div>
 
-        <div class="preview">
+        <div class="preview" id="studioPreview">
+          <div class="pv-toolbar"><div><strong>Live design preview</strong><span>See your storefront before publishing</span></div><div class="pv-modes" role="group" aria-label="Preview screen size"><button class="active" id="pvDesktop" type="button" onclick="setPreviewMode('desktop')" aria-pressed="true">▣ Desktop</button><button id="pvPhone" type="button" onclick="setPreviewMode('phone')" aria-pressed="false">▯ Phone</button></div></div>
+          <div class="pv-device" id="pvDevice">
           <div class="pbar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url" id="pvUrl">your-site</span></div>
           <div class="screen">
             <div class="top"><h3 id="pvName">Your brand</h3><p id="pvCat">Business category</p></div>
             <div class="body" id="pvOffers"></div>
+          </div>
           </div>
         </div>
       </div>
@@ -1894,13 +1931,13 @@
     const btn = $('descBtn');
     btn.disabled = true; btn.textContent = 'Searching Google...';
     try {
-      const d = await api('/api/ai/product-description', { method: 'POST', body: JSON.stringify({ query: title }) });
+      const d = await api('/api/ai/product-description', { method: 'POST', body: JSON.stringify({ query: title, details: $('oFacts').value.trim(), existingDescription: $('oDesc').value.trim(), category: S.category }) });
       if (d.description) {
         $('oDesc').value = d.description;
-        notify('Description generated. Please review it before publishing.', 'Description');
-      } else notify(d.message || 'No suitable description found.', 'Description');
+        notify('A tailored draft is ready. Review it before publishing.', 'Description');
+      } else notify(d.message || 'Add more product details for a better description.', 'Description');
     } catch (e) { notify(e.message, 'Description'); }
-    finally { btn.disabled = false; btn.textContent = '✦ Generate description from Google'; }
+    finally { btn.disabled = false; btn.textContent = '✦ Improve description'; }
   }
   // ---- Add a new offer, or save changes when an existing one is being edited ----
   function renderExisting() {
@@ -1992,6 +2029,16 @@
   }
 
   // ---------- Preview (real data only) ----------
+  function setPreviewMode(mode) {
+    const phone = mode === 'phone';
+    const device = $('pvDevice');
+    if (!device) return;
+    device.classList.toggle('phone-mode', phone);
+    $('pvPhone').classList.toggle('active', phone);
+    $('pvDesktop').classList.toggle('active', !phone);
+    $('pvPhone').setAttribute('aria-pressed', String(phone));
+    $('pvDesktop').setAttribute('aria-pressed', String(!phone));
+  }
   function renderPreview() {
     const name = $('siteName').value.trim() || (S.user && S.user.siteName) || '';
     $('pvName').textContent = name || 'Your brand';
