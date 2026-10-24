@@ -392,14 +392,15 @@
     .thumbs-row { display: flex; flex-wrap: wrap; gap: 10px; }
     .field textarea { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line2); background: var(--raise); color: inherit; font: inherit; resize: vertical; }
     .inbox { display: grid; grid-template-columns: 300px 1fr; gap: 16px; min-height: 360px; }
-    .conv-list { border: 1px solid var(--line2); border-radius: 12px; overflow: auto; max-height: 460px; }
+    .conv-list { border: 1px solid var(--line2); border-radius: 16px; overflow: auto; max-height: 460px; background: rgba(255,255,255,.02); }
     .conv-empty { color: var(--mute); padding: 18px; font-size: .9rem; }
-    .conv-item { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--line2); color: inherit; padding: 13px 14px; cursor: pointer; font: inherit; }
-    .conv-item:hover, .conv-item.on { background: var(--raise); }
-    .conv-item b { display: flex; justify-content: space-between; gap: 8px; font-size: .92rem; }
-    .conv-item span { display: block; color: var(--mute); font-size: .8rem; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conv-item { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid rgba(255,255,255,.08); color: var(--paper); padding: 15px 16px; cursor: pointer; font: inherit; transition: background .18s ease, border-color .18s ease; }
+    .conv-item:hover, .conv-item.on { background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border-color: rgba(195,162,112,.26); }
+    .conv-item b { display: flex; justify-content: space-between; gap: 8px; font-size: .98rem; color: var(--paper); font-weight: 700; }
+    .conv-item b span { color: var(--paper) !important; font-size: .98rem !important; margin: 0 !important; }
+    .conv-item span { display: block; color: var(--mute); font-size: .82rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .conv-dot { background: #ff3d7f; color: #fff; border-radius: 99px; font-size: .7rem; padding: 1px 8px; }
-    .conv-view { display: flex; flex-direction: column; border: 1px solid var(--line2); border-radius: 12px; padding: 14px; min-width: 0; }
+    .conv-view { display: flex; flex-direction: column; border: 1px solid var(--line2); border-radius: 16px; padding: 14px; min-width: 0; background: rgba(255,255,255,.02); }
     .conv-head { font-weight: 600; padding-bottom: 10px; border-bottom: 1px solid var(--line2); margin-bottom: 10px; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
     .conv-head small { color: var(--mute); font-weight: 400; }
     .conv-msgs { flex: 1; overflow-y: auto; max-height: 320px; display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
@@ -407,10 +408,16 @@
     .cbub small { display: block; margin-top: 3px; font-size: .68rem; opacity: .65; }
     .cbub.cust { align-self: flex-start; background: var(--raise); border: 1px solid var(--line2); }
     .cbub.me { align-self: flex-end; background: linear-gradient(135deg, var(--iris), var(--lagoon)); color: #07090d; }
-    .conv-form { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; }
-    .conv-form textarea { flex: 1; padding: 11px 13px; border-radius: 10px; border: 1px solid var(--line2); background: var(--raise); color: inherit; font: inherit; resize: none; }
+    .conv-form { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding: 10px; border-radius: 18px; border: 1px solid rgba(195,162,112,.2); background: linear-gradient(180deg, rgba(18,23,34,.98), rgba(13,17,25,.96)); box-shadow: inset 0 1px 0 rgba(255,255,255,.03); }
+    .conv-form textarea { flex: 1; min-height: 54px; padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); color: var(--paper); font: inherit; resize: none; outline: none; }
+    .conv-form textarea::placeholder { color: #9ea7b8; }
+    .conv-form textarea:focus { border-color: rgba(195,162,112,.6); box-shadow: 0 0 0 3px rgba(195,162,112,.12); }
+    .conv-form input[type=file] { display: none; }
+    .conv-attach { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 94px; height: 54px; padding: 0 14px; border-radius: 14px; border: 1px solid rgba(195,162,112,.35); background: rgba(195,162,112,.08); color: #e8d2a4; font-weight: 600; cursor: pointer; transition: background .18s ease, border-color .18s ease, transform .18s ease; }
+    .conv-attach:hover { background: rgba(195,162,112,.14); border-color: rgba(195,162,112,.55); transform: translateY(-1px); }
+    .conv-send { flex-shrink: 0; min-width: 102px; height: 54px; border-radius: 14px; }
     .badge-msg { background: #ff3d7f; color: #fff; border-radius: 99px; font-size: .7rem; padding: 1px 7px; margin-left: 6px; }
-    @media (max-width: 760px) { .inbox { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) { .inbox { grid-template-columns: 1fr; } .conv-form { flex-wrap: wrap; align-items: stretch; } .conv-attach { min-width: 100px; height: 48px; } .conv-form textarea { width: 100%; min-height: 88px; order: 3; } .conv-send { min-width: 96px; height: 48px; } }
     .acts { display: flex; gap: 8px; flex-shrink: 0; }
     .editing { outline: 2px solid var(--iris); border-radius: 12px; }
     .sources { margin-top: 8px; font-size: .8rem; color: var(--mute); }
@@ -1056,8 +1063,10 @@
             <div class="conv-head" id="convHead">Select a conversation</div>
             <div class="conv-msgs" id="convMsgs"></div>
             <form id="convForm" class="conv-form" onsubmit="sendReply(event)" style="display:none">
-              <input type="file" id="convFile" accept="image/*,.pdf,.txt" style="max-width:140px;width:100%" title="Attach photo or file"><textarea id="convText" rows="2" maxlength="1500" placeholder="Write a reply..." required></textarea>
-              <button class="btn" type="submit">Send</button>
+              <label class="conv-attach" for="convFile">＋ File</label>
+              <input type="file" id="convFile" accept="image/*,.pdf,.txt" title="Attach photo or file">
+              <textarea id="convText" rows="2" maxlength="1500" placeholder="Write a reply..." required></textarea>
+              <button class="btn conv-send" type="submit">Send</button>
             </form>
           </div>
         </div>
