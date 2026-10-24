@@ -106,7 +106,7 @@ const UserSchema = new mongoose.Schema({
   category: String,
   city: String,
   theme: { type: String, default: 'gold' },
-  layout: { type: String, enum: ['signature','editorial','market'], default: 'signature' },
+  layout: { type: String, enum: ['signature','editorial','market','neon','mono'], default: 'signature' },
   font: { type: String, default: 'sans' },
   published: { type: Boolean, default: false },
   categoryLabel: String,
@@ -198,6 +198,83 @@ const FONTS = {
   rounded: { css: "'Comfortaa', cursive", gf: 'Comfortaa:wght@600;700' },
   geo: { css: "'Montserrat', sans-serif", gf: 'Montserrat:wght@400;600;800' }
 };
+const LAYOUTS = {
+  signature: {
+    name: 'Signature',
+    eyebrow: 'Signature storefront',
+    storyHeading: 'A cinematic storefront built to feel premium.',
+    discoverTitle: 'Discover the business',
+    discoverText: 'Explore the catalog, meet the seller and connect directly.',
+    tilesText: 'A dramatic, premium layout with rich contrast and polished motion.',
+    profileText: 'Meet the seller, review the profile and start a conversation instantly.',
+    fallback: [
+      'https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=80'
+    ]
+  },
+  editorial: {
+    name: 'Editorial',
+    eyebrow: 'Editorial storefront',
+    storyHeading: 'A spacious layout focused on trust, story and clarity.',
+    discoverTitle: 'Browse the collection',
+    discoverText: 'A lighter, more refined presentation with product-first storytelling.',
+    tilesText: 'Every section breathes more, making the brand feel elegant and curated.',
+    profileText: 'Get to know the seller in a cleaner editorial presentation.',
+    fallback: [
+      'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80'
+    ]
+  },
+  market: {
+    name: 'Modern Market',
+    eyebrow: 'Modern storefront',
+    storyHeading: 'A bold marketplace look built for conversion and direct contact.',
+    discoverTitle: 'Shop the latest offers',
+    discoverText: 'The content is centered, bolder and more commerce-oriented.',
+    tilesText: 'This layout puts offers first and makes the catalog easier to scan.',
+    profileText: 'Seller profile and reviews stay one tap away across the whole site.',
+    fallback: [
+      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1468495244123-6c6a332a7303?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80'
+    ]
+  },
+  neon: {
+    name: 'Neon Grid',
+    eyebrow: 'Gamer / tech storefront',
+    storyHeading: 'A futuristic layout with sharper edges, glow and gamer energy.',
+    discoverTitle: 'Power up the storefront',
+    discoverText: 'Ideal for gaming, tech gear and creators who want a stronger personality.',
+    tilesText: 'Sharper cards, more contrast and a glowing interface across the full public link.',
+    profileText: 'The seller profile feels more like a modern gaming hub than a generic profile.',
+    fallback: [
+      'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1560253023-3ec5d502959f?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80'
+    ]
+  },
+  mono: {
+    name: 'Minimal Mono',
+    eyebrow: 'Minimal storefront',
+    storyHeading: 'A clean monochrome look with calmer typography and restrained accents.',
+    discoverTitle: 'Explore the essentials',
+    discoverText: 'Minimal Mono reduces visual noise and lets photos and text do the work.',
+    tilesText: 'The most minimal version — clean spacing, simple hierarchy and quiet confidence.',
+    profileText: 'Seller information becomes simpler, sharper and more business-like.',
+    fallback: [
+      'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80'
+    ]
+  }
+};
 
 // ---------- Helpers ----------
 const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
@@ -206,6 +283,16 @@ const CYR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ж: 'zh', з
 // Name shown to visitors as the person behind the shop (falls back to the shop name)
 function sellerName(user) {
   return ([user.firstName, user.lastName].filter(Boolean).join(' ').trim()) || user.siteName;
+}
+function safeLayout(v) { return LAYOUTS[v] ? v : 'signature'; }
+function layoutPack(v) { return LAYOUTS[safeLayout(v)]; }
+function initials(v) {
+  const parts = String(v || '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  if (!parts.length) return 'GO';
+  return parts.map(x => x.charAt(0).toUpperCase()).join('');
+}
+function artPlaceholder(title, kicker) {
+  return `<div class="ph ph-art"><div class="ph-art-bg"></div><small>${esc(kicker || 'Featured')}</small><strong>${esc(title || 'Offer')}</strong></div>`;
 }
 
 function slugify(text) {
@@ -679,7 +766,7 @@ app.put('/api/site', authenticateToken, async (req, res) => {
     if (b.notifyEmail !== undefined) user.notifyEmail = isEmail(b.notifyEmail) ? String(b.notifyEmail).trim() : '';
     if (typeof b.notifyOn === 'boolean') user.notifyOn = b.notifyOn;
     if (Object.keys(THEMES).includes(theme)) user.theme = theme;
-    if (['signature','editorial','market'].includes(b.layout)) user.layout = b.layout;
+    if (['signature','editorial','market','neon','mono'].includes(b.layout)) user.layout = b.layout;
     if (Object.keys(FONTS).includes(font)) user.font = font;
     if (!user.slug && user.siteName) user.slug = await uniqueSlug(user.siteName, user._id);
     if (publish === true) {
@@ -2000,6 +2087,57 @@ const SITE_JS = `(function(){
   }
 })();`;
 
+function layoutGlobalCss(layout) {
+  return `
+.ph-art{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;padding:18px;background:linear-gradient(160deg,#121721,#0b1017 60%,rgba(255,255,255,.02));color:#fff;isolation:isolate;font-size:inherit}
+.ph-art small{position:relative;z-index:2;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:8px}
+.ph-art strong{position:relative;z-index:2;font-size:clamp(1.2rem,2vw,1.8rem);line-height:1.1;max-width:12ch}
+.ph-art-bg,.ph-art::after{position:absolute;inset:0;border-radius:inherit;content:''}
+.ph-art-bg{background:radial-gradient(560px circle at 0% 0%,color-mix(in srgb,var(--a) 46%,transparent),transparent 52%),linear-gradient(135deg,rgba(255,255,255,.06),transparent 45%,rgba(255,255,255,.02));opacity:.95}
+.ph-art::after{background:linear-gradient(180deg,transparent 10%,rgba(0,0,0,.48));z-index:1}
+.seller-chip,.seller-pill{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:18px}
+.layout-signature .bar{background:rgba(5,7,11,.58)}
+.layout-editorial body,.layout-editorial{--bg:#ece9e2;--panel:#ffffff;--line:rgba(19,24,32,.12);--mute:#62676f;--soft:#353a42;color:#16181c}
+.layout-editorial body::after{opacity:.02}
+.layout-editorial .bar{background:rgba(237,233,226,.8);color:#111;border-bottom:1px solid rgba(19,24,32,.1)}
+.layout-editorial .bar nav a{border-color:rgba(19,24,32,.15);color:#1f2328;background:rgba(255,255,255,.5)}
+.layout-editorial .card,.layout-editorial .glass,.layout-editorial .sp-hero,.layout-editorial .sp-about,.layout-editorial .sp-review-summary,.layout-editorial .sp-review-list,.layout-editorial .mwrap .mside,.layout-editorial .mwrap .mmain,.layout-editorial .detail .main,.layout-editorial .detail .req,.layout-editorial .detail .seller{background:#fff;color:#1a1d22;box-shadow:0 18px 40px rgba(0,0,0,.06)}
+.layout-editorial .in h3,.layout-editorial .info h1,.layout-editorial .sp-intro h1,.layout-editorial footer b,.layout-editorial .mhead b{color:#17191d}
+.layout-editorial .in p,.layout-editorial .sub,.layout-editorial .short,.layout-editorial .long,.layout-editorial .sp-subtle,.layout-editorial .sp-about p{color:#5b6068}
+.layout-editorial .sp-proof span,.layout-editorial .tag,.layout-editorial .count,.layout-editorial .price,.layout-editorial .seller-pill{background:#f4f1ea;color:#17191d;border-color:#ddd5c6;box-shadow:none}
+.layout-editorial .mcomposer textarea,.layout-editorial input,.layout-editorial textarea,.layout-editorial select{background:#f6f2eb;color:#181a1f;border-color:#ddd5c6}
+.layout-editorial .ph-art{background:linear-gradient(160deg,#f6efe4,#ebe4d8)}
+.layout-market .bar{background:rgba(6,18,24,.7)}
+.layout-market .detail{grid-template-columns:1fr 1.08fr}
+.layout-market .sp-hero,.layout-market .sp-about,.layout-market .mwrap .mside,.layout-market .mwrap .mmain{border-radius:28px}
+.layout-neon{--a:#44f6ff;--b:#9b4dff;--ink:#7dd3fc;--on:#081018;--panel:#090d17;--bg:#03040a;--line:rgba(93,116,255,.23);--mute:#8690b2;--soft:#c9d0ff}
+.layout-neon .bar{background:rgba(4,6,16,.78);border-bottom-color:rgba(77,95,255,.35);box-shadow:0 10px 40px rgba(0,0,0,.28)}
+.layout-neon .bar nav a{border-color:rgba(88,99,255,.28)}
+.layout-neon .card,.layout-neon .glass,.layout-neon .sp-hero,.layout-neon .sp-about,.layout-neon .sp-review-summary,.layout-neon .sp-review-list,.layout-neon .mwrap .mside,.layout-neon .mwrap .mmain,.layout-neon .detail .main,.layout-neon .detail .req,.layout-neon .detail .seller{border-radius:18px;background:linear-gradient(180deg,rgba(11,15,28,.96),rgba(8,10,18,.96));box-shadow:0 0 0 1px rgba(82,96,255,.22),0 0 36px rgba(68,246,255,.08),0 24px 60px rgba(0,0,0,.6)}
+.layout-neon .card::before{opacity:.95;background:linear-gradient(135deg,#44f6ff,transparent 36%,transparent 64%,#9b4dff)}
+.layout-neon .tag,.layout-neon .count,.layout-neon .price,.layout-neon .sp-proof span{border-color:rgba(68,246,255,.35)}
+.layout-neon .abtn.pri,.layout-neon .sp-btn.sp-primary,.layout-neon .btn{background:linear-gradient(135deg,#44f6ff,#9b4dff);color:#081018;box-shadow:0 0 24px rgba(68,246,255,.18)}
+.layout-neon .moffer,.layout-neon .sp-tabs,.layout-neon .seller{border-color:rgba(82,96,255,.25)}
+.layout-neon .ph-art-bg{background:radial-gradient(360px circle at 10% 10%,rgba(68,246,255,.34),transparent 42%),radial-gradient(360px circle at 90% 90%,rgba(155,77,255,.24),transparent 40%),linear-gradient(140deg,#0a1020,#0b0f1b)}
+.layout-neon .wrap h2,.layout-neon .info h1,.layout-neon .sp-intro h1{letter-spacing:-.045em}
+.layout-mono{--a:#e8edf3;--b:#bfc7d5;--ink:#475569;--on:#0b0d10;--panel:#101317;--bg:#07090c;--line:rgba(255,255,255,.08);--mute:#98a0ad;--soft:#d5dae2}
+.layout-mono .bar{background:rgba(7,9,12,.82)}
+.layout-mono .bar nav a,.layout-mono .sp-btn,.layout-mono .abtn,.layout-mono .btn{border-radius:10px}
+.layout-mono .card,.layout-mono .glass,.layout-mono .sp-hero,.layout-mono .sp-about,.layout-mono .sp-review-summary,.layout-mono .sp-review-list,.layout-mono .mwrap .mside,.layout-mono .mwrap .mmain,.layout-mono .detail .main,.layout-mono .detail .req,.layout-mono .detail .seller{background:#11151a;border-radius:14px;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 18px 50px rgba(0,0,0,.45)}
+.layout-mono .card::before,.layout-mono .card::after{display:none}
+.layout-mono .tag,.layout-mono .count,.layout-mono .price,.layout-mono .sp-proof span{background:#0d1015;border-color:rgba(255,255,255,.12);box-shadow:none}
+.layout-mono .abtn.pri,.layout-mono .sp-btn.sp-primary,.layout-mono .btn{background:linear-gradient(180deg,#f3f4f6,#bfc7d5);color:#0b0d10;box-shadow:none}
+.layout-mono .ph-art-bg{background:linear-gradient(135deg,rgba(255,255,255,.12),transparent 55%),linear-gradient(180deg,#161a20,#0f1318)}
+.layout-mono .more{color:#f1f5f9}
+.layout-mono .sp-avatar,.layout-mono .seller .sav{background:#1b2027;color:#eef2f7}
+.layout-editorial .sp-avatar,.layout-editorial .seller .sav{background:#ede7dc;color:#15181c}
+.layout-neon .sp-avatar,.layout-neon .seller .sav{background:linear-gradient(135deg,#44f6ff,#9b4dff);color:#081018}
+.layout-market .sp-avatar,.layout-market .seller .sav,.layout-signature .sp-avatar,.layout-signature .seller .sav{background:linear-gradient(135deg,var(--a),var(--b));color:var(--on)}
+.layout-neon .moffer,.layout-market .moffer,.layout-mono .moffer,.layout-editorial .moffer{border-radius:16px}
+@media(max-width:820px){.layout-neon .detail,.layout-market .detail{grid-template-columns:1fr}}
+`;
+}
+
 function pageShell(user, { title, desc, body, cls }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
@@ -2011,7 +2149,7 @@ function pageShell(user, { title, desc, body, cls }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}</style></head><body class="${cls || ''} layout-${esc(user.layout || 'signature')}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${body}
 <script>${SITE_JS}</script>
 </body></html>`;
@@ -2040,7 +2178,7 @@ ${q ? `<div><div class="map"><iframe title="Map" loading="lazy" referrerpolicy="
 function offerCard(user, o, i) {
   const g = galleryOf(o);
   return `<a class="card rv" style="--d:${(i % 6) * 70}ms" href="/site/${esc(user.slug)}/offer/${o._id}">
-  <div class="pic">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : `<div class="ph">${esc(String(o.title || '?').charAt(0).toUpperCase())}</div>`}
+  <div class="pic">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : artPlaceholder(o.title, user.categoryLabel || user.category || user.siteName)}
     <span class="tag">${eur(o.price)}</span>${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
   <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p><span class="more">View details</span></div>
 </a>`;
@@ -2057,7 +2195,7 @@ function renderSellerProfile(user, offers) {
   <main class="sp-wrap">
     <a class="sp-back" href="/site/${slug}">← Back to website</a>
     <section class="sp-hero">
-      <div class="sp-identity"><div class="sp-avatar">${user.logoUrl?`<img src="${esc(user.logoUrl)}" alt="">`:esc(sellerName(user).charAt(0).toUpperCase())}</div><div class="sp-intro"><span class="sp-eyebrow">SELLER PROFILE</span><h1>${name}</h1><p>${esc(intro||user.siteName||'Independent seller')}</p><div class="sp-proof"><span>📍 ${esc(user.city||'Location not specified')}</span><span>◉ ${offers.length} offers</span><span id="spRating">★ No ratings yet</span>${user.verificationStatus==='approved'?'<span>✓ Verified seller</span>':''}<span>Joined ${esc(new Date(user.createdAt||Date.now()).getFullYear())}</span></div></div></div>
+      <div class="sp-identity"><div class="sp-avatar">${user.logoUrl?`<img src="${esc(user.logoUrl)}" alt="">`:esc(initials(sellerName(user)))}</div><div class="sp-intro"><span class="sp-eyebrow">SELLER PROFILE</span><h1>${name}</h1><p>${esc(intro||user.siteName||'Independent seller')}</p><div class="sp-proof"><span>📍 ${esc(user.city||'Location not specified')}</span><span>◉ ${offers.length} offers</span><span id="spRating">★ No ratings yet</span>${user.verificationStatus==='approved'?'<span>✓ Verified seller</span>':''}<span>Joined ${esc(new Date(user.createdAt||Date.now()).getFullYear())}</span></div></div></div>
       <div class="sp-buttons">${contact}<button id="spFollow" class="sp-btn" type="button" aria-pressed="false">♡ Save seller</button><button id="spShare" class="sp-btn" type="button">↗ Share</button></div>
     </section>
     <nav class="sp-tabs" aria-label="Seller profile sections"><a href="#offers">Offers</a><a href="#about-seller">About</a><a href="#reviews">Reviews <span id="spReviewCount"></span></a></nav>
@@ -2070,7 +2208,7 @@ function renderSellerProfile(user, offers) {
   <footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}">GoldOffer Studio</a></span></footer>
   <style>
   .sp-update{background:#253224;border:1px solid #719a56;color:#e7ffdd;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-size:14px}
-  .sp-wrap{max-width:1120px;width:min(100% - 36px,1120px);margin:auto;padding:38px 0 110px;min-width:0}.sp-back{display:inline-block;color:#aeb5c2;margin-bottom:20px;text-decoration:none;font-size:14px}.sp-hero{padding:clamp(22px,4vw,42px);border:1px solid #29303b;border-radius:26px;background:linear-gradient(128deg,#1b212c,#10151d);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:24px}.sp-identity{display:flex;align-items:center;gap:20px;min-width:0}.sp-avatar{flex:none;width:88px;height:88px;border-radius:22px;background:linear-gradient(135deg,#ffdc00,#ff9b00);color:#141414;display:grid;place-items:center;font-size:42px;font-weight:800;overflow:hidden}.sp-avatar img{width:100%;height:100%;object-fit:cover}.sp-intro{min-width:0}.sp-intro h1{font-size:clamp(28px,4.5vw,48px);margin:5px 0 8px;color:#f5f6f9;overflow-wrap:anywhere}.sp-intro p{color:#b5bdc9}.sp-eyebrow{color:#e6ba50;letter-spacing:.16em;font-size:11px;font-weight:800}.sp-proof{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;color:#c9cfd9;font-size:12px}.sp-proof span{background:#242b36;padding:7px 10px;border:1px solid #353e4c;border-radius:30px}.sp-buttons,.sp-about-actions{display:flex;flex-wrap:wrap;gap:10px}.sp-btn{border:1px solid #394150;background:#242b37;color:#f5f6fa;padding:12px 17px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font:700 14px Inter,sans-serif;cursor:pointer;min-height:46px}.sp-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8}.sp-btn:hover{border-color:#d7aa33}.sp-btn.sp-primary{background:linear-gradient(110deg,#ffda00,#ff9900);color:#15120b;border-color:transparent}.sp-tabs{position:sticky;top:72px;z-index:12;display:flex;gap:24px;border-bottom:1px solid #2d3440;background:#0a0e15;padding-top:19px;margin-bottom:28px}.sp-tabs a{padding:12px 2px;color:#bac3d1;text-decoration:none;font-weight:650;font-size:14px}.sp-tabs a:hover,.sp-tabs a:focus{color:#ffcf35}.sp-section{scroll-margin-top:135px;padding:25px 0 46px;border-bottom:1px solid #272e39}.sp-section-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:24px}.sp-section-head h2{font-size:clamp(23px,3vw,34px);margin:6px 0;color:#f5f6fa}.sp-subtle{color:#aab2c0;font-size:14px}.sp-about{background:#151b25;border:1px solid #2f3745;border-radius:20px;padding:24px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}.sp-about h3{font-size:21px;color:#fff;margin-bottom:8px}.sp-about p{color:#bdc4cf;max-width:700px}.sp-review-box{display:grid;grid-template-columns:minmax(180px,270px) minmax(0,1fr);gap:18px}.sp-review-summary,.sp-review-list{border-radius:20px;background:#171e29;border:1px solid #333d4b;padding:24px;min-width:0}.sp-review-summary{display:flex;flex-direction:column;gap:8px;align-self:start}.sp-review-summary strong{font-size:52px;color:#fff}.sp-review-summary>span{color:#ffca28;font-size:23px}.sp-review-summary small{color:#b9c2cf}.sp-review-list{min-height:130px;color:#c7cfda}.sp-review-item{padding:14px 0;border-bottom:1px solid #343c48}.sp-review-item:last-child{border:0}.sp-review-item>div{display:flex;justify-content:space-between;gap:10px}.sp-review-item strong{color:#fff}.sp-review-item span{color:#ffd13a}.sp-review-item p{margin:10px 0;overflow-wrap:anywhere;white-space:pre-wrap}.sp-review-item small{color:#9ca9bb}.sp-bar{height:7px;background:#323b47;border-radius:6px;overflow:hidden;margin:8px 0}.sp-bar i{display:block;height:100%;background:#ffb800}.sp-overlay:not([hidden]){position:fixed;z-index:300;inset:0;background:#05070bd9;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}.sp-dialog{width:min(100%,470px);max-height:calc(100dvh - 40px);overflow:auto;border:1px solid #38414e;background:#171e28;border-radius:22px;padding:24px;color:#f7f7f7}.sp-modal-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}.sp-modal-head h2{font-size:23px}.sp-modal-head button{border:1px solid #444c59;border-radius:10px;background:#252d38;color:white;padding:9px 13px;cursor:pointer}.sp-dialog label{display:block;margin:14px 0;color:#eef1f5;font-size:13px;font-weight:600}.sp-dialog input,.sp-dialog select,.sp-dialog textarea{display:block;width:100%;background:#222a36;color:#fff;border:1px solid #485261;border-radius:11px;padding:13px;margin-top:6px;box-sizing:border-box;font:inherit}.sp-dialog .sp-btn{width:100%}.sp-mobile-actions{display:none}
+  .sp-wrap{max-width:1120px;width:min(100% - 36px,1120px);margin:auto;padding:38px 0 110px;min-width:0}.sp-back{display:inline-block;color:#aeb5c2;margin-bottom:20px;text-decoration:none;font-size:14px}.sp-hero{padding:clamp(22px,4vw,42px);border:1px solid #29303b;border-radius:26px;background:linear-gradient(128deg,#1b212c,#10151d);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:24px}.sp-identity{display:flex;align-items:center;gap:20px;min-width:0}.sp-avatar{flex:none;width:88px;height:88px;border-radius:22px;background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.04));color:#f4f5f7;display:grid;place-items:center;font-size:26px;font-weight:800;letter-spacing:.04em;overflow:hidden;border:1px solid rgba(255,255,255,.12)}.sp-avatar img{width:100%;height:100%;object-fit:cover}.sp-intro{min-width:0}.sp-intro h1{font-size:clamp(28px,4.5vw,48px);margin:5px 0 8px;color:#f5f6f9;overflow-wrap:anywhere}.sp-intro p{color:#b5bdc9}.sp-eyebrow{color:#e6ba50;letter-spacing:.16em;font-size:11px;font-weight:800}.sp-proof{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;color:#c9cfd9;font-size:12px}.sp-proof span{background:#242b36;padding:7px 10px;border:1px solid #353e4c;border-radius:30px}.sp-buttons,.sp-about-actions{display:flex;flex-wrap:wrap;gap:10px}.sp-btn{border:1px solid #394150;background:#242b37;color:#f5f6fa;padding:12px 17px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font:700 14px Inter,sans-serif;cursor:pointer;min-height:46px}.sp-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8}.sp-btn:hover{border-color:#d7aa33}.sp-btn.sp-primary{background:linear-gradient(110deg,#ffda00,#ff9900);color:#15120b;border-color:transparent}.sp-tabs{position:sticky;top:72px;z-index:12;display:flex;gap:24px;border-bottom:1px solid #2d3440;background:#0a0e15;padding-top:19px;margin-bottom:28px}.sp-tabs a{padding:12px 2px;color:#bac3d1;text-decoration:none;font-weight:650;font-size:14px}.sp-tabs a:hover,.sp-tabs a:focus{color:#ffcf35}.sp-section{scroll-margin-top:135px;padding:25px 0 46px;border-bottom:1px solid #272e39}.sp-section-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:24px}.sp-section-head h2{font-size:clamp(23px,3vw,34px);margin:6px 0;color:#f5f6fa}.sp-subtle{color:#aab2c0;font-size:14px}.sp-about{background:#151b25;border:1px solid #2f3745;border-radius:20px;padding:24px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}.sp-about h3{font-size:21px;color:#fff;margin-bottom:8px}.sp-about p{color:#bdc4cf;max-width:700px}.sp-review-box{display:grid;grid-template-columns:minmax(180px,270px) minmax(0,1fr);gap:18px}.sp-review-summary,.sp-review-list{border-radius:20px;background:#171e29;border:1px solid #333d4b;padding:24px;min-width:0}.sp-review-summary{display:flex;flex-direction:column;gap:8px;align-self:start}.sp-review-summary strong{font-size:52px;color:#fff}.sp-review-summary>span{color:#ffca28;font-size:23px}.sp-review-summary small{color:#b9c2cf}.sp-review-list{min-height:130px;color:#c7cfda}.sp-review-item{padding:14px 0;border-bottom:1px solid #343c48}.sp-review-item:last-child{border:0}.sp-review-item>div{display:flex;justify-content:space-between;gap:10px}.sp-review-item strong{color:#fff}.sp-review-item span{color:#ffd13a}.sp-review-item p{margin:10px 0;overflow-wrap:anywhere;white-space:pre-wrap}.sp-review-item small{color:#9ca9bb}.sp-bar{height:7px;background:#323b47;border-radius:6px;overflow:hidden;margin:8px 0}.sp-bar i{display:block;height:100%;background:#ffb800}.sp-overlay:not([hidden]){position:fixed;z-index:300;inset:0;background:#05070bd9;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}.sp-dialog{width:min(100%,470px);max-height:calc(100dvh - 40px);overflow:auto;border:1px solid #38414e;background:#171e28;border-radius:22px;padding:24px;color:#f7f7f7}.sp-modal-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}.sp-modal-head h2{font-size:23px}.sp-modal-head button{border:1px solid #444c59;border-radius:10px;background:#252d38;color:white;padding:9px 13px;cursor:pointer}.sp-dialog label{display:block;margin:14px 0;color:#eef1f5;font-size:13px;font-weight:600}.sp-dialog input,.sp-dialog select,.sp-dialog textarea{display:block;width:100%;background:#222a36;color:#fff;border:1px solid #485261;border-radius:11px;padding:13px;margin-top:6px;box-sizing:border-box;font:inherit}.sp-dialog .sp-btn{width:100%}.sp-mobile-actions{display:none}
   @media(prefers-reduced-motion:no-preference){.sp-section{animation:spRise both;animation-timeline:view();animation-range:entry 0% entry 22%}@keyframes spRise{from{opacity:.68;transform:translateY(18px)}to{opacity:1;transform:none}}}
   @media(max-width:680px){.sp-wrap{width:calc(100% - 28px);padding:22px 0 95px}.sp-hero{padding:20px;border-radius:19px}.sp-avatar{width:66px;height:66px;border-radius:18px;font-size:30px}.sp-identity{gap:12px;align-items:start}.sp-intro h1{font-size:27px}.sp-buttons{width:100%}.sp-buttons .sp-btn{flex:1;font-size:13px}.sp-review-box{grid-template-columns:1fr}.sp-review-summary strong{font-size:38px}.sp-tabs{top:66px;gap:20px}.sp-about{padding:18px}.sp-mobile-actions{display:flex;position:fixed;z-index:90;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:8px;background:#0d111a;border-top:1px solid #38414c;box-shadow:0 -8px 24px #0007}.sp-mobile-actions .sp-btn{flex:1;padding:10px 8px;font-size:12px;white-space:nowrap}.sp-section{padding-bottom:35px}}
   </style>
@@ -2088,12 +2226,9 @@ function renderSite(user, offers, sent) {
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
   const seller = sellerName(user);
   const story = user.sellerBio || [user.categoryLabel || user.category, user.city].filter(Boolean).join(' in ') || 'Independent business built with GoldOffer.';
-  const fallbackGallery = [
-    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=80',
-    'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1200&q=80'
-  ];
+  const layout = layoutPack(user.layout);
+  const fallbackGallery = layout.fallback;
+
   const visualOffers = offers.filter(o => galleryOf(o).length);
   const leadOffer = visualOffers[0] || offers[0] || null;
   const secondOffer = visualOffers[1] || visualOffers[0] || offers[1] || leadOffer;
@@ -2127,7 +2262,7 @@ function renderSite(user, offers, sent) {
   <div class="cine-noise"></div>
   <div class="cine-wrap">
     <div class="cine-copy rv in-view" style="--d:80ms">
-      <span class="cine-eyebrow">${esc((user.categoryLabel || user.category || 'GoldOffer site').toUpperCase())}</span>
+      <span class="cine-eyebrow">${esc(((layout.eyebrow || user.categoryLabel || user.category || 'GoldOffer site')).toUpperCase())}</span>
       <h1>${esc(user.siteName)}</h1>
       <p class="cine-sub">${esc(story)}</p>
       <div class="cine-meta">${sub ? `<span>${sub}</span>` : ''}${hours ? `<span>${esc(hours)}</span>` : ''}<span>${offers.length} offers live</span></div>
@@ -2158,7 +2293,7 @@ function renderSite(user, offers, sent) {
       <div class="story-media">${renderMedia(heroMediaB, secondOffer ? secondOffer.title : user.siteName, 'story-main')}</div>
       <div class="story-panel">
         <span class="cine-eyebrow">THE STORY BEHIND THE BUSINESS</span>
-        <h2>${esc(user.siteName)} — made to stand out.</h2>
+        <h2>${esc(layout.storyHeading || (user.siteName + ' — made to stand out.'))}</h2>
         <p>${esc(story)}</p>
         <div class="story-stats"><div><b>${offers.length}</b><span>Offers</span></div><div><b>${esc(user.city || 'Global')}</b><span>Location</span></div><div><b>${phoneRaw ? 'Live call' : 'Direct line'}</b><span>Contact</span></div></div>
       </div>
@@ -2167,7 +2302,7 @@ function renderSite(user, offers, sent) {
 </section>
 
 <section class="reveal-band wrap">
-  <div class="sec-head"><h2>Discover ${esc(user.siteName)}</h2><span>A closer look at what we offer.</span></div>
+  <div class="sec-head"><h2>${esc(layout.discoverTitle || ('Discover ' + user.siteName))}</h2><span>${esc(layout.discoverText || 'A closer look at what we offer.')}</span></div>
   <div class="copylines">
     <p class="copyline">${esc(story)}</p>
     <p class="copyline">${esc(user.categoryLabel || user.category || 'Explore the collection')} ${user.city ? 'in ' + esc(user.city) : 'for you'}.</p>
@@ -2177,9 +2312,9 @@ function renderSite(user, offers, sent) {
 
 <section class="cine-feature wrap">
   <div class="feature-grid">
-    <div class="feature-card dark rv"><span class="cine-eyebrow">DISCOVER</span><h3>Discover our latest offers</h3><p>Find something that suits you. Explore the collection, ask questions and connect directly.</p></div>
+    <div class="feature-card dark rv"><span class="cine-eyebrow">DISCOVER</span><h3>${esc(layout.discoverTitle || 'Discover our latest offers')}</h3><p>${esc(layout.tilesText || 'Find something that suits you. Explore the collection, ask questions and connect directly.')}</p></div>
     <div class="feature-card media rv">${heroTiles ? `<div class="pics three">${heroTiles}</div>` : `<div class="feature-fallback">Publish offers to see your visual layout here.</div>`}</div>
-    <div class="feature-card light rv"><span class="cine-eyebrow">SELLER PROFILE</span><h3>Meet ${esc(seller)}</h3><p>Learn about the person behind this site, read feedback and get in touch directly.</p><a class="feature-link" href="/site/${esc(user.slug)}/profile">View seller profile →</a></div>
+    <div class="feature-card light rv"><span class="cine-eyebrow">SELLER PROFILE</span><h3>Meet ${esc(seller)}</h3><p>${esc(layout.profileText || 'Learn about the person behind this site, read feedback and get in touch directly.')}</p><a class="feature-link" href="/site/${esc(user.slug)}/profile">View seller profile →</a></div>
   </div>
 </section>
 
@@ -2190,7 +2325,7 @@ function renderSite(user, offers, sent) {
   <div class="grid" id="goOfferGrid">${cards}</div><p id="goNoResults" style="display:none;padding:28px 0;color:#707781">No matching offers.</p>
 </main>
 
-<section class="wrap" style="padding-top:42px"><a href="/site/${esc(user.slug)}/profile" style="display:flex;gap:15px;align-items:center;border:1px solid #364151;border-radius:18px;background:#161c25;padding:18px 20px;text-decoration:none"><span style="display:grid;place-items:center;width:52px;height:52px;border-radius:14px;background:linear-gradient(120deg,#ffda00,#ff9900);color:#15100b;font-size:24px;font-weight:800">${esc(sellerName(user).charAt(0).toUpperCase())}</span><span style="flex:1;min-width:0"><b style="display:block;color:#fff">Meet ${esc(sellerName(user))}</b><small style="color:#b1bdcc">Seller profile · Offers · Reviews</small></span><strong style="color:#ffcb31">View profile →</strong></a></section>
+<section class="wrap" style="padding-top:42px"><a href="/site/${esc(user.slug)}/profile" style="display:flex;gap:15px;align-items:center;border:1px solid #364151;border-radius:18px;background:#161c25;padding:18px 20px;text-decoration:none"><span class="seller-pill" style="display:grid;place-items:center;width:52px;height:52px;color:inherit;font-size:18px;font-weight:800">${esc(initials(sellerName(user)))}</span><span style="flex:1;min-width:0"><b style="display:block;color:#fff">Meet ${esc(sellerName(user))}</b><small style="color:#b1bdcc">Seller profile · Offers · Reviews</small></span><strong style="color:#ffcb31">View profile →</strong></a></section>
 <section class="wrap findus" id="about" style="padding-top:60px"><div class="sec-head"><h2>Find us</h2></div>${aboutBlock(user)}</section>
 <footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>
 <style>
@@ -2224,8 +2359,15 @@ function renderSite(user, offers, sent) {
 .layout-market .cine-visual{width:min(100%,930px);margin:auto;min-height:430px}.layout-market .main-screen{inset:35px 120px 30px 120px;border-radius:26px}
 .layout-market .stack-outline{inset:20px 90px}.layout-market .fc-a{top:12px;left:80px}.layout-market .fc-b{top:80px;right:65px}.layout-market .fc-c{right:100px}
 .layout-market .story-canvas{background:#0a2028}.layout-market .feature-grid{grid-template-columns:1.5fr 1fr}.layout-market .feature-card.dark{grid-column:1/-1;min-height:200px}
-@media(max-width:1080px){.layout-editorial .cine-wrap,.layout-editorial .story-canvas,.layout-editorial .feature-grid,.layout-market .feature-grid{grid-template-columns:1fr}.layout-editorial .feature-card.light,.layout-market .feature-card.dark{grid-column:auto}}
-@media(max-width:720px){.layout-editorial .cine-hero{padding-top:90px}.layout-editorial .main-screen{inset:24px 10px}.layout-editorial .fc-a{left:0}.layout-market .main-screen{inset:34px 24px}.layout-market .stack-outline{inset:22px 18px}.layout-market .fc-a{left:2px}.layout-market .fc-b{right:2px}.layout-market .fc-c{right:30px}}
+.layout-neon .cine-hero{background:radial-gradient(900px circle at 80% 20%,rgba(68,246,255,.14),transparent 30%),radial-gradient(900px circle at 18% 12%,rgba(155,77,255,.12),transparent 30%),linear-gradient(180deg,#03040a,#050712)}
+.layout-neon .cine-wrap{grid-template-columns:minmax(0,.95fr) minmax(380px,.95fr)}.layout-neon .cine-copy h1{text-shadow:0 0 20px rgba(68,246,255,.08)}
+.layout-neon .stack-outline{border-color:rgba(86,95,255,.35);border-radius:20px}.layout-neon .screen-caption{background:rgba(6,8,17,.82);border-color:rgba(68,246,255,.22)}
+.layout-neon .story-canvas{background:linear-gradient(130deg,#0a1120,#090b16)}.layout-neon .copyline.on{color:#d9f9ff}.layout-neon .feature-grid{grid-template-columns:1.25fr .75fr}.layout-neon .feature-card.media{grid-row:span 2}
+.layout-mono .cine-hero{background:linear-gradient(180deg,#07090c,#0a0d11)}.layout-mono .cine-wrap{grid-template-columns:minmax(0,.92fr) minmax(380px,1.08fr)}
+.layout-mono .cine-copy h1{max-width:13ch}.layout-mono .stack-outline{display:none}.layout-mono .main-screen{inset:14px;border-radius:16px}.layout-mono .float-card{border-radius:16px}
+.layout-mono .story-canvas{grid-template-columns:1.1fr .9fr;background:#0d1015}.layout-mono .feature-grid{grid-template-columns:1fr 1fr 1fr}.layout-mono .feature-card{padding:24px;border-radius:18px}.layout-mono .feature-card.light{background:#101317}
+@media(max-width:1080px){.layout-editorial .cine-wrap,.layout-editorial .story-canvas,.layout-editorial .feature-grid,.layout-market .feature-grid,.layout-neon .feature-grid,.layout-mono .feature-grid,.layout-mono .story-canvas{grid-template-columns:1fr}.layout-editorial .feature-card.light,.layout-market .feature-card.dark,.layout-neon .feature-card.media{grid-column:auto;grid-row:auto}}
+@media(max-width:720px){.layout-editorial .cine-hero{padding-top:90px}.layout-editorial .main-screen{inset:24px 10px}.layout-editorial .fc-a{left:0}.layout-market .main-screen{inset:34px 24px}.layout-market .stack-outline{inset:22px 18px}.layout-market .fc-a{left:2px}.layout-market .fc-b{right:2px}.layout-market .fc-c{right:30px}.layout-neon .cine-wrap,.layout-mono .cine-wrap{grid-template-columns:1fr}}
 @media(max-width:1080px){.cine-wrap,.story-canvas,.feature-grid{grid-template-columns:1fr}.cine-visual{min-height:430px}.feature-card{min-height:0}.story-shell{height:auto;padding:8px 0 0}.story-stick{position:relative;top:auto;height:auto}.story-canvas{width:min(100% - 32px,1220px)}.story-media{min-height:300px}.feature-grid{display:grid;gap:16px}.copylines{max-width:none}.copyline{max-width:30ch}}
 @media(max-width:720px){.cine-hero{padding-top:92px}.cine-wrap{width:calc(100% - 24px);gap:24px}.cine-copy h1{font-size:clamp(2.7rem,16vw,4.2rem);max-width:12ch}.cine-sub{font-size:.98rem}.cine-visual{min-height:330px}.main-screen{inset:40px 14px 40px}.stack-outline{inset:26px 6px}.float-card{width:84px;height:84px;border-radius:20px}.fc-a{top:8px;left:2px}.fc-b{right:0;top:86px}.fc-c{right:36px;bottom:2px;width:74px;height:74px}.screen-caption{left:22px;right:22px;bottom:8px;padding:10px 12px;border-radius:14px}.story-canvas{width:calc(100% - 24px);border-radius:24px}.story-panel{padding:22px}.story-panel h2{font-size:1.85rem}.story-stats{grid-template-columns:1fr}.copyline{font-size:1.4rem;max-width:100%}.go-shop-search input{width:100%}.feature-card{padding:22px;border-radius:24px}}
 </style>
@@ -2241,7 +2383,7 @@ function renderOfferPage(user, offer, others, sent) {
   const thumbs = g.length > 1 ? `<div class="thumbs">${g.map((u, i) => `<button type="button" class="${i === 0 ? 'on' : ''}" aria-label="Photo ${i + 1}"><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('')}</div>` : '';
   const main = g.length
     ? `<div class="main" id="mainPic" data-imgs="${esc(JSON.stringify(g))}"><img id="mainImg" src="${esc(g[0])}" alt="${esc(offer.title)}">${g.length > 1 ? '<button class="nav p" id="prev" aria-label="Previous photo">&#8249;</button><button class="nav n" id="next" aria-label="Next photo">&#8250;</button>' : ''}</div>${thumbs}`
-    : `<div class="main"><div class="ph">${esc(String(offer.title || '?').charAt(0).toUpperCase())}</div></div>`;
+    : `<div class="main">${artPlaceholder(offer.title, user.categoryLabel || user.category || 'Offer preview')}</div>`;
   const more = others.length ? `<h2 class="rv" style="font-size:1.8rem;margin:70px 0 26px">More from ${esc(sellerName(user))}</h2><div class="grid">${others.map((o, i) => offerCard(user, o, i)).join('')}</div>` : '';
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
   const ld = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: offer.title, description: String(offer.description || offer.title), image: g, offers: { '@type': 'Offer', price: Number(offer.price || 0).toFixed(2), priceCurrency: 'EUR', availability: 'https://schema.org/InStock', seller: { '@type': 'Organization', name: user.siteName } } }).replace(/</g, '\\u003c');
@@ -2259,7 +2401,7 @@ function renderOfferPage(user, offer, others, sent) {
       <button type="button" class="heart lg" data-id="${offer._id}" aria-pressed="false" aria-label="Save">${HEART_PATH}<span class="t"></span></button>
       <button type="button" class="share abtn" id="shareBtn" aria-label="Share">${SHARE_SVG}<span class="t2">Share</span></button>
     </div>
-    <a class="seller" href="/site/${esc(user.slug)}/profile"><span class="sav">${esc(sellerName(user).charAt(0).toUpperCase())}</span><div><b>${esc(sellerName(user))}</b><small>${[user.siteName, user.city].filter(Boolean).map(esc).join(' &middot; ')}</small></div><em>View profile →</em></a>
+    <a class="seller" href="/site/${esc(user.slug)}/profile"><span class="sav">${esc(initials(sellerName(user)))}</span><div><b>${esc(sellerName(user))}</b><small>${[user.siteName, user.city].filter(Boolean).map(esc).join(' &middot; ')}</small></div><em>View profile →</em></a>
     ${offer.description ? `<p class="short">${esc(offer.description)}</p>` : ''}
     ${offer.longDescription ? `<p class="long">${esc(offer.longDescription)}</p>` : ''}
     <div class="glass req" id="request">

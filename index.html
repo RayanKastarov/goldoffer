@@ -650,7 +650,7 @@
 @media(prefers-reduced-motion:reduce){.go-setting-grid a{transition:none!important}.rv{opacity:1!important;transform:none!important}}
 
 /* Site layout picker and real-time mini-preview */
-.go-layout-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 20px}
+.go-layout-choices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:12px 0 20px}
 .go-layout-choice{background:#141b26;color:#edf0f5;border:1px solid #384050;border-radius:16px;padding:10px;cursor:pointer;text-align:left;min-width:0;display:flex;flex-direction:column;gap:5px}
 .go-layout-choice.on{border-color:#ffcf2c;box-shadow:0 0 0 2px #ffcf2c26}
 .go-layout-choice b{font-size:13px}.go-layout-choice small{font-size:11px;color:#aeb9c9;line-height:1.3}
@@ -659,10 +659,15 @@
 .go-layout-art i:first-child{flex:.65;background:#293646}
 .go-layout-editorial{background:#ede9de}.go-layout-editorial i{background:#c7b6a1;border-radius:1px}.go-layout-editorial i:first-child{background:#fff}
 .go-layout-market{background:#0b2730;flex-direction:column}.go-layout-market i:first-child{flex:1;background:#284a5e}.go-layout-market i:last-child{background:#20c8b5;flex:1}
+.go-layout-neon{background:#08111f}.go-layout-neon i{background:linear-gradient(140deg,#44f6ff,#9b4dff)}.go-layout-neon i:first-child{background:#111a30}.go-layout-neon i:last-child{background:#1a1230}
+.go-layout-mono{background:#0f1318}.go-layout-mono i{background:#d7dce3}.go-layout-mono i:first-child{background:#2b3138}.go-layout-mono i:last-child{background:#848f9d}
 .preview[data-layout=editorial] .screen{background:#f1eee6!important;color:#191919!important}.preview[data-layout=editorial] .screen .top{background:#ded9c9!important;color:#191919!important}
 .preview[data-layout=market] .screen{background:#102a33!important;color:#fff!important}.preview[data-layout=market] .screen .top{text-align:center;background:#174455!important}
 .preview[data-layout=market] .screen .body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-@media(max-width:650px){.go-layout-choices{grid-template-columns:1fr 1fr}.go-layout-choice:last-child{grid-column:1/-1}.go-layout-art{height:56px}}
+.preview[data-layout=neon] .screen{background:#0a1020!important;color:#d9f9ff!important}.preview[data-layout=neon] .screen .top{background:#121a33!important;color:#d9f9ff!important}.preview[data-layout=neon] .screen .card{border-color:#44f6ff!important;box-shadow:0 0 0 1px rgba(68,246,255,.35)}
+.preview[data-layout=mono] .screen{background:#0f1318!important;color:#eef2f7!important}.preview[data-layout=mono] .screen .top{background:#171d24!important;color:#eef2f7!important}.preview[data-layout=mono] .screen .card{border-radius:10px!important}
+@media(max-width:920px){.go-layout-choices{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:650px){.go-layout-choices{grid-template-columns:1fr 1fr}.go-layout-choice:last-child{grid-column:auto}.go-layout-art{height:56px}}
 </style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
@@ -983,9 +988,11 @@
             <label style="display:block;margin-top:18px">Website layout</label>
             <p class="note">Choose a real page layout, not just a color. Preview changes instantly.</p>
             <div class="go-layout-choices" id="layoutChoices">
-              <button type="button" class="go-layout-choice on" data-layout="signature" onclick="selectLayout('signature')"><span class="go-layout-art go-layout-signature"><i></i><i></i></span><b>Signature</b><small>Cinematic, dark &amp; expressive</small></button>
+              <button type="button" class="go-layout-choice on" data-layout="signature" onclick="selectLayout('signature')"><span class="go-layout-art go-layout-signature"><i></i><i></i></span><b>Signature</b><small>Cinematic, dark &amp; premium</small></button>
               <button type="button" class="go-layout-choice" data-layout="editorial" onclick="selectLayout('editorial')"><span class="go-layout-art go-layout-editorial"><i></i><i></i></span><b>Editorial</b><small>Light, elegant &amp; spacious</small></button>
-              <button type="button" class="go-layout-choice" data-layout="market" onclick="selectLayout('market')"><span class="go-layout-art go-layout-market"><i></i><i></i></span><b>Modern Market</b><small>Centered, visual &amp; bold</small></button>
+              <button type="button" class="go-layout-choice" data-layout="market" onclick="selectLayout('market')"><span class="go-layout-art go-layout-market"><i></i><i></i></span><b>Modern Market</b><small>Bold, commerce-first &amp; clean</small></button>
+              <button type="button" class="go-layout-choice" data-layout="neon" onclick="selectLayout('neon')"><span class="go-layout-art go-layout-neon"><i></i><i></i></span><b>Neon Grid</b><small>Modern, gamer &amp; high-tech</small></button>
+              <button type="button" class="go-layout-choice" data-layout="mono" onclick="selectLayout('mono')"><span class="go-layout-art go-layout-mono"><i></i><i></i></span><b>Minimal Mono</b><small>Minimal, sharp &amp; business</small></button>
             </div>
             <label>Color theme</label>
             <div class="swatches" id="swatches"></div>
@@ -2091,7 +2098,7 @@
 
   // ---------- Preview (real data only) ----------
   function selectLayout(layout) {
-    if (!['signature','editorial','market'].includes(layout)) return;
+    if (!['signature','editorial','market','neon','mono'].includes(layout)) return;
     S.layout = layout;
     document.querySelectorAll('.go-layout-choice').forEach(b=>{const on=b.dataset.layout===layout;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});
     renderPreview();
