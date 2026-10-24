@@ -166,7 +166,7 @@ const Order = mongoose.model('Order', OrderSchema);
 // ---------- Themes and fonts (shared look with the builder) ----------
 // a/b = gradient colors, ink = readable accent on white, on = text color on the gradient
 const THEMES = {
-  gold: { a: '#ffd700', b: '#ff8c00', ink: '#b45309', on: '#1a1a1a' },
+  gold: { a: '#ffdf00', b: '#ff9000', ink: '#b45309', on: '#17120a' },
   'neon-blue': { a: '#00f2fe', b: '#4facfe', ink: '#0369a1', on: '#06222e' },
   emerald: { a: '#00f5a0', b: '#00d9f5', ink: '#047857', on: '#06281c' },
   ruby: { a: '#ff0844', b: '#ff7a59', ink: '#be123c', on: '#ffffff' },
@@ -1236,9 +1236,9 @@ a{color:inherit}
 .ring.r2{width:min(56vw,520px);animation-direction:reverse;animation-duration:28s}
 .hero-in{position:relative;z-index:2;max-width:920px;transform-style:preserve-3d;transition:transform .15s ease-out}
 .chip{display:inline-block;border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:8px 18px;font-size:.86rem;margin-bottom:28px;background:rgba(255,255,255,.06);backdrop-filter:blur(8px);animation:rise .8s both}
-h1{font-size:clamp(2.7rem,9vw,7rem);line-height:1.02;letter-spacing:-.035em;background:linear-gradient(100deg,#fff 15%,var(--a) 50%,var(--b) 80%,#fff);background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:rise .9s .1s both,shine 9s linear infinite;padding-bottom:.08em}
+h1{font-size:clamp(2.7rem,9vw,7rem);line-height:1.02;letter-spacing:-.035em;background:linear-gradient(100deg,var(--a) 0%,#ffe75f 32%,var(--b) 75%,var(--a) 100%);background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:rise .9s .1s both,shine 9s linear infinite;padding-bottom:.08em}
 .lead{color:var(--soft);font-size:clamp(1rem,1.7vw,1.25rem);margin:22px auto 0;max-width:46ch;animation:rise .9s .25s both}
-.cta{display:inline-block;margin-top:38px;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);text-decoration:none;font-weight:700;padding:16px 34px;border-radius:99px;box-shadow:0 0 40px color-mix(in srgb,var(--a) 45%,transparent);transition:transform .2s;animation:rise .9s .4s both}
+.cta{display:inline-block;margin-top:38px;background:linear-gradient(105deg,var(--a) 0%,#ffcc12 42%,var(--b) 100%);color:var(--on);text-decoration:none;font-weight:700;padding:16px 34px;border-radius:99px;box-shadow:0 0 40px color-mix(in srgb,var(--a) 45%,transparent);transition:transform .2s;animation:rise .9s .4s both}
 .cta:hover{transform:translateY(-3px) scale(1.03)}
 .scroll{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:22px;height:36px;border:2px solid rgba(255,255,255,.4);border-radius:12px}
 .scroll::after{content:'';position:absolute;left:50%;top:7px;width:3px;height:7px;margin-left:-1.5px;border-radius:2px;background:#fff;animation:wheel 1.8s ease-in-out infinite}
@@ -1659,7 +1659,7 @@ app.get('/site/:slug', async (req, res) => {
     const user = await User.findOne({ slug: req.params.slug });
     if (!user || !user.published) return res.status(404).send('Site not found.');
     const offers = await Offer.find({ userId: user._id }).sort({ createdAt: -1 });
-    res.setHeader('Content-Security-Policy', SITE_CSP);
+    res.setHeader('Content-Security-Policy', SITE_CSP); res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.send(renderSite(user, offers, req.query.sent === '1'));
   } catch (err) {
     res.status(500).send('Server error');
@@ -1675,7 +1675,7 @@ app.get('/site/:slug/favorites', async (req, res) => {
   try {
     const user = await User.findOne({ slug: req.params.slug });
     if (!user || !user.published) return res.status(404).send('Site not found.');
-    res.setHeader('Content-Security-Policy', SITE_CSP);
+    res.setHeader('Content-Security-Policy', SITE_CSP); res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.send(renderFavoritesPage(user));
   } catch (err) { res.status(500).send('Server error'); }
 });
@@ -1689,7 +1689,7 @@ app.get('/site/:slug/offer/:id', async (req, res) => {
     const offer = await Offer.findOne({ _id: req.params.id, userId: user._id });
     if (!offer) return res.status(404).send('Offer not found.');
     const others = await Offer.find({ userId: user._id, _id: { $ne: offer._id } }).sort({ createdAt: -1 }).limit(3);
-    res.setHeader('Content-Security-Policy', SITE_CSP);
+    res.setHeader('Content-Security-Policy', SITE_CSP); res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.send(renderOfferPage(user, offer, others, req.query.sent === '1'));
   } catch (err) {
     res.status(500).send('Server error');
