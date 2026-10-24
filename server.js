@@ -145,6 +145,7 @@ const OrderSchema = new mongoose.Schema({
   customerName: String,
   customerContact: String,
   contacts: [{ type: { type: String }, value: String, _id: false }],
+  note: String,
   amount: Number,
   status: { type: String, default: 'Pending' }, // Pending, Completed, Cancelled
   createdAt: { type: Date, default: Date.now }
@@ -246,20 +247,20 @@ async function issueVerifyCode(user) {
   await user.save();
   return sendMail({
     to: user.email,
-    subject: `${code} е вашият код за GoldOffer / ${code} is your GoldOffer code`,
-    text: `Здравейте,\nВашият код за потвърждение е: ${code}\nВалиден е ${VERIFY_MINUTES} минути.\n\nHello,\nYour confirmation code is: ${code}\nIt is valid for ${VERIFY_MINUTES} minutes.\n\nАко не сте се регистрирали, игнорирайте писмото. / If you did not sign up, ignore this email.`,
+    subject: `${code} is your GoldOffer code`,
+    text: `Hello,\nYour confirmation code is: ${code}\nIt is valid for ${VERIFY_MINUTES} minutes.\n\nIf you did not sign up, ignore this email.`,
     html: emailShell({
       icon: '&#9993;',
-      preheader: `${code} е вашият код / is your code`,
-      heading: ['Потвърдете имейла си', 'Confirm your email'],
-      intro: [`Здравейте! Въведете този код, за да завършите регистрацията си. Валиден е ${VERIFY_MINUTES} минути.`, `Hello! Enter this code to finish creating your account. It is valid for ${VERIFY_MINUTES} minutes.`],
+      preheader: `${code} is your code`,
+      heading: ['', 'Confirm your email'],
+      intro: ['', `Hello! Enter this code to finish creating your account. It is valid for ${VERIFY_MINUTES} minutes.`],
       code,
-      footnote: ['Ако не сте се регистрирали, просто игнорирайте писмото.', 'If you did not sign up, simply ignore this email.']
+      footnote: ['', 'If you did not sign up, simply ignore this email.']
     })
   });
 }
 const canResend = (user) => !user.verifySentAt || Date.now() - new Date(user.verifySentAt).getTime() >= VERIFY_COOLDOWN_MS;
-const nowSofia = () => new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia', dateStyle: 'medium', timeStyle: 'short' }) + ' (София / Sofia)';
+const nowSofia = () => new Date().toLocaleString('en-GB', { timeZone: 'Europe/Sofia', dateStyle: 'medium', timeStyle: 'short' }) + ' (Sofia time)';
 
 // Short description of the browser that made the request (no IP address is stored or sent)
 function deviceOf(req) {
@@ -270,18 +271,18 @@ function deviceOf(req) {
 }
 
 // One modern layout for every email: dark card, gradient accent, round icon, optional code / details / button.
-// heading, intro, buttonText and footnote are [Bulgarian, English]; details rows are [labelBg, labelEn, value].
+// heading, intro, buttonText and footnote are [unused, English]; details rows are [unused, label, value]. Everything shown is English.
 function emailShell({ icon, preheader, heading, intro, code, details, buttonText, link, footnote }) {
   const l = link ? esc(link) : '';
   const rows = (details || []).map(([kb, ke, v], i, all) => {
     const line = i < all.length - 1 ? 'border-bottom:1px solid #232c3b;' : '';
-    return `<tr><td style="padding:11px 16px;font-size:13px;color:#8b94a5;width:36%;${line}">${esc(kb)} / ${esc(ke)}</td><td style="padding:11px 16px;font-size:14px;color:#f1eee8;font-weight:600;${line}">${esc(v)}</td></tr>`;
+    return `<tr><td style="padding:11px 16px;font-size:13px;color:#8b94a5;width:36%;${line}">${esc(ke)}</td><td style="padding:11px 16px;font-size:14px;color:#f1eee8;font-weight:600;${line}">${esc(v)}</td></tr>`;
   }).join('');
   const detailsBlock = rows ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 26px;background:#0a0e15;border:1px solid #232c3b;border-radius:12px;">${rows}</table>` : '';
   const codeBlock = code ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 26px;"><tr><td align="center" style="padding:20px 10px 20px 22px;background:#0a0e15;border:1px solid #2d3850;border-radius:14px;font-family:'Courier New',Courier,monospace;font-size:38px;line-height:1;font-weight:700;letter-spacing:12px;color:#ffffff;">${esc(code)}</td></tr></table>` : '';
-  const button = l && buttonText ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="border-radius:11px;background:#7f8cf2;background-image:linear-gradient(135deg,#8b7bff,#4fe3cf);"><a href="${l}" style="display:inline-block;padding:15px 30px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#07090d;text-decoration:none;border-radius:11px;">${buttonText[0]} / ${buttonText[1]}</a></td></tr></table>` : '';
-  const fallback = l && buttonText ? `<p style="margin:0 0 24px;font-size:12px;line-height:1.6;color:#6f7889;">Не работи бутонът? Копирайте връзката / Button not working? Copy this link:<br><a href="${l}" style="color:#4fe3cf;word-break:break-all;text-decoration:none;">${l}</a></p>` : '';
-  return `<!doctype html><html lang="bg"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"><title>GoldOffer Studio</title></head>
+  const button = l && buttonText ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;"><tr><td style="border-radius:11px;background:#7f8cf2;background-image:linear-gradient(135deg,#8b7bff,#4fe3cf);"><a href="${l}" style="display:inline-block;padding:15px 30px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#07090d;text-decoration:none;border-radius:11px;">${buttonText[1]} / ${buttonText[1]}</a></td></tr></table>` : '';
+  const fallback = l && buttonText ? `<p style="margin:0 0 24px;font-size:12px;line-height:1.6;color:#6f7889;">Button not working? Copy this link:<br><a href="${l}" style="color:#4fe3cf;word-break:break-all;text-decoration:none;">${l}</a></p>` : '';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"><title>GoldOffer Studio</title></head>
 <body style="margin:0;padding:0;background:#05070b;font-family:Arial,Helvetica,sans-serif;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#05070b;">${preheader || ''}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#05070b;"><tr><td align="center" style="padding:34px 12px;">
@@ -299,10 +300,10 @@ function emailShell({ icon, preheader, heading, intro, code, details, buttonText
 <p style="margin:0 0 8px;color:#c4cad5;">${intro[0]}</p>
 <p style="margin:0 0 26px;color:#8b94a5;font-size:14px;">${intro[1]}</p>
 ${codeBlock}${detailsBlock}${button}${fallback}
-<p style="margin:0;padding-top:20px;border-top:1px solid #232c3b;font-size:13px;line-height:1.6;color:#8b94a5;">${footnote[0]}<br>${footnote[1]}</p>
+<p style="margin:0;padding-top:20px;border-top:1px solid #232c3b;font-size:13px;line-height:1.6;color:#8b94a5;">${footnote[1]}</p>
 </td></tr></table>
 </td></tr>
-<tr><td align="center" style="padding:22px 10px 0;font-size:12px;line-height:1.6;color:#5f697a;">GoldOffer Studio &middot; Автоматично съобщение, моля не отговаряйте. / This is an automated message, please do not reply.</td></tr>
+<tr><td align="center" style="padding:22px 10px 0;font-size:12px;line-height:1.6;color:#5f697a;">GoldOffer Studio &middot; This is an automated message, please do not reply.</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -472,16 +473,16 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     // Security notice (not awaited, so login never waits for email)
     sendMail({
       to: user.email,
-      subject: 'Вход в профила ви / New login to your GoldOffer account',
-      text: `Здравейте,\nВлязохте в профила си в GoldOffer Studio на ${nowSofia()}.\nАко не сте вие, сменете паролата си веднага от "Forgot your password?" и ни пишете на rayankatsarov2013@gmail.com.\n\nHello,\nYou signed in to your GoldOffer Studio account on ${nowSofia()}.\nIf this was not you, reset your password right away with "Forgot your password?" and write to rayankatsarov2013@gmail.com.`,
+      subject: 'New login to your GoldOffer account',
+      text: `Hello,\nYou signed in to your GoldOffer Studio account on ${nowSofia()}.\nIf this was not you, reset your password right away with "Forgot your password?" and write to rayankatsarov2013@gmail.com.`,
       html: emailShell({
         icon: '&#128274;',
-        preheader: 'Нов вход в профила ви / New sign-in to your account',
-        heading: ['Нов вход в профила ви', 'New sign-in to your account'],
-        intro: ['Забелязахме вход в профила ви в GoldOffer Studio. Ако това сте вие, не е нужно да правите нищо.', 'We noticed a sign-in to your GoldOffer Studio account. If this was you, there is nothing to do.'],
-        details: [['Кога', 'When', nowSofia()], ['Устройство', 'Device', deviceOf(req)]],
-        buttonText: ['Не бях аз', 'This was not me'], link: `${PUBLIC_BASE}/?forgot=1`,
-        footnote: ['Ако не разпознавате този вход, сменете паролата си веднага.', 'If you do not recognise this sign-in, reset your password right away.']
+        preheader: 'New sign-in to your account',
+        heading: ['', 'New sign-in to your account'],
+        intro: ['', 'We noticed a sign-in to your GoldOffer Studio account. If this was you, there is nothing to do.'],
+        details: [['', 'When', nowSofia()], ['', 'Device', deviceOf(req)]],
+        buttonText: ['', 'This was not me'], link: `${PUBLIC_BASE}/?forgot=1`,
+        footnote: ['', 'If you do not recognise this sign-in, reset your password right away.']
       })
     });
     res.json({ token: signToken(user), user: publicUser(user) });
@@ -510,15 +511,15 @@ app.post('/api/auth/forgot', authLimiter, async (req, res) => {
       const link = `${PUBLIC_BASE}/reset?token=${token}`;
       sendMail({
         to: user.email,
-        subject: 'Нова парола за GoldOffer / Reset your GoldOffer password',
-        text: `Здравейте,\nНатиснете връзката, за да зададете нова парола (валидна 1 час):\n${link}\n\nHello,\nOpen this link to set a new password (valid for 1 hour):\n${link}\n\nАко не сте поискали това, игнорирайте писмото. / If you did not ask for this, ignore this email.`,
+        subject: 'Reset your GoldOffer password',
+        text: `Hello,\nOpen this link to set a new password (valid for 1 hour):\n${link}\n\nIf you did not ask for this, ignore this email.`,
         html: emailShell({
           icon: '&#128273;',
-          preheader: 'Задайте нова парола / Set a new password',
-          heading: ['Нова парола', 'Reset your password'],
-          intro: ['Получихме заявка за нова парола за профила ви. Натиснете бутона и изберете нова. Връзката важи 1 час.', 'We received a request to reset your password. Press the button and choose a new one. The link is valid for 1 hour.'],
-          buttonText: ['Задайте нова парола', 'Set a new password'], link,
-          footnote: ['Връзката работи само веднъж. Ако не сте я поискали, игнорирайте писмото и паролата ви няма да се промени.', 'The link works only once. If you did not ask for it, ignore this email and your password will not change.']
+          preheader: 'Set a new password',
+          heading: ['', 'Reset your password'],
+          intro: ['', 'We received a request to reset your password. Press the button and choose a new one. The link is valid for 1 hour.'],
+          buttonText: ['', 'Set a new password'], link,
+          footnote: ['', 'The link works only once. If you did not ask for it, ignore this email and your password will not change.']
         })
       });
     }
@@ -543,16 +544,16 @@ app.post('/api/auth/reset', authLimiter, async (req, res) => {
     await user.save();
     sendMail({
       to: user.email,
-      subject: 'Паролата ви е сменена / Your GoldOffer password was changed',
-      text: `Здравейте,\nПаролата на профила ви в GoldOffer Studio беше сменена на ${nowSofia()}.\nАко не сте вие, поискайте нова парола веднага и ни пишете на rayankatsarov2013@gmail.com.\n\nHello,\nThe password of your GoldOffer Studio account was changed on ${nowSofia()}.\nIf this was not you, request a new password right away and write to rayankatsarov2013@gmail.com.`,
+      subject: 'Your GoldOffer password was changed',
+      text: `Hello,\nThe password of your GoldOffer Studio account was changed on ${nowSofia()}.\nIf this was not you, request a new password right away and write to rayankatsarov2013@gmail.com.`,
       html: emailShell({
         icon: '&#10003;',
-        preheader: 'Паролата ви е сменена / Your password was changed',
-        heading: ['Паролата ви е сменена', 'Your password was changed'],
-        intro: ['Паролата на профила ви в GoldOffer Studio току-що беше сменена.', 'The password of your GoldOffer Studio account was just changed.'],
-        details: [['Кога', 'When', nowSofia()], ['Устройство', 'Device', deviceOf(req)]],
-        buttonText: ['Не го направих аз', 'I did not do this'], link: `${PUBLIC_BASE}/?forgot=1`,
-        footnote: ['Ако сте я сменили вие, игнорирайте писмото. Ако не, поискайте нова парола веднага и ни пишете.', 'If you changed it yourself, ignore this email. If not, reset it again right now and write to us.']
+        preheader: 'Your password was changed',
+        heading: ['', 'Your password was changed'],
+        intro: ['', 'The password of your GoldOffer Studio account was just changed.'],
+        details: [['', 'When', nowSofia()], ['', 'Device', deviceOf(req)]],
+        buttonText: ['', 'I did not do this'], link: `${PUBLIC_BASE}/?forgot=1`,
+        footnote: ['', 'If you changed it yourself, ignore this email. If not, reset it again right now and write to us.']
       })
     });
     res.json({ token: signToken(user), user: publicUser(user) });
@@ -812,22 +813,45 @@ function extractPrices(text) {
 }
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
 
+// Calls SerpAPI. The location parameter must exactly match SerpAPI's own location list, so if it is rejected we retry without it
+// (the city is already inside the search text, and gl/hl keep the results Bulgarian).
+async function serp(params) {
+  const base = { api_key: process.env.SERPAPI_KEY, google_domain: 'google.bg', gl: 'bg', hl: 'bg' };
+  try {
+    const r = await axios.get('https://serpapi.com/search.json', { timeout: 25000, params: { ...base, ...params } });
+    if (r.data && r.data.error) throw Object.assign(new Error(r.data.error), { serpError: r.data.error });
+    return r.data || {};
+  } catch (err) {
+    const msg = (err.response && err.response.data && err.response.data.error) || err.serpError || err.message;
+    if (params.location && /location/i.test(String(msg))) {
+      const { location, ...rest } = params;
+      return serp(rest);
+    }
+    throw Object.assign(new Error(String(msg)), { serpError: String(msg), status: err.response && err.response.status });
+  }
+}
+
 async function googleResults(query, city) {
-  const q = `${query} цена ${city}`.trim();
   const items = []; // { name, url, texts: [], price?: number }
   if (process.env.SERPAPI_KEY) {
-    const r = await axios.get('https://serpapi.com/search.json', {
-      timeout: 20000,
-      params: { engine: 'google', q, location: `${city}, Bulgaria`, google_domain: 'google.bg', gl: 'bg', hl: 'bg', num: 20, api_key: process.env.SERPAPI_KEY }
-    });
-    const d = r.data || {};
+    const q = `${query} цена ${city}`.trim();
+    const d = await serp({ engine: 'google', q, location: `${city}, Bulgaria`, num: 20 });
     (d.shopping_results || []).forEach(x => items.push({ name: x.source || x.title, url: x.link || x.product_link, texts: [x.price || ''], price: x.extracted_price }));
     (d.inline_shopping_results || []).forEach(x => items.push({ name: x.source || x.title, url: x.link, texts: [x.price || ''], price: x.extracted_price }));
-    (d.local_results && d.local_results.places || []).forEach(x => items.push({ name: x.title, url: x.links && x.links.website, texts: [x.price || '', x.description || ''] }));
+    ((d.local_results && d.local_results.places) || []).forEach(x => items.push({ name: x.title, url: x.links && x.links.website, texts: [x.price || '', x.description || ''] }));
     (d.organic_results || []).forEach(x => items.push({ name: x.source || hostOf(x.link), url: x.link, texts: [x.title, x.snippet, ...(x.rich_snippet && x.rich_snippet.top && x.rich_snippet.top.detected_extensions ? [String(x.rich_snippet.top.detected_extensions.price || '')] : [])] }));
+    // Few prices in normal results: ask Google Shopping as well (one more search credit)
+    const withPrice = items.filter(it => it.price != null || extractPrices((it.texts || []).join(' ')).length).length;
+    if (withPrice < 3) {
+      try {
+        const sh = await serp({ engine: 'google_shopping', q: `${query} ${city}`.trim(), location: `${city}, Bulgaria` });
+        (sh.shopping_results || []).forEach(x => items.push({ name: x.source || x.title, url: x.product_link || x.link, texts: [x.price || ''], price: x.extracted_price }));
+      } catch (e) { /* the normal results are still used */ }
+    }
     return items;
   }
   if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_CX) {
+    const q = `${query} цена ${city}`.trim();
     const r = await axios.get('https://www.googleapis.com/customsearch/v1', {
       timeout: 20000,
       params: { key: process.env.GOOGLE_API_KEY, cx: process.env.GOOGLE_CX, q, gl: 'bg', hl: 'bg', lr: 'lang_bg', num: 10 }
@@ -858,7 +882,7 @@ app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
       if (prices.length) found.push({ price: Number(prices[0]), name: it.name || hostOf(it.url), url: it.url });
     });
     if (found.length < 2) {
-      return res.json({ estimated: true, description: fallbackDesc, message: `Google did not show enough prices for "${query}" in ${city}. Please enter the price manually.` });
+      return res.json({ estimated: true, description: fallbackDesc, message: `Google returned ${items.length} results for "${query}" in ${city}, but only ${found.length} showed a price (at least 2 are needed). Try a more common product name, or enter the price manually.` });
     }
     // drop outliers: keep prices within 0.33x to 3x of the median
     const sorted = found.map(f => f.price).sort((a, b) => a - b);
@@ -875,8 +899,9 @@ app.post('/api/ai/market-price', authenticateToken, async (req, res) => {
       sources: kept.slice(0, 6).map(f => ({ name: f.name, price: f.price, url: f.url }))
     });
   } catch (err) {
-    console.error('Market price error:', err.response ? JSON.stringify(err.response.data).slice(0, 400) : err.message);
-    res.json({ estimated: true, description: fallbackDesc, message: 'The Google price search failed just now. Please try again or enter the price manually.' });
+    const why = String(err.serpError || (err.response && err.response.data && (err.response.data.error && (err.response.data.error.message || err.response.data.error))) || err.message || 'unknown error').slice(0, 200);
+    console.error('Market price error:', why);
+    res.json({ estimated: true, description: fallbackDesc, message: `The Google price search failed: ${why}. You can enter the price manually.` });
   }
 });
 
@@ -915,12 +940,210 @@ app.get('/api/image/:id', async (req, res) => {
   }
 });
 
+// ---------- Chat between visitors and the business (no account needed for the visitor) ----------
+const ConversationSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, index: true },
+  offerId: mongoose.Schema.Types.ObjectId,
+  offerTitle: String,
+  customerName: String,
+  customerEmail: String,          // optional, only used to say "you have a reply"
+  tokenHash: String,              // the visitor proves who they are with a secret kept in their browser
+  messages: [{ from: String, text: String, at: { type: Date, default: Date.now }, _id: false }],
+  unreadSeller: { type: Number, default: 0 },
+  unreadCustomer: { type: Number, default: 0 },
+  lastAt: { type: Date, default: Date.now },
+  sellerMailedAt: Date,
+  customerMailedAt: Date
+});
+const Conversation = mongoose.model('Conversation', ConversationSchema);
+
+const startLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
+const chatLimiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+const tokHash = (t) => crypto.createHash('sha256').update(String(t || '')).digest('hex');
+const cleanMsg = (v) => String(v || '').replace(/\r/g, '').trim().slice(0, 1500);
+const MAX_MSGS = 300;
+const MAIL_GAP_MS = 10 * 60 * 1000;
+function tokenOk(conv, token) {
+  if (!conv || !token) return false;
+  const a = Buffer.from(conv.tokenHash || '', 'hex'), b = Buffer.from(tokHash(token), 'hex');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+const lastOf = (c) => (c.messages.length ? c.messages[c.messages.length - 1] : null);
+const briefConv = (c, forSeller) => ({
+  id: c._id, offerId: c.offerId, offerTitle: c.offerTitle, customerName: c.customerName, customerEmail: forSeller ? c.customerEmail : undefined,
+  last: lastOf(c), unread: forSeller ? c.unreadSeller : c.unreadCustomer, lastAt: c.lastAt, count: c.messages.length
+});
+
+async function siteBySlug(slug) {
+  const user = await User.findOne({ slug });
+  return user && user.published ? user : null;
+}
+
+// Visitor: start a conversation about an offer
+app.post('/site/:slug/chat/start', startLimiter, async (req, res) => {
+  try {
+    const user = await siteBySlug(req.params.slug);
+    if (!user) return res.status(404).json({ message: 'Site not found.' });
+    const b = req.body || {};
+    if (!mongoose.isValidObjectId(b.offerId)) return res.status(400).json({ message: 'Offer not found.' });
+    const offer = await Offer.findOne({ _id: b.offerId, userId: user._id });
+    if (!offer) return res.status(404).json({ message: 'Offer not found.' });
+    const name = String(b.name || '').trim().slice(0, 60);
+    const text = cleanMsg(b.text);
+    const email = String(b.email || '').trim().slice(0, 120);
+    if (!name) return res.status(400).json({ message: 'Please enter your name.' });
+    if (!text) return res.status(400).json({ message: 'Please write a message.' });
+    if (email && !isEmail(email)) return res.status(400).json({ message: 'That email address does not look right.' });
+    const token = crypto.randomBytes(24).toString('hex');
+    const conv = await Conversation.create({
+      userId: user._id, offerId: offer._id, offerTitle: offer.title, customerName: name, customerEmail: email || undefined,
+      tokenHash: tokHash(token), messages: [{ from: 'customer', text, at: new Date() }], unreadSeller: 1, lastAt: new Date(), sellerMailedAt: new Date()
+    });
+    if (user.notifyOn !== false) {
+      sendMail({
+        to: user.notifyEmail || user.email,
+        subject: `New message about ${offer.title}`,
+        text: `${name} wrote about "${offer.title}":\n\n${text}\n\nReply: ${PUBLIC_BASE}/dashboard`,
+        html: emailShell({
+          icon: '&#128172;', preheader: `${esc(name)}: ${esc(text.slice(0, 80))}`,
+          heading: ['', 'New message'], intro: ['', `${esc(name)} sent you a message about “${esc(offer.title)}”.`],
+          details: [['', 'From', name], ['', 'Message', text]],
+          buttonText: ['', 'Reply in dashboard'], link: `${PUBLIC_BASE}/dashboard`,
+          footnote: ['', 'Reply from your dashboard. The visitor sees your answer on the offer page.']
+        })
+      });
+    }
+    res.json({ id: conv._id, token, messages: conv.messages });
+  } catch (err) {
+    res.status(500).json({ message: 'Could not send your message. Please try again.' });
+  }
+});
+
+// Visitor: list of their own conversations on this site (used by the Saved page)
+app.post('/site/:slug/chat/list', chatLimiter, async (req, res) => {
+  try {
+    const user = await siteBySlug(req.params.slug);
+    if (!user) return res.status(404).json({ message: 'Site not found.' });
+    const items = (Array.isArray(req.body && req.body.chats) ? req.body.chats : []).slice(0, 20).filter(x => x && mongoose.isValidObjectId(x.id));
+    const found = await Conversation.find({ _id: { $in: items.map(x => x.id) }, userId: user._id });
+    const out = found.filter(c => tokenOk(c, (items.find(x => String(x.id) === String(c._id)) || {}).token)).map(c => briefConv(c, false));
+    out.sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+    res.json({ conversations: out });
+  } catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+// Visitor: read the thread (polled every few seconds by the offer page)
+app.get('/site/:slug/chat/:id', chatLimiter, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Not found' });
+    const user = await siteBySlug(req.params.slug);
+    const conv = user && await Conversation.findOne({ _id: req.params.id, userId: user._id });
+    if (!conv || !tokenOk(conv, req.query.token)) return res.status(404).json({ message: 'Conversation not found.' });
+    if (conv.unreadCustomer) { conv.unreadCustomer = 0; await conv.save(); }
+    res.json({ messages: conv.messages, businessName: user.siteName });
+  } catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+// Visitor: send another message
+app.post('/site/:slug/chat/:id/send', chatLimiter, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Not found' });
+    const user = await siteBySlug(req.params.slug);
+    const conv = user && await Conversation.findOne({ _id: req.params.id, userId: user._id });
+    if (!conv || !tokenOk(conv, req.body && req.body.token)) return res.status(404).json({ message: 'Conversation not found.' });
+    const text = cleanMsg(req.body && req.body.text);
+    if (!text) return res.status(400).json({ message: 'Please write a message.' });
+    if (conv.messages.length >= MAX_MSGS) return res.status(400).json({ message: 'This conversation is full. Please call or use another contact.' });
+    conv.messages.push({ from: 'customer', text, at: new Date() });
+    conv.unreadSeller += 1; conv.lastAt = new Date();
+    const mailNow = user.notifyOn !== false && (!conv.sellerMailedAt || Date.now() - new Date(conv.sellerMailedAt).getTime() > MAIL_GAP_MS);
+    if (mailNow) conv.sellerMailedAt = new Date();
+    await conv.save();
+    if (mailNow) {
+      sendMail({
+        to: user.notifyEmail || user.email,
+        subject: `New message from ${conv.customerName}`,
+        text: `${conv.customerName} wrote about "${conv.offerTitle}":\n\n${text}\n\nReply: ${PUBLIC_BASE}/dashboard`,
+        html: emailShell({
+          icon: '&#128172;', preheader: `${esc(conv.customerName)}: ${esc(text.slice(0, 80))}`,
+          heading: ['', 'New message'], intro: ['', `${esc(conv.customerName)} wrote again about “${esc(conv.offerTitle)}”.`],
+          details: [['', 'Message', text]], buttonText: ['', 'Reply in dashboard'], link: `${PUBLIC_BASE}/dashboard`,
+          footnote: ['', 'You get at most one email every 10 minutes per conversation.']
+        })
+      });
+    }
+    res.json({ messages: conv.messages });
+  } catch (err) { res.status(500).json({ message: 'Could not send your message. Please try again.' }); }
+});
+
+// Public offers by id (for the Saved page, which keeps the ids in the visitor's own browser)
+app.get('/site/:slug/offers.json', chatLimiter, async (req, res) => {
+  try {
+    const user = await siteBySlug(req.params.slug);
+    if (!user) return res.status(404).json({ offers: [] });
+    const ids = String(req.query.ids || '').split(',').filter(mongoose.isValidObjectId).slice(0, 60);
+    const offers = await Offer.find({ userId: user._id, _id: { $in: ids } });
+    res.json({ offers: offers.map(o => ({ id: o._id, title: o.title, price: o.price, description: o.description, image: galleryOf(o)[0] || null, photos: galleryOf(o).length })) });
+  } catch (err) { res.status(500).json({ offers: [] }); }
+});
+
+// Business owner: inbox
+app.get('/api/conversations', authenticateToken, async (req, res) => {
+  const list = await Conversation.find({ userId: req.user.id }).sort({ lastAt: -1 }).limit(100);
+  res.json({ conversations: list.map(c => briefConv(c, true)), unread: list.reduce((n, c) => n + (c.unreadSeller || 0), 0) });
+});
+app.get('/api/conversations/:id', authenticateToken, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
+  const c = await Conversation.findOne({ _id: req.params.id, userId: req.user.id });
+  if (!c) return res.status(404).json({ message: 'Conversation not found' });
+  if (c.unreadSeller) { c.unreadSeller = 0; await c.save(); }
+  res.json({ conversation: { ...briefConv(c, true), messages: c.messages } });
+});
+app.post('/api/conversations/:id/reply', authenticateToken, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
+    const c = await Conversation.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!c) return res.status(404).json({ message: 'Conversation not found' });
+    const text = cleanMsg(req.body && req.body.text);
+    if (!text) return res.status(400).json({ message: 'Please write a message.' });
+    if (c.messages.length >= MAX_MSGS) return res.status(400).json({ message: 'This conversation is full.' });
+    c.messages.push({ from: 'seller', text, at: new Date() });
+    c.unreadCustomer += 1; c.lastAt = new Date();
+    const owner = await User.findById(req.user.id);
+    const mailNow = c.customerEmail && (!c.customerMailedAt || Date.now() - new Date(c.customerMailedAt).getTime() > MAIL_GAP_MS);
+    if (mailNow) c.customerMailedAt = new Date();
+    await c.save();
+    if (mailNow && owner) {
+      const link = `${PUBLIC_BASE}/site/${owner.slug}/offer/${c.offerId}#chat`;
+      sendMail({
+        to: c.customerEmail,
+        subject: `${owner.siteName} replied to you`,
+        text: `${owner.siteName} replied about "${c.offerTitle}":\n\n${text}\n\nOpen the chat: ${link}`,
+        html: emailShell({
+          icon: '&#128172;', preheader: esc(text.slice(0, 90)),
+          heading: ['', 'You have a reply'], intro: ['', `${esc(owner.siteName)} answered your message about “${esc(c.offerTitle)}”.`],
+          details: [['', 'Reply', text]], buttonText: ['', 'Open the chat'], link,
+          footnote: ['', 'Open the same browser you used before to continue the conversation.']
+        })
+      });
+    }
+    res.json({ conversation: { ...briefConv(c, true), messages: c.messages } });
+  } catch (err) { res.status(500).json({ message: 'Could not send the reply.' }); }
+});
+app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
+  await Conversation.deleteOne({ _id: req.params.id, userId: req.user.id });
+  res.json({ ok: true });
+});
+
 // ---------- Public customer site: dark luxury design, neon cards, 3D parallax ----------
 const okImg = (u) => /^https:\/\//.test(u || '');
 const galleryOf = (o) => {
   const list = (o.images && o.images.length ? o.images : (o.imageUrl ? [o.imageUrl] : [])).filter(okImg);
   return list.slice(0, MAX_GALLERY);
 };
+const HEART_PATH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 5 6 5c2 0 3.4 1.1 4 2.2.6-1.1 2-2.2 4-2.2 3.3 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z"/></svg>';
+const HEART_SMALL = (id) => `<button type="button" class="heart" data-id="${id}" aria-label="Save to favorites" aria-pressed="false">${HEART_PATH}</button>`;
 const eur = (n) => `&euro;${Number(n || 0).toFixed(2)}`;
 
 function siteCss(t, f) {
@@ -1045,6 +1268,31 @@ body::after{content:'';position:fixed;inset:0;z-index:100;pointer-events:none;op
 .share:hover{border-color:var(--a)}
 .stick{display:none}
 @media (max-width:860px){.steps{grid-template-columns:1fr}.stick{position:fixed;left:0;right:0;bottom:0;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(5,7,11,.88);backdrop-filter:blur(16px);border-top:1px solid var(--line)}.stick b{font-size:1.15rem}.stick a{text-decoration:none;font-weight:700;padding:12px 24px;border-radius:99px;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b))}.fab{bottom:78px}footer{padding-bottom:90px}}
+.heart{position:absolute;right:14px;bottom:14px;z-index:6;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(5,7,11,.7);backdrop-filter:blur(10px);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s,background .2s,border-color .2s}
+.heart svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+.heart:hover{transform:scale(1.12);border-color:#ff5d8f}
+.heart.on{background:#ff3d7f;border-color:#ff3d7f;box-shadow:0 0 22px rgba(255,61,127,.6)}.heart.on svg{fill:#fff;stroke:#fff}
+.heart.lg{position:static;width:auto;height:auto;border-radius:99px;padding:10px 18px;gap:8px;display:inline-flex;font-family:inherit;font-size:.9rem;margin:0 8px 22px 0}
+.heart.lg .t::before{content:'Save'}.heart.lg.on .t::before{content:'Saved'}
+.favlink{display:inline-flex;gap:6px;align-items:center}
+.chat h2{font-size:1.3rem;margin-bottom:4px}.chat .hint{color:var(--mute);font-size:.88rem;margin-bottom:14px}
+.chat form{display:grid;gap:10px}
+.chat textarea,.req textarea{width:100%;padding:14px;border:1px solid rgba(255,255,255,.14);border-radius:12px;font-family:inherit;font-size:.95rem;background:rgba(255,255,255,.04);color:#fff;resize:vertical;min-height:84px}
+.chat textarea:focus,.req textarea:focus{outline:2px solid var(--a);border-color:transparent}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{border:1px solid rgba(255,255,255,.18);background:transparent;color:var(--soft);border-radius:99px;padding:7px 13px;font-family:inherit;font-size:.82rem;cursor:pointer}
+.chips button:hover{border-color:var(--a);color:#fff}
+.msgs{height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:6px 2px 10px;margin-bottom:10px;scroll-behavior:smooth}
+.bub{max-width:82%;padding:10px 14px;border-radius:16px;font-size:.95rem;white-space:pre-wrap;word-break:break-word}
+.bub small{display:block;margin-top:4px;font-size:.7rem;opacity:.65}
+.bub.me{align-self:flex-end;color:var(--on);background:linear-gradient(135deg,var(--a),var(--b));border-bottom-right-radius:4px}
+.bub.them{align-self:flex-start;background:rgba(255,255,255,.08);border:1px solid var(--line);border-bottom-left-radius:4px}
+.chat .sendrow{display:flex;gap:8px;align-items:flex-end}.sendrow textarea{min-height:48px;height:48px}
+.sendrow .btn{padding:13px 20px}
+.callbtn{display:inline-block;margin-top:10px;font-size:.88rem;color:var(--a);text-decoration:none}
+.msgrow{display:flex;justify-content:space-between;gap:14px;align-items:center;text-decoration:none;padding:16px 18px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03);margin-bottom:10px}
+.msgrow:hover{border-color:var(--a)}.msgrow b{display:block}.msgrow span{color:var(--mute);font-size:.88rem}
+.newdot{background:#ff3d7f;color:#fff;border-radius:99px;font-size:.75rem;padding:3px 9px;font-weight:700}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shine{to{background-position:220% center}}
 @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
@@ -1064,9 +1312,10 @@ const SITE_JS = `(function(){
     addEventListener('scroll',function(){if(!tick){tick=true;requestAnimationFrame(par)}},{passive:true});par()}
   var hero=document.querySelector('.hero'),hin=document.querySelector('.hero-in');
   if(hero&&hin&&fine&&!calm){hero.addEventListener('pointermove',function(e){var x=e.clientX/innerWidth-.5,y=e.clientY/innerHeight-.5;hin.style.transform='rotateY('+(x*7)+'deg) rotateX('+(-y*7)+'deg)'});hero.addEventListener('pointerleave',function(){hin.style.transform=''})}
-  if(fine&&!calm){document.querySelectorAll('.card').forEach(function(c){
+  function tiltAll(){if(!(fine&&!calm))return;document.querySelectorAll('.card:not([data-t])').forEach(function(c){c.setAttribute('data-t','1');
     c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;c.style.setProperty('--mx',(x*100)+'%');c.style.setProperty('--my',(y*100)+'%');c.style.transform='perspective(900px) rotateY('+((x-.5)*9)+'deg) rotateX('+((.5-y)*9)+'deg) translateY(-6px)'});
     c.addEventListener('pointerleave',function(){c.style.transform=''})})}
+  tiltAll();
   var pg=document.getElementById('prog');
   if(pg){addEventListener('scroll',function(){var h=document.documentElement.scrollHeight-innerHeight;pg.style.transform='scaleX('+(h>0?scrollY/h:0)+')'},{passive:true})}
   var sp=document.querySelector('.spot');
@@ -1088,6 +1337,54 @@ const SITE_JS = `(function(){
       cbox.appendChild(row);bind(row);i.focus();
       if(cbox.children.length>=5)addB.style.display='none';
     });
+  }
+  var slug=document.body.getAttribute('data-slug')||'';
+  function favs(){try{return JSON.parse(localStorage.getItem('fav:'+slug)||'[]')}catch(e){return[]}}
+  function paintFavs(){var a=favs();document.querySelectorAll('.heart').forEach(function(h){var on=a.indexOf(h.dataset.id)>-1;h.classList.toggle('on',on);h.setAttribute('aria-pressed',on)});var c=document.getElementById('favCount');if(c)c.textContent=a.length?'('+a.length+')':''}
+  document.addEventListener('click',function(e){var h=e.target.closest&&e.target.closest('.heart');if(!h)return;e.preventDefault();e.stopPropagation();var a=favs(),i=a.indexOf(h.dataset.id);if(i>-1)a.splice(i,1);else a.unshift(h.dataset.id);try{localStorage.setItem('fav:'+slug,JSON.stringify(a.slice(0,100)))}catch(x){}paintFavs();
+    var fl=document.getElementById('favList');if(fl&&i>-1){var card=h.closest('.card');if(card)card.remove();if(!fl.children.length)fl.innerHTML='<p class="none">No saved offers yet. Tap the heart on any offer to save it here.</p>'}});
+  function mk(t,c,x){var n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n}
+  var fl=document.getElementById('favList');
+  if(fl){var ids=favs();
+    if(!ids.length){fl.innerHTML='<p class="none">No saved offers yet. Tap the heart on any offer to save it here.</p>'}
+    else fetch('/site/'+slug+'/offers.json?ids='+ids.join(',')).then(function(r){return r.json()}).then(function(d){fl.textContent='';
+      var by={};(d.offers||[]).forEach(function(o){by[o.id]=o});var shown=0;
+      ids.forEach(function(id){var o=by[id];if(!o)return;shown++;
+        var a=mk('a','card rv in-view');a.href='/site/'+slug+'/offer/'+o.id;
+        var pic=mk('div','pic');if(o.image){var im=mk('img');im.src=o.image;im.alt=o.title;im.loading='lazy';pic.appendChild(im)}else pic.appendChild(mk('div','ph',String(o.title||'?').charAt(0).toUpperCase()));
+        pic.appendChild(mk('span','tag','\u20ac'+Number(o.price||0).toFixed(2)));
+        var hb=mk('button','heart');hb.type='button';hb.dataset.id=o.id;hb.setAttribute('aria-label','Remove from favorites');hb.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 5 6 5c2 0 3.4 1.1 4 2.2.6-1.1 2-2.2 4-2.2 3.3 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z"/></svg>';pic.appendChild(hb);
+        a.appendChild(pic);var inn=mk('div','in');inn.appendChild(mk('h3',null,o.title));inn.appendChild(mk('p',null,o.description||''));inn.appendChild(mk('span','more','View details'));a.appendChild(inn);fl.appendChild(a)});
+      if(!shown)fl.innerHTML='<p class="none">Those offers are no longer available.</p>';paintFavs();tiltAll()}).catch(function(){fl.innerHTML='<p class="none">Could not load your saved offers. Please refresh.</p>'})}
+  var cl=document.getElementById('chatList');
+  if(cl){var saved=[];try{saved=JSON.parse(localStorage.getItem('chats:'+slug)||'[]')}catch(e){}
+    if(!saved.length){cl.innerHTML='<p class="none">No conversations yet. Open an offer and use the chat box to write to the business.</p>'}
+    else fetch('/site/'+slug+'/chat/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chats:saved})}).then(function(r){return r.json()}).then(function(d){cl.textContent='';var list=d.conversations||[];
+      if(!list.length){cl.innerHTML='<p class="none">No conversations yet.</p>';return}
+      list.forEach(function(c){var a=mk('a','msgrow');a.href='/site/'+slug+'/offer/'+c.offerId+'#chat';var l=mk('div');l.appendChild(mk('b',null,c.offerTitle));l.appendChild(mk('span',null,c.last?(c.last.from==='seller'?'Business: ':'You: ')+String(c.last.text).slice(0,90):''));a.appendChild(l);if(c.unread)a.appendChild(mk('span','newdot',c.unread+' new'));cl.appendChild(a)})}).catch(function(){})}
+  paintFavs();
+  var cw=document.getElementById('chat');
+  if(cw){
+    var offerId=cw.dataset.offer,ckey='chats:'+slug,startF=document.getElementById('chatStart'),thread=document.getElementById('chatThread'),box=document.getElementById('chatMsgs'),cerr=document.getElementById('chErr');
+    function chats(){try{return JSON.parse(localStorage.getItem(ckey)||'[]')}catch(e){return[]}}
+    function putChats(a){try{localStorage.setItem(ckey,JSON.stringify(a.slice(0,20)))}catch(e){}}
+    var mine=chats().filter(function(x){return x.offerId===offerId})[0],count=-1,timer=null;
+    function bubble(m){var d=mk('div','bub '+(m.from==='customer'?'me':'them'));d.appendChild(mk('div',null,m.text));d.appendChild(mk('small',null,new Date(m.at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})));return d}
+    function draw(msgs){var stick=count<0||box.scrollHeight-box.scrollTop-box.clientHeight<90;box.textContent='';msgs.forEach(function(m){box.appendChild(bubble(m))});count=msgs.length;if(stick)box.scrollTop=box.scrollHeight}
+    function pull(){fetch('/site/'+slug+'/chat/'+mine.id+'?token='+encodeURIComponent(mine.token)).then(function(r){if(r.status===404){forget();return null}return r.json()}).then(function(d){if(d&&d.messages&&d.messages.length!==count)draw(d.messages)}).catch(function(){})}
+    function forget(){clearInterval(timer);putChats(chats().filter(function(x){return x.offerId!==offerId}));mine=null;count=-1;thread.style.display='none';startF.style.display='grid'}
+    function openThread(){startF.style.display='none';thread.style.display='block';pull();clearInterval(timer);timer=setInterval(function(){if(!document.hidden)pull()},4000)}
+    if(mine)openThread();
+    startF.querySelectorAll('.chips button').forEach(function(b){b.addEventListener('click',function(){document.getElementById('chText').value=b.textContent})});
+    startF.addEventListener('submit',function(e){e.preventDefault();cerr.textContent='';var btn=startF.querySelector('.btn');btn.disabled=true;
+      fetch('/site/'+slug+'/chat/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offerId:offerId,name:document.getElementById('chName').value,email:document.getElementById('chEmail').value,text:document.getElementById('chText').value})})
+      .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}})}).then(function(x){btn.disabled=false;if(!x.ok){cerr.textContent=x.d.message||'Could not send.';return}
+        mine={offerId:offerId,id:x.d.id,token:x.d.token};putChats([mine].concat(chats().filter(function(c){return c.offerId!==offerId})));openThread()}).catch(function(){btn.disabled=false;cerr.textContent='Connection problem. Please try again.'})});
+    var sf=document.getElementById('chatSend'),ta=document.getElementById('chReply');
+    ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sf.requestSubmit()}});
+    sf.addEventListener('submit',function(e){e.preventDefault();var t=ta.value.trim();if(!t||!mine)return;ta.value='';
+      fetch('/site/'+slug+'/chat/'+mine.id+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:mine.token,text:t})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}})}).then(function(x){if(x.ok&&x.d.messages)draw(x.d.messages);else{ta.value=t;alert(x.d.message||'Could not send.')}}).catch(function(){ta.value=t})});
+    if(location.hash==='#chat')cw.scrollIntoView({behavior:'smooth',block:'center'});
   }
   var main=document.getElementById('mainPic');
   if(main){
@@ -1113,7 +1410,7 @@ function pageShell(user, { title, desc, body }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}</style></head><body>
+<style>${siteCss(t, f)}</style></head><body data-slug="${esc(user.slug)}">
 ${body}
 <script>${SITE_JS}</script>
 </body></html>`;
@@ -1143,7 +1440,7 @@ function offerCard(user, o, i) {
   const g = galleryOf(o);
   return `<a class="card rv" style="--d:${(i % 6) * 70}ms" href="/site/${esc(user.slug)}/offer/${o._id}">
   <div class="pic">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : `<div class="ph">${esc(String(o.title || '?').charAt(0).toUpperCase())}</div>`}
-    <span class="tag">${eur(o.price)}</span>${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
+    <span class="tag">${eur(o.price)}</span>${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
   <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p><span class="more">View details</span></div>
 </a>`;
 }
@@ -1155,7 +1452,7 @@ function renderSite(user, offers, sent) {
   const meta = [user.category, user.city].filter(Boolean).map(esc).join(' &middot; ');
   const cards = offers.length === 0 ? '<p class="none">No offers yet. Please check back soon.</p>' : offers.map((o, i) => offerCard(user, o, i)).join('');
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
-  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="#offers">Offers</a><a href="#how">How it works</a><a href="#about">About</a></nav></header>
+  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="#offers">Offers</a><a href="#about">About</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
 <section class="hero"><div class="spot"></div>${heroBg}<div class="layer blob b1" data-depth=".3"></div><div class="layer blob b2" data-depth="-.12"></div><div class="layer gridbg" data-depth=".22"></div><div class="layer ring" data-depth=".08"></div><div class="layer ring r2" data-depth=".12"></div>
 <div class="hero-in">
 ${meta ? `<div class="chip">${meta}</div>` : ''}
@@ -1184,7 +1481,7 @@ function renderOfferPage(user, offer, others, sent) {
   const more = others.length ? `<h2 class="rv" style="font-size:1.8rem;margin:70px 0 26px">More from ${esc(user.siteName)}</h2><div class="grid">${others.map((o, i) => offerCard(user, o, i)).join('')}</div>` : '';
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
   const ld = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: offer.title, description: String(offer.description || offer.title), image: g, offers: { '@type': 'Offer', price: Number(offer.price || 0).toFixed(2), priceCurrency: 'EUR', availability: 'https://schema.org/InStock', seller: { '@type': 'Organization', name: user.siteName } } }).replace(/</g, '\\u003c');
-  const body = `<script type="application/ld+json">${ld}</script><div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a></nav></header>
+  const body = `<script type="application/ld+json">${ld}</script><div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
 <main class="wrap" style="padding-top:110px">
 <a class="crumb" href="/site/${esc(user.slug)}#offers">&larr; Back to all offers</a>
 <div class="detail">
@@ -1192,7 +1489,7 @@ function renderOfferPage(user, offer, others, sent) {
   <div class="info">
     <h1>${esc(offer.title)}</h1>
     <div class="price">${eur(offer.price)}</div><br>
-    <button type="button" class="share" id="shareBtn">&#8599; Share this offer</button>
+    <button type="button" class="heart lg" data-id="${offer._id}" aria-pressed="false">${HEART_PATH}<span class="t"></span></button><button type="button" class="share" id="shareBtn">&#8599; Share this offer</button>
     ${offer.description ? `<p class="short">${esc(offer.description)}</p>` : ''}
     ${offer.longDescription ? `<p class="long">${esc(offer.longDescription)}</p>` : ''}
     <div class="glass req" id="request">
@@ -1201,6 +1498,8 @@ function renderOfferPage(user, offer, others, sent) {
       <form method="POST" action="/site/${esc(user.slug)}/order">
         <input type="hidden" name="offerId" value="${offer._id}"><input type="hidden" name="from" value="offer">
         <input name="customerName" placeholder="Your name" required maxlength="80">
+        <label class="lbl">Describe what you want (optional)</label>
+        <textarea name="note" rows="3" maxlength="1000" placeholder="e.g. extra cheese, no onions, a bigger size, the day you need it..."></textarea>
         <label class="lbl">How can we reach you?</label>
         <div class="contacts" id="contacts"><div class="crow">
           <select name="ctype" aria-label="Contact type">${Object.entries(CONTACT_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
@@ -1210,6 +1509,23 @@ function renderOfferPage(user, offer, others, sent) {
         <label class="consent"><input type="checkbox" name="consent" value="1" required> <span>I agree that my details are used to answer my request. <a href="${PUBLIC_BASE}/privacy" target="_blank" rel="noopener">Privacy Policy</a></span></label>
         <button class="btn" type="submit">Send request</button>
       </form>
+    </div>
+    <div class="glass chat" id="chat" data-offer="${offer._id}" style="margin-top:20px">
+      <h2>Chat with ${esc(user.siteName)}</h2>
+      <p class="hint">Ask a question or explain exactly what you want. Their reply shows up right here.</p>
+      <form id="chatStart">
+        <input id="chName" placeholder="Your name" required maxlength="60">
+        <input id="chEmail" type="email" placeholder="Email (optional, we tell you when they reply)" maxlength="120">
+        <textarea id="chText" placeholder="Write your message..." required maxlength="1500"></textarea>
+        <div class="chips"><button type="button">Is this available?</button><button type="button">Can you customize it for me?</button><button type="button">What is the delivery or pickup time?</button></div>
+        <button class="btn" type="submit">Send message</button>
+        <div class="err" id="chErr" style="color:#ff8aa5;font-size:.88rem"></div>
+      </form>
+      <div id="chatThread" style="display:none">
+        <div class="msgs" id="chatMsgs" aria-live="polite"></div>
+        <form class="sendrow" id="chatSend"><textarea id="chReply" placeholder="Write a message..." maxlength="1500" required></textarea><button class="btn" type="submit">Send</button></form>
+        ${phoneRaw ? `<a class="callbtn" href="tel:${esc(phoneRaw)}">&#9742; Call ${esc(user.siteName)}</a>` : ''}
+      </div>
     </div>
   </div>
 </div>
@@ -1221,6 +1537,19 @@ ${more}
 ${phoneRaw ? `<a class="fab" href="tel:${esc(phoneRaw)}">&#9742; Call</a>` : ''}
 <footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
   return pageShell(user, { title: `${offer.title} - ${user.siteName}`, desc: String(offer.description || offer.title).slice(0, 160), body });
+}
+
+function renderFavoritesPage(user) {
+  const body = `<div class="prog" id="prog"></div><header class="bar"><b>${esc(user.siteName)}</b><nav><a href="/site/${esc(user.slug)}#offers">All offers</a><a class="favlink" href="/site/${esc(user.slug)}/favorites">&#9825; Saved <span id="favCount"></span></a></nav></header>
+<main class="wrap" style="padding-top:110px">
+<a class="crumb" href="/site/${esc(user.slug)}#offers">&larr; Back to all offers</a>
+<h2>Your favorites</h2><p class="sub">Offers you saved with the heart. They are kept in this browser only, so no account is needed.</p>
+<div class="grid" id="favList"><p class="none">Loading...</p></div>
+<h2 style="margin-top:80px">Your messages</h2><p class="sub">Conversations you started with ${esc(user.siteName)} from this browser.</p>
+<div id="chatList"><p class="none">Loading...</p></div>
+</main>
+<footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
+  return pageShell(user, { title: `Favorites - ${user.siteName}`, desc: `Offers you saved at ${user.siteName}`, body });
 }
 
 const SITE_CSP = [
@@ -1244,6 +1573,15 @@ app.get('/site/:slug', async (req, res) => {
   } catch (err) {
     res.status(500).send('Server error');
   }
+});
+
+app.get('/site/:slug/favorites', async (req, res) => {
+  try {
+    const user = await User.findOne({ slug: req.params.slug });
+    if (!user || !user.published) return res.status(404).send('Site not found.');
+    res.setHeader('Content-Security-Policy', SITE_CSP);
+    res.send(renderFavoritesPage(user));
+  } catch (err) { res.status(500).send('Server error'); }
 });
 
 // One page per offer: opened by the offer ID from the card link
@@ -1276,24 +1614,26 @@ app.post('/site/:slug/order', publicLimiter, async (req, res) => {
       customerName: String(req.body.customerName || '').slice(0, 80),
       customerContact: parsed.text.slice(0, 400),
       contacts: parsed.contacts,
+      note: String(req.body.note || '').replace(/\r/g, '').trim().slice(0, 1000),
       status: 'Pending'
     });
     // Tell the business owner right away (not awaited, so the customer never waits for email)
     if (user.notifyOn !== false) {
       const name = String(req.body.customerName || '').slice(0, 80);
       const contact = parsed.text.slice(0, 400);
+      const note = String(req.body.note || '').replace(/\r/g, '').trim().slice(0, 1000);
       sendMail({
         to: user.notifyEmail || user.email,
-        subject: `Нова заявка / New request: ${offer.title}`,
-        text: `Нова заявка за "${offer.title}" (EUR ${Number(offer.price || 0).toFixed(2)})\nИме: ${name}\nКонтакт: ${contact}\n\nNew request for "${offer.title}"\nName: ${name}\nContact: ${contact}\n\n${PUBLIC_BASE}/dashboard`,
+        subject: `New request: ${offer.title}`,
+        text: `New request for "${offer.title}"\nName: ${name}\nContact: ${contact}${note ? `\nRequest details: ${note}` : ''}\n\n${PUBLIC_BASE}/dashboard`,
         html: emailShell({
           icon: '&#128276;',
           preheader: `${esc(offer.title)} - ${esc(name)}`,
-          heading: ['Нова заявка', 'New request'],
-          intro: [`Клиент поиска „${esc(offer.title)}“ през вашия сайт.`, `A customer requested “${esc(offer.title)}” through your site.`],
-          details: [['Оферта', 'Offer', offer.title], ['Цена', 'Price', `EUR ${Number(offer.price || 0).toFixed(2)}`], ['Име', 'Name', name], ['Контакт', 'Contact', contact]],
-          buttonText: ['Отвори таблото', 'Open dashboard'], link: `${PUBLIC_BASE}/dashboard`,
-          footnote: ['Свържете се с клиента възможно най-бързо.', 'Contact the customer as soon as you can.']
+          heading: ['', 'New request'],
+          intro: ['', `A customer requested “${esc(offer.title)}” through your site.`],
+          details: [['', 'Offer', offer.title], ['', 'Price', `EUR ${Number(offer.price || 0).toFixed(2)}`], ['', 'Name', name], ['', 'Contact', contact], ...(note ? [['', 'Request details', note]] : [])],
+          buttonText: ['', 'Open dashboard'], link: `${PUBLIC_BASE}/dashboard`,
+          footnote: ['', 'Contact the customer as soon as you can.']
         })
       });
     }

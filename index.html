@@ -391,6 +391,26 @@
     .thumb .x:hover { background: #b91c1c; }
     .thumbs-row { display: flex; flex-wrap: wrap; gap: 10px; }
     .field textarea { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line2); background: var(--raise); color: inherit; font: inherit; resize: vertical; }
+    .inbox { display: grid; grid-template-columns: 300px 1fr; gap: 16px; min-height: 360px; }
+    .conv-list { border: 1px solid var(--line2); border-radius: 12px; overflow: auto; max-height: 460px; }
+    .conv-empty { color: var(--mute); padding: 18px; font-size: .9rem; }
+    .conv-item { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--line2); color: inherit; padding: 13px 14px; cursor: pointer; font: inherit; }
+    .conv-item:hover, .conv-item.on { background: var(--raise); }
+    .conv-item b { display: flex; justify-content: space-between; gap: 8px; font-size: .92rem; }
+    .conv-item span { display: block; color: var(--mute); font-size: .8rem; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conv-dot { background: #ff3d7f; color: #fff; border-radius: 99px; font-size: .7rem; padding: 1px 8px; }
+    .conv-view { display: flex; flex-direction: column; border: 1px solid var(--line2); border-radius: 12px; padding: 14px; min-width: 0; }
+    .conv-head { font-weight: 600; padding-bottom: 10px; border-bottom: 1px solid var(--line2); margin-bottom: 10px; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .conv-head small { color: var(--mute); font-weight: 400; }
+    .conv-msgs { flex: 1; overflow-y: auto; max-height: 320px; display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+    .cbub { max-width: 82%; padding: 9px 13px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; font-size: .93rem; }
+    .cbub small { display: block; margin-top: 3px; font-size: .68rem; opacity: .65; }
+    .cbub.cust { align-self: flex-start; background: var(--raise); border: 1px solid var(--line2); }
+    .cbub.me { align-self: flex-end; background: linear-gradient(135deg, var(--iris), var(--lagoon)); color: #07090d; }
+    .conv-form { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; }
+    .conv-form textarea { flex: 1; padding: 11px 13px; border-radius: 10px; border: 1px solid var(--line2); background: var(--raise); color: inherit; font: inherit; resize: none; }
+    .badge-msg { background: #ff3d7f; color: #fff; border-radius: 99px; font-size: .7rem; padding: 1px 7px; margin-left: 6px; }
+    @media (max-width: 760px) { .inbox { grid-template-columns: 1fr; } }
     .acts { display: flex; gap: 8px; flex-shrink: 0; }
     .editing { outline: 2px solid var(--iris); border-radius: 12px; }
     .sources { margin-top: 8px; font-size: .8rem; color: var(--mute); }
@@ -487,7 +507,6 @@
     .lsw { display: flex; gap: 8px; margin-top: 22px; }
     .lsw button { background: transparent; border: 1px solid rgba(10,14,20,.25); border-radius: 99px; padding: 7px 16px; cursor: pointer; font-weight: 500; color: var(--ltext); }
     body[data-lang=bg] .lsw button:first-child, body[data-lang=en] .lsw button:last-child { background: #0b0e14; color: #fff; border-color: #0b0e14; }
-    body[data-lang=bg] [data-l=en], body[data-lang=en] [data-l=bg] { display: none; }
 
     /* ---------- Responsive ---------- */
     @media (max-width: 1100px) {
@@ -941,49 +960,18 @@
 <main class="view" id="v-privacy">
   <div class="light" data-nav="light" style="min-height:100vh">
     <div class="page-head" style="padding-bottom:30px">
-      <h1 data-l="bg">Политика за поверителност</h1><h1 data-l="en">Privacy Policy</h1>
-      <p data-l="bg">Последна промяна: 12 октомври 2026 г.</p><p data-l="en">Last updated: 12 October 2026.</p>
-      <div class="lsw"><button type="button" onclick="setLegalLang('bg')">Български</button><button type="button" onclick="setLegalLang('en')">English</button></div>
+      <h1>Privacy Policy</h1>
+      <p>Last updated: 12 October 2026.</p>
     </div>
     <div class="section legal" style="padding-top:0">
-      <div data-l="bg">
-        <h2>1. Кои сме ние</h2>
-        <p>GoldOffer Studio е услуга за създаване на сайтове на малки бизнеси. Администратор на данните е Раян Кацаров. За въпроси: rayankatsarov2013@gmail.com, тел. 0896 255 898.</p>
-        <h2>2. Какви данни събираме</h2>
-        <ul>
-          <li><b>Акаунт:</b> име, фамилия, имейл и парола (паролата се съхранява само в криптиран вид).</li>
-          <li><b>Съдържание на сайта:</b> име на бизнеса, град, оферти, цени, снимки, както и контактите, които сами въведете (телефон, адрес, работно време, връзки към социални мрежи).</li>
-          <li><b>Заявки от ваши клиенти:</b> име и телефон или имейл, които клиентът въвежда във формата, и избраната оферта.</li>
-          <li><b>В браузъра:</b> пазим само токена за вход и избрания език. Не използваме рекламни бисквитки и не следим посетителите.</li>
-        </ul>
-        <h2>3. За какво използваме данните</h2>
-        <ul>
-          <li>За да предоставяме услугата: акаунт, публикуване на сайта, показване на офертите.</li>
-          <li>За да ви изпращаме имейл при нова заявка и връзка за нова парола.</li>
-          <li>За плащане на абонамента, което се извършва през Stripe. Не виждаме и не пазим данните на вашата карта.</li>
-          <li>За сигурност и предотвратяване на злоупотреби.</li>
-        </ul>
-        <h2>4. Основание</h2>
-        <p>Изпълнение на договор (предоставяне на услугата), вашето съгласие (формата за заявка и регистрацията) и законен интерес (сигурност).</p>
-        <h2>5. Кой още получава данни</h2>
-        <p>Ползваме доставчици, които обработват данни от наше име: хостинг (Render), база данни (MongoDB Atlas), изпращане на имейли (Brevo или Resend), плащания (Stripe). Страниците зареждат шрифтове от Google Fonts, а конструкторът показва снимки от Уикипедия. Ако сайт показва карта, тя се зарежда от Google Maps. Не продаваме данни.</p>
-        <h2>6. Данни на ваши клиенти</h2>
-        <p>Когато клиент изпрати заявка през вашия сайт, вие сте администратор на тези данни, а GoldOffer Studio ги обработва само за да ви ги предостави. Отговорни сте да ги използвате законно.</p>
-        <h2>7. Колко време ги пазим</h2>
-        <p>Докато имате акаунт. Когато изтриете акаунта си или поискате това, изтриваме данните, освен ако закон ни задължава да ги пазим.</p>
-        <h2>8. Вашите права</h2>
-        <p>Можете да поискате достъп, поправка, изтриване, ограничаване, пренос на данните си и да възразите срещу обработването. Пишете ни на rayankatsarov2013@gmail.com. Имате право и на жалба до Комисията за защита на личните данни (www.cpdp.bg).</p>
-        <h2>9. Промени</h2>
-        <p>Ако променим тази политика, ще обновим датата отгоре.</p>
-      </div>
-      <div data-l="en">
+      <div>
         <h2>1. Who we are</h2>
         <p>GoldOffer Studio is a service for building websites for small businesses. The data controller is Rayan Katsarov. Questions: rayankatsarov2013@gmail.com, phone 0896 255 898.</p>
         <h2>2. What data we collect</h2>
         <ul>
           <li><b>Account:</b> first name, last name, email and password (the password is stored only in hashed form).</li>
           <li><b>Site content:</b> business name, city, offers, prices, photos, and the contact details you choose to enter (phone, address, opening hours, social links).</li>
-          <li><b>Requests from your customers:</b> the name and phone or email the customer types in the form, and the chosen offer.</li>
+          <li><b>Requests and messages from your customers:</b> the name and contact details the customer types in the form, the chosen offer, any notes, the messages exchanged in the chat, and the offers a visitor saves as favorites (those are kept only in the visitor's own browser).</li>
           <li><b>In your browser:</b> we store only your login token and your language choice. We do not use advertising cookies and we do not track visitors.</li>
         </ul>
         <h2>3. Why we use the data</h2>
@@ -1014,34 +1002,11 @@
 <main class="view" id="v-terms">
   <div class="light" data-nav="light" style="min-height:100vh">
     <div class="page-head" style="padding-bottom:30px">
-      <h1 data-l="bg">Условия за ползване</h1><h1 data-l="en">Terms of Use</h1>
-      <p data-l="bg">Последна промяна: 12 октомври 2026 г.</p><p data-l="en">Last updated: 12 October 2026.</p>
-      <div class="lsw"><button type="button" onclick="setLegalLang('bg')">Български</button><button type="button" onclick="setLegalLang('en')">English</button></div>
+      <h1>Terms of Use</h1>
+      <p>Last updated: 12 October 2026.</p>
     </div>
     <div class="section legal" style="padding-top:0">
-      <div data-l="bg">
-        <h2>1. Услугата</h2>
-        <p>GoldOffer Studio ви позволява да създадете и публикувате сайт с оферти и форма за заявки. Като се регистрирате, приемате тези условия и Политиката за поверителност.</p>
-        <h2>2. Акаунт</h2>
-        <p>Давате верни данни и пазите паролата си. Вие отговаряте за всичко, което се случва през вашия акаунт.</p>
-        <h2>3. Безплатен и платен план</h2>
-        <p>Безплатният план включва публичен сайт и до 10 оферти. Планът Pro струва 19.99 евро на месец, с първите 7 дни безплатно, и позволява повече оферти. Можете да го прекратите по всяко време. Плащането се обработва от Stripe.</p>
-        <h2>4. Вашето съдържание</h2>
-        <p>Вие отговаряте за текстовете, цените и снимките, които качвате. Не качвайте незаконно, подвеждащо или чуждо защитено с авторски права съдържание. Цените и офертите са ваши и ние не ги проверяваме.</p>
-        <h2>5. Забранени действия</h2>
-        <p>Не използвайте услугата за измами, спам, незаконни стоки или услуги, нито за да затруднявате работата на системата. Можем да спрем сайт, който нарушава тези правила.</p>
-        <h2>6. Наличност</h2>
-        <p>Правим всичко възможно сайтът да работи, но услугата се предоставя във вида, в който е. Безплатната инфраструктура може да е бавна след период без посещения и понякога да е недостъпна.</p>
-        <h2>7. Отговорност</h2>
-        <p>В рамките, разрешени от закона, не носим отговорност за пропуснати ползи, загубени клиенти или непреки щети, свързани с ползването на услугата.</p>
-        <h2>8. Прекратяване</h2>
-        <p>Можете да спрете да ползвате услугата и да поискате изтриване на акаунта си по всяко време. Можем да прекратим акаунт при нарушение на условията.</p>
-        <h2>9. Промени и приложимо право</h2>
-        <p>Можем да променим условията, като обновим датата отгоре. Прилага се българското право.</p>
-        <h2>10. Контакт</h2>
-        <p>Раян Кацаров, rayankatsarov2013@gmail.com, тел. 0896 255 898.</p>
-      </div>
-      <div data-l="en">
+      <div>
         <h2>1. The service</h2>
         <p>GoldOffer Studio lets you create and publish a website with offers and a request form. By registering, you accept these terms and the Privacy Policy.</p>
         <h2>2. Account</h2>
@@ -1078,6 +1043,20 @@
         <div class="stat"><h3>Completed orders</h3><div class="v" id="sCompleted">0</div></div>
         <div class="stat"><h3>Pending requests</h3><div class="v" id="sPending">0</div></div>
         <div class="stat"><h3>Active offers</h3><div class="v" id="sOffers">0</div></div>
+      </div>
+      <div class="panel" id="msgPanel" style="margin-bottom:18px">
+        <h2>Messages <span class="pill Pending" id="msgUnread" style="display:none"></span></h2>
+        <div class="inbox">
+          <div class="conv-list" id="convList"><p class="conv-empty">No messages yet. When a visitor writes to you from an offer page, the chat appears here.</p></div>
+          <div class="conv-view">
+            <div class="conv-head" id="convHead">Select a conversation</div>
+            <div class="conv-msgs" id="convMsgs"></div>
+            <form id="convForm" class="conv-form" onsubmit="sendReply(event)" style="display:none">
+              <textarea id="convText" rows="2" maxlength="1500" placeholder="Write a reply..." required></textarea>
+              <button class="btn" type="submit">Send</button>
+            </form>
+          </div>
+        </div>
       </div>
       <div class="dash-grid">
         <div class="panel"><h2>Revenue, last 6 months</h2><canvas id="chart"></canvas></div>
@@ -1577,7 +1556,8 @@
     const a = $('authArea');
     if (S.user) {
       const nm = [S.user.firstName, S.user.lastName].filter(Boolean).join(' ');
-      a.innerHTML = '<span class="who" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><button class="btn-ghost" onclick="logout()">Log out</button>';
+      a.innerHTML = '<span class="who" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span><a class="btn-ghost" href="/dashboard" data-link>Dashboard<span class="badge-msg who-badge" style="display:none"></span></a><button class="btn-ghost" onclick="logout()">Log out</button>';
+      setTimeout(() => { if (S.user) loadInbox(); }, 400);
     } else {
       a.innerHTML = '<button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button><button class="btn" onclick="openAuth(\'signup\')">Get started</button>';
     }
@@ -1947,14 +1927,66 @@
       $('sCompleted').textContent = d.completedOrders;
       $('sPending').textContent = d.pendingOrders;
       $('sOffers').textContent = d.offersCount;
-      S.lastMonthly = d.monthly; drawChart(d.monthly);
+      S.lastMonthly = d.monthly; drawChart(d.monthly); loadInbox();
       $('orderRows').innerHTML = d.recentOrders.length ? d.recentOrders.map(o =>
-        '<tr><td>' + esc(o.offerTitle) + '<br><small style="color:var(--mute)">' + esc(o.customerName) + ' ' + esc(o.customerContact) + '</small></td>' +
+        '<tr><td>' + esc(o.offerTitle) + '<br><small style="color:var(--mute)">' + esc(o.customerName) + ' ' + esc(o.customerContact) + (o.note ? '<br><em style="color:var(--soft)">&ldquo;' + esc(o.note) + '&rdquo;</em>' : '') + '</small></td>' +
         '<td>' + money(o.amount) + '</td><td><span class="pill ' + esc(o.status) + '">' + esc(o.status) + '</span></td>' +
         '<td>' + (o.status === 'Pending' ? '<button class="btn-ghost" style="padding:5px 10px;font-size:.75rem" onclick="setOrder(\'' + esc(o._id) + '\',\'Completed\')">Complete</button>' : '') + '</td></tr>'
       ).join('') : '<tr><td colspan="4" style="color:var(--mute);text-align:center">No orders yet.</td></tr>';
     } catch (e) { notify(e.message, 'Dashboard'); }
   }
+  // ---------- Messages inbox ----------
+  function setUnread(n) {
+    const pill = $('msgUnread'); if (pill) { pill.style.display = n ? 'inline-block' : 'none'; pill.textContent = n + ' new'; }
+    document.querySelectorAll('.who-badge').forEach(b => { b.style.display = n ? 'inline' : 'none'; b.textContent = n; });
+    S.unread = n;
+  }
+  function timeAgo(d) { return new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+  function renderConvList() {
+    const list = S.convs || [];
+    $('convList').innerHTML = list.length ? list.map(c =>
+      '<button type="button" class="conv-item' + (S.openConv === c.id ? ' on' : '') + '" onclick="openConv(\'' + esc(c.id) + '\')">' +
+      '<b><span style="color:inherit;margin:0;font-size:inherit">' + esc(c.customerName) + '</span>' + (c.unread ? '<i class="conv-dot" style="font-style:normal">' + c.unread + '</i>' : '') + '</b>' +
+      '<span>' + esc(c.offerTitle) + '</span><span>' + esc(c.last ? c.last.text : '') + '</span></button>').join('')
+      : '<p class="conv-empty">No messages yet. When a visitor writes to you from an offer page, the chat appears here.</p>';
+  }
+  async function loadInbox() {
+    if (!S.user) return;
+    try {
+      const d = await api('/api/conversations');
+      S.convs = d.conversations; setUnread(d.unread); renderConvList();
+      if (S.openConv && currentPage === 'dashboard') openConv(S.openConv, true);
+    } catch (e) { /* silent: the next poll will try again */ }
+  }
+  async function openConv(id, quiet) {
+    S.openConv = id;
+    try {
+      const d = await api('/api/conversations/' + id);
+      const c = d.conversation;
+      const box = $('convMsgs');
+      const stick = !quiet || box.scrollHeight - box.scrollTop - box.clientHeight < 90;
+      $('convHead').innerHTML = '<div>' + esc(c.customerName) + '<br><small>' + esc(c.offerTitle) + (c.customerEmail ? ' &middot; ' + esc(c.customerEmail) : '') + '</small></div>' +
+        '<button class="btn-ghost" style="padding:5px 10px;font-size:.75rem" onclick="deleteConv(\'' + esc(c.id) + '\')">Delete</button>';
+      box.innerHTML = c.messages.map(m => '<div class="cbub ' + (m.from === 'seller' ? 'me' : 'cust') + '">' + esc(m.text) + '<small>' + esc(timeAgo(m.at)) + '</small></div>').join('');
+      if (stick) box.scrollTop = box.scrollHeight;
+      $('convForm').style.display = 'flex';
+      if (!quiet) renderConvList();
+      if (!quiet) { const row = (S.convs || []).find(x => x.id === id); if (row && row.unread) { setUnread(Math.max(0, (S.unread || 0) - row.unread)); row.unread = 0; renderConvList(); } }
+    } catch (e) { if (!quiet) notify(e.message, 'Messages'); }
+  }
+  async function sendReply(e) {
+    e.preventDefault();
+    const t = $('convText').value.trim(); if (!t || !S.openConv) return;
+    $('convText').value = '';
+    try { await api('/api/conversations/' + S.openConv + '/reply', { method: 'POST', body: JSON.stringify({ text: t }) }); await openConv(S.openConv, false); loadInbox(); }
+    catch (err) { $('convText').value = t; notify(err.message, 'Error'); }
+  }
+  async function deleteConv(id) {
+    if (!confirm('Delete this conversation for good?')) return;
+    try { await api('/api/conversations/' + id, { method: 'DELETE' }); S.openConv = null; $('convMsgs').innerHTML = ''; $('convHead').textContent = 'Select a conversation'; $('convForm').style.display = 'none'; loadInbox(); }
+    catch (err) { notify(err.message, 'Error'); }
+  }
+  setInterval(() => { if (S.user && !document.hidden) loadInbox(); }, 8000);
   async function setOrder(id, status) {
     try { await api('/api/orders/' + id, { method: 'PATCH', body: JSON.stringify({ status }) }); loadDashboard(); }
     catch (e) { notify(e.message, 'Error'); }
