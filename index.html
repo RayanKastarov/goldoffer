@@ -950,10 +950,14 @@
             <h2>2. Brand and style</h2>
             <p class="sub">Name your site and pick how it looks.</p>
             <div class="field"><label>Site name</label><input type="text" id="siteName" placeholder="e.g. AutoFix Express" oninput="renderPreview()"></div>
+            <div class="field"><label>About your business (shown on seller profile)</label><textarea id="sellerBio" rows="3" maxlength="650" placeholder="What do you offer? What makes your business special?"></textarea></div>
+            <button type="button" class="btn-ghost" onclick="suggestSellerBio()">✦ Suggest a business intro</button>
+            <p class="note" style="margin-top:8px">The suggestion uses your own details. Review before publishing.</p>
             <label>Color theme</label>
             <div class="swatches" id="swatches"></div>
             <label>Font style</label>
             <div class="fonts" id="fonts"></div>
+            <div class="note" id="verificationState" style="margin:14px 0"><b>Seller verification</b> · Only approved sellers get a verified badge. <button type="button" class="link-btn" style="width:auto;margin:3px 0 0" onclick="requestSellerVerification()">Request verification</button></div>
             <button class="btn btn-block" onclick="step2Next()">Continue</button>
             <button class="link-btn" onclick="goStep(1)">Back</button>
           </div>
@@ -1841,6 +1845,7 @@
     if (currentPage === 'messages') openMessagesPage();
     const u = S.user;
     if (u.siteName) $('siteName').value = u.siteName;
+    if ($('sellerBio')) $('sellerBio').value = u.sellerBio || '';
     if (u.city) $('city').value = u.city;
     if (u.category) { setCategory(u.category); renderProfs(); }
     if (u.theme) applyTheme(u.theme);
@@ -1868,11 +1873,21 @@
     if (!S.category) return notify('Please choose a profession from the list or search for yours.');
     goStep(2);
   }
+  async function requestSellerVerification(){
+    try{const d=await api('/api/site/request-verification',{method:'POST',body:'{}'});$('verificationState').textContent='Verification status: '+d.status+'. An actual review is required for approval.';}
+    catch(e){notify(e.message,'Verification')}
+  }
+  async function suggestSellerBio() {
+    try {
+      const d = await api('/api/site/bio-suggestion', { method:'POST', body:JSON.stringify({siteName:$('siteName').value,category:S.category,city:$('city').value,details:$('sellerBio').value}) });
+      $('sellerBio').value = d.bio || ''; notify('Intro suggested from your details. Please review it before publishing.');
+    } catch(e){ notify(e.message,'Business intro'); }
+  }
   async function step2Next() {
     if (!$('siteName').value.trim()) return notify('Please enter a site name.');
     try {
       const d = await api('/api/site', { method: 'PUT', body: JSON.stringify({
-        siteName: $('siteName').value.trim(), category: S.category, city: $('city').value.trim(), theme: S.theme, font: S.font }) });
+        siteName: $('siteName').value.trim(), sellerBio: $('sellerBio').value.trim(), category: S.category, city: $('city').value.trim(), theme: S.theme, font: S.font }) });
       S.user = d.user;
     } catch (e) { return notify(e.message, 'Error'); }
     if (S.backToLive) { S.backToLive = false; showLive(); notify('Your design was updated. The live site shows it now.'); }
