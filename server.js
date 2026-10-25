@@ -122,6 +122,7 @@ const UserSchema = new mongoose.Schema({
   motionStyle: {type:String,enum:['full','subtle','none'],default:'full'},
   sectionOrder: {type:[String],default:['story','discover','highlights','offers','booking','faq','about']},
   hiddenSections: {type:[String],default:[]},
+  canvasColors: {type:mongoose.Schema.Types.Mixed,default:()=>({})},
 
   published: { type: Boolean, default: false },
   categoryLabel: String,
@@ -510,7 +511,7 @@ const offerLimitFor = (u) => (u.subscriptionStatus === 'active' ? PAID_OFFER_LIM
 const publicUser = (u) => ({
   id: u._id, firstName: u.firstName, lastName: u.lastName, email: u.email,
   subscriptionStatus: u.subscriptionStatus, siteName: u.siteName, sellerBio: u.sellerBio || '', verificationStatus: u.verificationStatus || 'none', slug: u.slug,
-  category: u.category, city: u.city, theme: u.theme, layout: u.layout || 'signature', font: u.font, buttonStyle: u.buttonStyle || 'pill', cardStyle: u.cardStyle || 'glass', navStyle: u.navStyle || 'outline', heroStyle: u.heroStyle || 'cinematic', spacingStyle: u.spacingStyle || 'balanced', heroHeadline:u.heroHeadline||'', heroSubtitle:u.heroSubtitle||'', primaryCta:u.primaryCta||'', offersHeading:u.offersHeading||'', storyHeading:u.storyHeading||'', catalogStyle:u.catalogStyle||'grid2', backdropStyle:u.backdropStyle||'default', motionStyle:u.motionStyle||'full', sectionOrder:u.sectionOrder||[], hiddenSections:u.hiddenSections||[], published: u.published,
+  category: u.category, city: u.city, theme: u.theme, layout: u.layout || 'signature', font: u.font, buttonStyle: u.buttonStyle || 'pill', cardStyle: u.cardStyle || 'glass', navStyle: u.navStyle || 'outline', heroStyle: u.heroStyle || 'cinematic', spacingStyle: u.spacingStyle || 'balanced', heroHeadline:u.heroHeadline||'', heroSubtitle:u.heroSubtitle||'', primaryCta:u.primaryCta||'', offersHeading:u.offersHeading||'', storyHeading:u.storyHeading||'', catalogStyle:u.catalogStyle||'grid2', backdropStyle:u.backdropStyle||'default', motionStyle:u.motionStyle||'full', sectionOrder:u.sectionOrder||[], hiddenSections:u.hiddenSections||[], canvasColors:u.canvasColors||{}, published: u.published,
   siteUrl: u.slug && u.published ? `${PUBLIC_BASE}/site/${u.slug}` : null,
   offerLimit: offerLimitFor(u),
   categoryLabel: u.categoryLabel, phone: u.phone, address: u.address, hours: u.hours,
@@ -856,6 +857,9 @@ app.put('/api/site', authenticateToken, async (req, res) => {
       user.sectionOrder=[...new Set([...proposed,...sectionKeys])];
     }
     if(Array.isArray(b.hiddenSections)) user.hiddenSections=[...new Set(b.hiddenSections.filter(x=>typeof x==='string'&&sectionKeys.includes(x)&&x!=='offers'))];
+    if (b.canvasColors && typeof b.canvasColors === 'object' && !Array.isArray(b.canvasColors)) {
+      const validColors={};for(const key of ['heading','body','accent','background']) {const v=b.canvasColors[key];if(typeof v==='string' && /^#[0-9a-fA-F]{6}$/.test(v))validColors[key]=v.toLowerCase();}user.canvasColors=validColors;
+    }
 
     if (!user.slug && user.siteName) user.slug = await uniqueSlug(user.siteName, user._id);
     if (publish === true) {
@@ -2460,6 +2464,17 @@ function layoutGlobalCss(layout) {
 }
 
 
+function canvasColorCss(colors) {
+  const c = colors && typeof colors === 'object' ? colors : {};
+  const safe = key => typeof c[key] === 'string' && /^#[0-9a-fA-F]{6}$/.test(c[key]) ? c[key] : null;
+  const styles = [];
+  if (safe('accent')) styles.push(`body{--a:${safe('accent')}!important;--b:${safe('accent')}!important;--ink:${safe('accent')}!important}`);
+  if (safe('heading')) styles.push(`body h1,body h2,body h3,body .cine-copy h1,body .story-panel h2,body .sp-intro h1{color:${safe('heading')}!important}`);
+  if (safe('body')) styles.push(`body .cine-sub,body .story-panel p,body .copyline,body .in p,body .sp-about p{color:${safe('body')}!important}`);
+  if (safe('background')) styles.push(`body{background:${safe('background')}!important}body .cine-hero{background:${safe('background')}!important}`);
+  return styles.join('\n');
+}
+
 function customizationCss() {
   return `.btn-pill .btn,.btn-pill .abtn,.btn-pill .sp-btn,.btn-pill .bar nav a,.btn-pill .cta{border-radius:999px}
 .btn-sharp .btn,.btn-sharp .abtn,.btn-sharp .sp-btn,.btn-sharp .bar nav a,.btn-sharp .cta{border-radius:10px}
@@ -2506,7 +2521,7 @@ function pageShell(user, { title, desc, body, cls }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style><style>${customizationCss()}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))} btn-${esc(safeButtonStyle(user.buttonStyle))} card-${esc(safeCardStyle(user.cardStyle))} nav-${esc(safeNavStyle(user.navStyle))} hero-${esc(safeHeroStyle(user.heroStyle))} space-${esc(safeSpacingStyle(user.spacingStyle))} catalog-${esc(safePick(user.catalogStyle,['grid2','grid3','list'],'grid2'))} backdrop-${esc(safePick(user.backdropStyle,['default','mesh','clean','grid'],'default'))} motion-${esc(safePick(user.motionStyle,['full','subtle','none'],'full'))}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style><style>${customizationCss()}</style><style>${canvasColorCss(user.canvasColors)}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))} btn-${esc(safeButtonStyle(user.buttonStyle))} card-${esc(safeCardStyle(user.cardStyle))} nav-${esc(safeNavStyle(user.navStyle))} hero-${esc(safeHeroStyle(user.heroStyle))} space-${esc(safeSpacingStyle(user.spacingStyle))} catalog-${esc(safePick(user.catalogStyle,['grid2','grid3','list'],'grid2'))} backdrop-${esc(safePick(user.backdropStyle,['default','mesh','clean','grid'],'default'))} motion-${esc(safePick(user.motionStyle,['full','subtle','none'],'full'))}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
 <script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>
@@ -3399,6 +3414,18 @@ app.get('/api/my/reviews', authenticateToken, async(req,res)=>{
   }catch(e){res.status(500).json({message:'Unable to load feedback'});}
 });
 
+// Authenticated live canvas preview: same exact storefront markup, including unpublished work.
+app.get('/api/site/canvas-preview', authenticateToken, async (req,res) => {
+  try {
+    const owner=await User.findById(req.user.id);
+    if(!owner)return res.sendStatus(404);
+    const offers=await Offer.find({userId:owner._id}).sort({createdAt:-1}).limit(100);
+    res.set('Cache-Control','no-store');
+    res.set('Content-Security-Policy',SITE_CSP);
+    res.json({html:renderSite(owner,offers,false)});
+  }catch(e){console.error('Canvas preview',e);res.status(500).json({message:'Preview is not available'});}
+});
+
 app.get('/site/:slug', async (req, res) => {
   try {
     const user = await User.findOne({ slug: req.params.slug });
@@ -3564,3 +3591,4 @@ app.get('/logo.jpg', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+  

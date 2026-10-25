@@ -706,6 +706,28 @@
 </style>
 
 <style>.freedom-sections{display:grid;gap:9px}.freedom-section-row{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid rgba(255,255,255,.12);padding:11px 12px;border-radius:12px;background:#141b26}.freedom-section-row label{display:flex;align-items:center;gap:9px;min-width:0;font-size:.9rem}.freedom-section-row input{width:auto;accent-color:#ffcd19}.freedom-section-row button{width:34px;height:34px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);color:#fff;border-radius:9px;cursor:pointer}.freedom-section-row button:disabled{opacity:.28;cursor:default}.preview[data-catalog=list] .screen .body{grid-template-columns:1fr!important}.preview[data-catalog=grid3] .screen .body{grid-template-columns:repeat(3,minmax(0,1fr))!important}.preview[data-backdrop=mesh] .screen{background:radial-gradient(circle at 20% 10%,rgba(255,180,0,.3),transparent 42%),radial-gradient(circle at 85% 75%,rgba(96,80,255,.2),transparent 40%),#0b101b!important}.preview[data-backdrop=grid] .screen{background-image:linear-gradient(#ffffff0a 1px,transparent 1px),linear-gradient(90deg,#ffffff0a 1px,transparent 1px)!important;background-size:25px 25px!important}</style>
+
+<style>
+/* Widen the authentic storefront canvas; keep editing tools compact and contextual. */
+#v-build .layout{grid-template-columns:minmax(320px,.72fr) minmax(580px,1.28fr);align-items:start;gap:22px;max-width:1760px}
+#v-build .card{padding:24px}
+.canvas-workspace{position:sticky;top:calc(var(--nav-h) + 12px);background:#101723;border:1px solid #354052;border-radius:22px;overflow:hidden;min-width:0;box-shadow:0 22px 65px #0006}
+.canvas-toolbar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#151e2b;color:#f2f5fa;border-bottom:1px solid #313b4b;font-size:12px}
+.canvas-toolbar strong{font-size:12px;letter-spacing:.1em}.canvas-indicator{width:9px;height:9px;border-radius:50%;background:#00dfa7;box-shadow:0 0 12px #00dfa788}.canvas-toolbar-help{margin-left:auto;color:#aeb9cb;font-size:11px}
+.canvas-actions{padding:9px 12px;flex-wrap:wrap;background:#111824}.canvas-actions button,.canvas-section-settings button{border:1px solid #3c4655;background:#222e3b;border-radius:10px;padding:9px 12px;font:600 12px inherit;color:#edf2fb;cursor:pointer}.canvas-actions .canvas-save{margin-left:auto;background:linear-gradient(110deg,#ffdf00,#ff9000);border:none;color:#17110a;font-weight:800}
+.canvas-frame-host{height:min(66vh,730px);min-height:400px;display:flex;justify-content:center;overflow:auto;background:repeating-linear-gradient(45deg,#1b2433 0 12px,#1c2635 12px 24px);padding:10px}
+#canvasFrame{width:100%;height:100%;border:0;background:#05070b;border-radius:10px;transition:width .2s}
+.canvas-frame-host.mobile #canvasFrame{width:390px;max-width:100%;flex:none}
+.canvas-empty{display:none;position:absolute;inset:120px 0 auto;padding:60px 22px;text-align:center;background:#171c29;color:#b9c4d4}
+.canvas-inspector{padding:15px 17px;border-top:1px solid #2a3444;background:#101722}
+.canvas-inspector>strong{display:block;font-size:14px}.canvas-hint{color:#a0acbf;font-size:12px;line-height:1.5;margin:6px 0 11px}.canvas-property label{font-size:12px;display:block;color:#d6deeb;margin-bottom:5px}.canvas-property textarea{width:100%;background:#1c2633;color:#fff;border:1px solid #405167;border-radius:10px;padding:10px;font-size:14px;resize:vertical}
+.canvas-colors{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:11px 0}.canvas-colors label{font-size:11px;color:#bac6d8;display:flex;flex-direction:column;align-items:center;gap:6px}.canvas-colors input{width:100%;height:37px;border:1px solid #46546c;border-radius:9px;padding:3px;background:#171d29;cursor:pointer}
+.canvas-section-settings{display:none;gap:8px;align-items:center;flex-wrap:wrap}.canvas-section-settings.active{display:flex}.canvas-section-settings label{font-size:12px;color:#e0e6ee}.canvas-section-settings input{width:auto}
+#canvasStatus{font-size:12px;line-height:1.5;color:#aeb9cb;margin-top:7px}
+.canvas-advanced{margin-top:16px;border:1px solid #343f4f;border-radius:15px;background:#131c28;padding:13px 15px}.canvas-advanced>summary{font-weight:700;color:#e8edf5;cursor:pointer;padding:7px 0}
+@media(max-width:1150px){#v-build .layout{grid-template-columns:1fr}.canvas-workspace{position:relative;top:auto}.canvas-frame-host{height:600px}}
+@media(max-width:700px){#v-build .card{padding:17px}.canvas-frame-host{height:520px;min-height:320px}.canvas-toolbar-help{display:none}.canvas-actions button{padding:8px}.canvas-colors{gap:5px}.canvas-inspector{padding:12px}}
+</style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
 
@@ -1039,6 +1061,7 @@
             <label>Font style</label>
             <div class="fonts" id="fonts"></div>
 
+            <details class="canvas-advanced"><summary>Button, card and layout details</summary>
             <div class="style-grid">
               <div class="style-set">
                 <label>Button style</label>
@@ -1090,8 +1113,9 @@
                 </div>
               </div>
             </div>
+            </details>
 
-            <div class="style-grid" id="freedomSuite" style="margin-top:22px;padding:20px;border:1px solid rgba(255,215,0,.24);border-radius:22px;background:linear-gradient(145deg,rgba(255,215,0,.055),transparent)">
+            <details class="canvas-advanced"><summary>Advanced content & structure settings</summary><div class="style-grid" id="freedomSuite" style="margin-top:16px;padding:18px;border:1px solid rgba(255,215,0,.18);border-radius:18px">
  <h3 style="font-size:1.35rem">Freedom Studio — Content & Structure</h3>
  <p class="note">Edit your own words, move sections, switch the catalog view and control how the published website behaves.</p>
  <div class="style-set"><label>Hero headline</label><input id="freedomHeadline" maxlength="100" placeholder="Your own headline" oninput="renderPreview()"><p class="style-help">Leave blank to use the business name.</p></div>
@@ -1118,6 +1142,7 @@
  <div class="style-set"><label>Page sections — order & visibility</label><p class="style-help">Use ↑ ↓ to reorder, and the checkbox to show or hide. Offers cannot be hidden.</p><div id="freedomSections" class="freedom-sections"></div></div>
  <button type="button" class="btn-ghost" onclick="resetFreedom()">Reset these options</button>
  </div>
+ </details>
  <div class="note" id="verificationState" style="margin:14px 0"><b>Seller verification</b> · Only approved sellers get a verified badge. <button type="button" class="link-btn" style="width:auto;margin:3px 0 0" onclick="requestSellerVerification()">Request verification</button></div>
             <button class="btn btn-block" onclick="step2Next()">Continue</button>
             <button class="link-btn" onclick="goStep(1)">Back</button>
@@ -1167,13 +1192,29 @@
           </div>
         </div>
 
-        <div class="preview">
-          <div class="pbar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url" id="pvUrl">your-site</span></div>
-          <div class="screen">
-            <div class="top"><h3 id="pvName">Your brand</h3><p id="pvCat">Business category</p></div>
-            <div class="body" id="pvOffers"></div>
+        <aside class="canvas-workspace" id="canvasWorkspace">
+          <div class="canvas-toolbar"><span class="canvas-indicator"></span><strong>LIVE CANVAS</strong><span class="canvas-toolbar-help">Click text to edit · drag the section handle to reorder</span></div>
+          <div class="canvas-toolbar canvas-actions">
+            <button type="button" onclick="canvasReload()">↻ Refresh</button>
+            <button type="button" onclick="canvasSize('desktop')">Desktop</button>
+            <button type="button" onclick="canvasSize('mobile')">Mobile</button>
+            <button type="button" onclick="canvasSave()" class="canvas-save">Save changes</button>
           </div>
-        </div>
+          <div class="canvas-frame-host" id="canvasFrameHost"><iframe id="canvasFrame" title="Editable storefront preview" sandbox="allow-same-origin allow-scripts" referrerpolicy="no-referrer"></iframe><div class="canvas-empty" id="canvasEmpty">Sign in to preview your website. The canvas uses your real storefront design.</div></div>
+          <div class="canvas-inspector" id="canvasInspector">
+            <strong id="canvasSelected">Select something on the page</strong>
+            <p class="canvas-hint" id="canvasHint">Click a title or button in the preview to change its text. Drag a section handle to change its position.</p>
+            <div class="canvas-property" id="canvasTextPanel" hidden><label for="canvasTextInput">Text</label><textarea id="canvasTextInput" rows="2" maxlength="240" oninput="canvasTextChanged()"></textarea></div>
+            <div class="canvas-colors">
+              <label>Title<input id="canvasHeadingColor" type="color" value="#f4f1ea" onchange="canvasColorChanged('heading',this.value)"></label>
+              <label>Text<input id="canvasBodyColor" type="color" value="#c3cad6" onchange="canvasColorChanged('body',this.value)"></label>
+              <label>Accent<input id="canvasAccentColor" type="color" value="#ffdf00" onchange="canvasColorChanged('accent',this.value)"></label>
+              <label>Background<input id="canvasBgColor" type="color" value="#05070b" onchange="canvasColorChanged('background',this.value)"></label>
+            </div>
+            <div class="canvas-section-settings"><label><input type="checkbox" id="canvasSectionVisible" onchange="canvasVisibilityChanged()"> Show selected section</label><button type="button" onclick="canvasMoveSection(-1)">↑ Move up</button><button type="button" onclick="canvasMoveSection(1)">↓ Move down</button></div>
+            <p id="canvasStatus" role="status">Preview of your real site. Save to publish your changes.</p>
+          </div>
+        </aside>
       </div>
     </div>
   </div>
@@ -1531,7 +1572,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
       cards: [['Portrait session', '45 minutes, 15 edited photos.', '80.00', 'Photographer'], ['Wedding day', 'Full-day coverage and gallery.', '650.00', 'Event planner'], ['Brand photos', 'For your site and social media.', '180.00', 'Videographer']] }
   ];
 
-  const S = { photos: {}, token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', layout: 'signature', font: 'sans', buttonStyle: 'pill', cardStyle: 'glass', navStyle: 'outline', heroStyle: 'cinematic', spacingStyle: 'balanced', catalogStyle:'grid2', backdropStyle:'default', motionStyle:'full', sectionOrder:['story','discover','highlights','offers','booking','faq','about'], hiddenSections:[], mode: 'signup', chart: null };
+  const S = { photos: {}, token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', layout: 'signature', font: 'sans', buttonStyle: 'pill', cardStyle: 'glass', navStyle: 'outline', heroStyle: 'cinematic', spacingStyle: 'balanced', catalogStyle:'grid2', backdropStyle:'default', motionStyle:'full', sectionOrder:['story','discover','highlights','offers','booking','faq','about'], hiddenSections:[], canvasColors:{}, mode: 'signup', chart: null };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
   const money = (n) => Number(n || 0).toFixed(2);
@@ -2090,6 +2131,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     $('freedomHeadline').value=u.heroHeadline||'';$('freedomSubtitle').value=u.heroSubtitle||'';$('freedomCta').value=u.primaryCta||'';
     $('freedomOffersTitle').value=u.offersHeading||'';$('freedomStoryTitle').value=u.storyHeading||'';
     syncFreedom();
+    S.canvasColors=u.canvasColors||{};canvasSyncColors();
     try { const d = await api('/api/offers'); S.offers = d.offers; } catch (e) {}
     renderPreview(); renderOfferList();
     if (u.published && u.siteUrl) showLive();
@@ -2100,6 +2142,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   function goStep(n) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     $('step-' + n).classList.add('active');
+    if(n===2)setTimeout(canvasReload,100);
     $('nodes').style.display = (n >= 1 && n <= 4) ? 'flex' : 'none';
     for (let i = 1; i <= 4; i++) {
       const el = $('n' + i);
@@ -2145,7 +2188,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   }
   function pickFreedom(key,value){const allowed={catalogStyle:['grid2','grid3','list'],backdropStyle:['default','mesh','clean','grid'],motionStyle:['full','subtle','none']};if(!allowed[key]?.includes(value))return;S[key]=value;syncFreedom();renderPreview()}
   function resetFreedom(){S.catalogStyle='grid2';S.backdropStyle='default';S.motionStyle='full';S.sectionOrder=freedomKeys.slice();S.hiddenSections=[];['freedomHeadline','freedomSubtitle','freedomCta','freedomOffersTitle','freedomStoryTitle'].forEach(k=>{$(k).value=''});syncFreedom();renderPreview()}
-  function freedomPayload(){return {heroHeadline:$('freedomHeadline').value.trim(),heroSubtitle:$('freedomSubtitle').value.trim(),primaryCta:$('freedomCta').value.trim(),offersHeading:$('freedomOffersTitle').value.trim(),storyHeading:$('freedomStoryTitle').value.trim(),catalogStyle:S.catalogStyle,backdropStyle:S.backdropStyle,motionStyle:S.motionStyle,sectionOrder:S.sectionOrder,hiddenSections:S.hiddenSections}}
+  function freedomPayload(){return {heroHeadline:$('freedomHeadline').value.trim(),heroSubtitle:$('freedomSubtitle').value.trim(),primaryCta:$('freedomCta').value.trim(),offersHeading:$('freedomOffersTitle').value.trim(),storyHeading:$('freedomStoryTitle').value.trim(),catalogStyle:S.catalogStyle,backdropStyle:S.backdropStyle,motionStyle:S.motionStyle,sectionOrder:S.sectionOrder,hiddenSections:S.hiddenSections,canvasColors:S.canvasColors}}
   async function step2Next() {
     if (!$('siteName').value.trim()) return notify('Please enter a site name.');
     try {
@@ -2815,6 +2858,30 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   async function goCopyLink(){const v=$('goShareLink').value;try{await navigator.clipboard.writeText(v);goSuiteSay('Link copied.')}catch(e){goSuiteSay('Select and copy the link manually.')}}
   function goGetQr(){const u=$('goShareLink').value;if(!u.startsWith('http'))return goSuiteSay('Publish your website first.');const im=new Image();im.src='https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='+encodeURIComponent(u);im.alt='QR code for your storefront';const wrap=$('goQR');wrap.textContent='';wrap.append(im)}
   async function goExportData(){try{const r=await fetch('/api/business/export',{headers:{Authorization:'Bearer '+S.token}});if(!r.ok)throw Error('Export failed');const blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='goldoffer-export.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){goSuiteSay(e.message)}}
+
+
+  // ---------- Live visual canvas, actual storefront renderer ----------
+  const canvasMap={headline:{selector:'.cine-copy h1',input:'freedomHeadline',name:'Hero title'},subtitle:{selector:'.cine-sub',input:'freedomSubtitle',name:'Hero description'},cta:{selector:'.cine-copy .abtn.pri',input:'freedomCta',name:'Primary button'},offers:{selector:'#offers .sec-head h2',input:'freedomOffersTitle',name:'Offers title'},story:{selector:'.story-panel h2',input:'freedomStoryTitle',name:'Story title'}};
+  let canvasSelected=null,canvasSelectedSection=null,canvasDoc=null,canvasDrag=null;
+  function canvasStatus(message){const el=$('canvasStatus');if(el)el.textContent=message}
+  function canvasSyncColors(){const c=S.canvasColors||{};for(const [key,id] of [['heading','canvasHeadingColor'],['body','canvasBodyColor'],['accent','canvasAccentColor'],['background','canvasBgColor']]){const el=$(id);if(el&&/^#[0-9a-f]{6}$/i.test(c[key]||''))el.value=c[key]}}
+  function canvasInjectStyle(doc){if(!doc||!doc.head)return;let st=doc.getElementById('go-canvas-live-colors');if(!st){st=doc.createElement('style');st.id='go-canvas-live-colors';doc.head.append(st)}const c=S.canvasColors||{};const safe=k=>/^#[0-9a-f]{6}$/i.test(c[k]||'')?c[k]:null;st.textContent=(safe('accent')?'body{--a:'+safe('accent')+'!important;--b:'+safe('accent')+'!important}':'')+(safe('heading')?'body h1,body h2,body h3{color:'+safe('heading')+'!important}':'')+(safe('body')?'body .cine-sub,body .story-panel p,body .copyline{color:'+safe('body')+'!important}':'')+(safe('background')?'body,body .cine-hero{background:'+safe('background')+'!important}':'')}
+  function canvasColorChanged(key,value){if(!/^#[0-9a-f]{6}$/i.test(value))return;S.canvasColors={...(S.canvasColors||{}),[key]:value};canvasInjectStyle(canvasDoc);canvasStatus('Color changed. Save changes to publish.');}
+  function canvasSetSelected(type,element){canvasSelected=type;const info=canvasMap[type];if(!info)return;document.querySelectorAll('#canvasFrame').forEach(()=>{});$('canvasSelected').textContent=info.name;$('canvasHint').textContent='Edit the selected text and save when ready.';$('canvasTextPanel').hidden=false;$('canvasTextInput').value=$(info.input).value.trim()||element.textContent.trim();$('canvasSectionVisible').closest('.canvas-section-settings').classList.remove('active');}
+  function canvasTextChanged(){if(!canvasSelected)return;const map=canvasMap[canvasSelected],v=$('canvasTextInput').value;$(map.input).value=v;const target=canvasDoc?.querySelector(map.selector);if(target){if(canvasSelected==='cta'){const span=target.querySelector('span');if(span)span.textContent=v||'Message us';else{const svg=target.querySelector('svg');target.textContent='';if(svg)target.append(svg);target.append(document.createTextNode(v||'Message us'))}}else target.textContent=v|| (canvasSelected==='headline'?$('siteName').value:'');}canvasStatus('Text edited. Save changes to publish.');}
+  function canvasSelectSection(key){canvasSelected=null;canvasSelectedSection=key;$('canvasSelected').textContent=freedomLabels[key]||key;$('canvasHint').textContent='Drag the small section handle in the preview, or use Move up / Move down. Offers stay visible.';$('canvasTextPanel').hidden=true;const panel=$('canvasSectionVisible').closest('.canvas-section-settings');panel.classList.add('active');$('canvasSectionVisible').checked=!(S.hiddenSections||[]).includes(key);$('canvasSectionVisible').disabled=key==='offers';}
+  function canvasVisibilityChanged(){const key=canvasSelectedSection;if(!key||key==='offers')return;const hidden=new Set(S.hiddenSections||[]);if($('canvasSectionVisible').checked)hidden.delete(key);else hidden.add(key);S.hiddenSections=[...hidden];syncFreedom();canvasApplySectionLayout();canvasStatus('Section visibility updated. Save changes to publish.');}
+  function canvasMoveSection(delta){const key=canvasSelectedSection;if(!key)return;const a=S.sectionOrder.slice(),i=a.indexOf(key),j=i+delta;if(i<0||j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];S.sectionOrder=a;syncFreedom();canvasApplySectionLayout();canvasStatus('Section moved. Save changes to publish.');}
+  function canvasApplySectionLayout(){const doc=canvasDoc;if(!doc)return;const box=doc.getElementById('go-custom-sections'),sections=S.sectionOrder||[];if(!box)return;sections.forEach(key=>{const el=doc.querySelector('[data-go-section="'+key+'"]');if(el){el.style.display=(S.hiddenSections||[]).includes(key)?'none':'';box.append(el)}});canvasDecorateSections(doc)}
+  function canvasDecorateSections(doc){doc.querySelectorAll('.go-canvas-handle').forEach(el=>el.remove());const cssId='go-canvas-edit-css';if(!doc.getElementById(cssId)){let st=doc.createElement('style');st.id=cssId;st.textContent='.go-owner-banner{display:none!important}.go-canvas-handle{position:relative;z-index:90;width:max-content;max-width:100%;display:flex;align-items:center;gap:9px;padding:9px 14px;background:#ffd000!important;color:#14120a!important;font:800 12px system-ui!important;border-radius:11px;margin:9px 0 8px 20px;cursor:grab;user-select:none;box-shadow:0 6px 24px #0007}.go-canvas-handle:active{cursor:grabbing} [data-go-section].go-selected-section{outline:2px dashed #ffd000;outline-offset:3px} .go-canvas-text-active{outline:2px solid #13deb5!important;outline-offset:5px!important;cursor:text!important}';doc.head.append(st)}
+    doc.querySelectorAll('[data-go-section]').forEach(el=>{const key=el.getAttribute('data-go-section');if(!freedomKeys.includes(key))return;const h=doc.createElement('div');h.className='go-canvas-handle';h.draggable=true;h.textContent='⠿  '+(freedomLabels[key]||key);h.title='Drag this section';h.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();canvasSelectSection(key)});h.addEventListener('dragstart',e=>{canvasDrag=key;e.dataTransfer.setData('text/plain',key);e.dataTransfer.effectAllowed='move'});h.addEventListener('dragover',e=>e.preventDefault());el.addEventListener('dragover',e=>e.preventDefault(),{signal:doc.defaultView.__canvasSignal?.signal});el.addEventListener('drop',e=>{e.preventDefault();const from=canvasDrag||e.dataTransfer.getData('text/plain');if(!freedomKeys.includes(from)||from===key)return;const arr=S.sectionOrder.filter(k=>k!==from),index=arr.indexOf(key);arr.splice(index,0,from);S.sectionOrder=arr;syncFreedom();canvasApplySectionLayout();canvasSelectSection(from);canvasStatus('Section moved by dragging. Save changes to publish.');});el.insertBefore(h,el.firstChild)})}
+  function canvasConnect(doc){if(!doc||!doc.body)return;canvasDoc=doc;canvasInjectStyle(doc);canvasApplySectionLayout();doc.addEventListener('click',e=>{if(e.target.closest('a,button')){e.preventDefault();e.stopPropagation()}},true);doc.querySelectorAll('a,button,form').forEach(el=>el.addEventListener('click',ev=>{if(ev.target.closest('.go-canvas-handle'))return;ev.preventDefault();ev.stopImmediatePropagation()},true));doc.addEventListener('submit',e=>{e.preventDefault();e.stopImmediatePropagation()},true);
+    Object.entries(canvasMap).forEach(([key,item])=>{const el=doc.querySelector(item.selector);if(!el)return;el.classList.add('go-canvas-text-active');el.title='Click to edit';el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();canvasSetSelected(key,el)},true)});
+    canvasStatus('Live canvas ready. Click a highlighted text or drag a yellow section handle.');}
+  async function canvasReload(){const frame=$('canvasFrame');if(!frame)return;canvasStatus('Loading the real storefront preview…');if(!S.token){$('canvasEmpty').style.display='block';return;}try{const d=await api('/api/site/canvas-preview');$('canvasEmpty').style.display='none';frame.onload=()=>{try{canvasConnect(frame.contentDocument)}catch(e){canvasStatus('Preview loaded, but editing controls could not attach.')}};frame.srcdoc=d.html;}catch(e){canvasStatus(e.message||'Could not load preview');$('canvasEmpty').style.display='block';}}
+  function canvasSize(mode){$('canvasFrameHost').classList.toggle('mobile',mode==='mobile');}
+  async function canvasSave(){if(!$('siteName').value.trim())return notify('Enter your business name first.');try{canvasStatus('Saving changes…');const payload={siteName:$('siteName').value.trim(),sellerBio:$('sellerBio').value.trim(),category:S.category,city:$('city').value.trim(),theme:S.theme,layout:S.layout,font:S.font,buttonStyle:S.buttonStyle,cardStyle:S.cardStyle,navStyle:S.navStyle,heroStyle:S.heroStyle,spacingStyle:S.spacingStyle,...freedomPayload()};const r=await api('/api/site',{method:'PUT',body:JSON.stringify(payload)});S.user=r.user;canvasStatus('Changes saved to your storefront.');await canvasReload()}catch(e){canvasStatus('Could not save: '+e.message)}}
+  window.canvasReload=canvasReload;window.canvasSave=canvasSave;window.canvasSize=canvasSize;window.canvasTextChanged=canvasTextChanged;window.canvasColorChanged=canvasColorChanged;window.canvasVisibilityChanged=canvasVisibilityChanged;window.canvasMoveSection=canvasMoveSection;
 
   // ---------- Start ----------
   async function init() {
