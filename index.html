@@ -335,7 +335,7 @@
     .tips li:last-child { border-bottom: 1px solid var(--lline); }
 
     /* ---------- Builder ---------- */
-    .layout { display: grid; grid-template-columns: 1fr 420px; gap: 28px; align-items: start; }
+    .layout { display: grid; grid-template-columns: minmax(0,760px); gap: 28px; align-items: start; justify-content: center; }
     .card { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 34px; position: relative; }
     .card h2 { font-size: 1.7rem; margin-bottom: 8px; letter-spacing: -.025em; }
     .sub { color: var(--soft); margin-bottom: 24px; font-size: .96rem; line-height: 1.55; }
@@ -681,6 +681,38 @@
 <style>
 .go-quick-list{display:flex;flex-wrap:wrap;gap:8px;padding:9px 13px}.go-quick-list button{background:#212d3f;border:1px solid #3e4b61;border-radius:20px;color:#f2f5fa;cursor:pointer;padding:6px 12px;font-size:12px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.go-quick-list button:hover{border-color:#ffcf31}.go-suite{display:none;margin:36px 0 70px;padding:0 0 24px;color:#e7eaf1}.go-suite-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 18px}.go-suite-head h2{font-size:clamp(26px,3vw,34px);margin:5px 0}.go-suite-head p,.go-suite-card p{color:#a7afbf;font-size:14px;line-height:1.5}.go-suite-kicker{font-size:11px;letter-spacing:.14em;color:#ffcb35;font-weight:800}.go-suite-status{font-size:13px;color:#b7bec9;padding:9px 0}.go-suite-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.go-suite-card{min-width:0;padding:22px;border:1px solid #344052;border-radius:18px;background:linear-gradient(160deg,#161e2c,#111723)}.go-suite-card h3{font-size:18px;margin:0 0 6px}.go-suite-card label{display:block;font-size:13px;color:#d4deea;margin:10px 0}.go-suite-card input:not([type=checkbox]),.go-suite-card select,.go-suite-card textarea{display:block;margin-top:5px;width:100%;background:#0b111c;color:#f5f6fa;border:1px solid #334054;border-radius:9px;padding:11px;font:inherit;max-width:100%}.go-suite-card button,.go-suite-actions a{border:1px solid #5c677a;background:#222e41;color:#f4f7fb;border-radius:9px;cursor:pointer;padding:10px 14px;font:inherit;font-weight:650;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;margin-top:9px}.go-suite-card button:hover,.go-suite-actions a:hover{border-color:#ffd042}.go-suite-card small{display:block;color:#a4adbd;margin:10px 0}.go-suite-switch{display:flex!important;align-items:center;gap:9px}.go-suite-switch input{accent-color:#ffcb27}.go-suite-actions{display:flex;flex-wrap:wrap;gap:8px}.go-suite-list{display:grid;gap:8px;margin-top:14px;max-height:260px;overflow:auto}.go-suite-item{background:#0c121e;border:1px solid #31394a;border-radius:9px;padding:10px;font-size:13px;overflow-wrap:anywhere}.go-suite-item strong{color:#fff}.go-suite-item button{padding:5px 8px;font-size:12px;margin:5px 5px 0 0}.go-suite-accent{color:#ffd54a!important}.go-suite-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.go-suite-metrics>div{background:#151d29;border:1px solid #344052;border-radius:12px;padding:15px;font-size:13px;color:#c4cedd}.go-suite-metrics strong{display:block;font-size:26px;color:#fff}#goQR img{max-width:190px;width:100%;height:auto;padding:9px;background:#fff;border-radius:10px;margin:12px 0}
 @media(max-width:800px){.go-suite-grid{grid-template-columns:1fr}.go-suite-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.go-suite-card{padding:16px}}
+.wk-in{background:#0f1520;border:1px solid #303949;border-radius:12px;padding:10px 14px;color:#f1eee8;font:inherit;min-width:160px}
+.wk-board{display:grid;grid-template-columns:repeat(5,minmax(210px,1fr));gap:14px;overflow-x:auto;padding-bottom:10px}
+.wk-col{background:#10161f;border:1px solid #263041;border-radius:16px;padding:12px;min-height:200px}.wk-col h3{font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:#9aa6ba;margin:2px 4px 10px;display:flex;justify-content:space-between}
+.wk-card{background:#171f2c;border:1px solid #2b3647;border-radius:12px;padding:12px;margin-bottom:10px;font-size:.88rem}.wk-card b{display:block;font-size:.95rem}.wk-card small{color:#9aa6ba;display:block;margin-top:2px;word-break:break-word}
+.wk-act{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.wk-act button{padding:6px 11px;border-radius:9px;border:1px solid #3a4658;background:transparent;color:#f1eee8;font:600 .78rem system-ui;cursor:pointer}.wk-act button.pri{background:#ffcf00;color:#161100;border-color:#ffcf00}
+.wk-panel{background:#10161f;border:1px solid #263041;border-radius:16px;padding:18px;margin-bottom:16px}.wk-panel h3{margin-bottom:10px}
+.wk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.wk-grid label{font-size:.78rem;color:#9aa6ba;display:grid;gap:5px}.wk-grid input,.wk-grid select,.wk-panel textarea{background:#0b1018;border:1px solid #303949;border-radius:10px;padding:9px 10px;color:#f1eee8;font:inherit;width:100%}
+.wk-hrs{display:grid;grid-template-columns:70px 28px 1fr 1fr;gap:8px;align-items:center;margin:6px 0}
+.wk-dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:10px}.wk-ok{background:#35e08a}.wk-warn{background:#ffc32a}.wk-fail{background:#ff5d73}
+.wk-row{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #222c3b}.wk-row:last-child{border:0}.wk-row small{color:#9aa6ba;display:block}
+.wk-chip{display:inline-block;padding:3px 10px;border-radius:99px;font-size:.74rem;font-weight:700;background:#222c3b;margin:2px 4px 2px 0}.wk-chip.ok{background:#12372a;color:#5ff0a4}.wk-chip.warn{background:#3b3010;color:#ffcf4d}.wk-chip.vip{background:#3b2a10;color:#ffcf4d}
+.bellw{position:relative;display:inline-block}.bell-b{position:relative;background:transparent;border:1px solid rgba(255,255,255,.2);color:inherit;border-radius:999px;width:38px;height:38px;cursor:pointer;font-size:16px}.bell-n{position:absolute;top:-5px;right:-5px;background:#ff3d5a;color:#fff;border-radius:99px;font:700 10px system-ui;min-width:17px;height:17px;display:grid;place-items:center;padding:0 4px}
+.bell-p{position:fixed;right:14px;top:70px;width:min(360px,calc(100vw - 28px));max-height:70vh;overflow:auto;background:#10161f;border:1px solid #303949;border-radius:16px;box-shadow:0 20px 60px #000a;z-index:900;color:#f1eee8;text-align:left}.bell-p h4{padding:14px 16px;display:flex;justify-content:space-between;border-bottom:1px solid #222c3b}.bell-i{display:block;padding:12px 16px;border-bottom:1px solid #1d2635;text-decoration:none;color:inherit;cursor:pointer}.bell-i.un{background:#16202e}.bell-i small{color:#9aa6ba;display:block}
+@media(max-width:800px){.wk-board{grid-template-columns:repeat(5,82vw)}.wk-hrs{grid-template-columns:56px 24px 1fr 1fr}}
+.wk-hrs input[type=time],.wk-grid input[type=time],.wk-grid input[type=datetime-local],.wk-grid input[type=date]{color-scheme:dark}.wk-hrs input[type=time]{background:#0b1018;border:1px solid #303949;border-radius:10px;padding:8px;color:#f1eee8;font:inherit;min-width:0;width:100%}
+@media(max-width:480px){.bell-b{width:30px;height:30px;font-size:13px}.nav-end{gap:4px!important}.nav-end .btn-ghost,.nav-end .btn{padding:6px 8px!important;font-size:.72rem!important}}
+/* ---- Studio ---- */
+.stu{position:fixed;inset:0;z-index:2000;background:#0a0e15;color:#e9edf5;display:flex;flex-direction:column;font:500 13px system-ui,sans-serif}.stu[hidden]{display:none}
+.stu-top{display:flex;gap:8px;align-items:center;padding:9px 12px;background:#0f1520;border-bottom:1px solid #222c3b;flex-wrap:wrap}.stu-sp{flex:1}.stu-note{color:#8a97ad;font-size:12px}
+.stu-b,.stu-s{background:#18212f;color:#e9edf5;border:1px solid #2c384b;border-radius:9px;padding:8px 12px;font:600 12.5px system-ui;cursor:pointer}.stu-b.pri{background:#ffcf00;color:#161100;border-color:#ffcf00}.stu-b:disabled{opacity:.35}
+.stu-seg{display:flex;border:1px solid #2c384b;border-radius:9px;overflow:hidden}.stu-seg button{background:#18212f;color:#9aa6ba;border:0;padding:8px 13px;font:600 12.5px system-ui;cursor:pointer}.stu-seg button.on{background:#3b5bdb;color:#fff}
+.stu-main{flex:1;display:flex;min-height:0}.stu-stage{flex:1;overflow:auto;padding:14px;background:#06090e;display:flex;flex-direction:column;align-items:center;min-width:0;position:relative}
+.stu-hint{color:#6f7d94;font-size:11.5px;margin-bottom:8px;text-align:center}.stu-wrap{flex:1;width:100%;display:flex;justify-content:center;min-height:0}.stu-wrap iframe{width:100%;height:100%;min-height:560px;border:0;background:#05070b;border-radius:10px;box-shadow:0 20px 70px #000c}.stu-wrap.ph iframe{width:390px;max-width:100%;border-radius:34px;border:9px solid #1b2433}
+.stu-side{width:330px;background:#0f1520;border-left:1px solid #222c3b;display:flex;flex-direction:column;min-height:0}.stu-tabs{display:flex;border-bottom:1px solid #222c3b}.stu-tabs button{flex:1;background:none;border:0;color:#8a97ad;padding:12px 4px;font:700 12.5px system-ui;cursor:pointer;border-bottom:2px solid transparent}.stu-tabs button.on{color:#fff;border-color:#ffcf00}
+.stu-pane{padding:12px 14px 40px;overflow:auto;flex:1}.stu-pane h5{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:#7d8aa0;margin:18px 0 8px}.stu-pane h5:first-child{margin-top:2px}
+.stu-r{display:flex;align-items:center;gap:8px;margin:7px 0}.stu-r>label{flex:0 0 84px;color:#9aa6ba;font-size:12px}.stu-r input[type=number],.stu-r input[type=text],.stu-r select{flex:1;min-width:0;background:#0a0f17;border:1px solid #2c384b;border-radius:8px;color:#e9edf5;padding:7px 8px;font:inherit}.stu-r input[type=color]{width:38px;height:32px;padding:0;border:1px solid #2c384b;border-radius:8px;background:none;cursor:pointer}.stu-r input[type=range]{flex:1}
+.stu-x{background:none;border:1px solid #2c384b;color:#8a97ad;border-radius:7px;padding:5px 8px;cursor:pointer;font-size:11px}.stu-tg{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}.stu-tg button{background:#18212f;color:#cfd7e6;border:1px solid #2c384b;border-radius:8px;padding:7px 11px;font:700 12px system-ui;cursor:pointer}.stu-tg button.on{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
+.stu-pill{background:#14203a;border:1px solid #29406e;color:#a9c1ff;border-radius:10px;padding:8px 10px;font-size:12px;margin-bottom:8px;word-break:break-all}
+.stu-modal{position:absolute;inset:0;background:#000b;display:grid;place-items:center;padding:16px;z-index:5}.stu-modal[hidden]{display:none}.stu-card{background:#0f1520;border:1px solid #2c384b;border-radius:16px;padding:20px;width:min(560px,100%);max-height:86vh;overflow:auto}
+.stu-v{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #1f2a3a}.stu-v small{color:#8a97ad;display:block}
+@media(max-width:900px){.stu-main{flex-direction:column}.stu-side{width:100%;height:42vh;border-left:0;border-top:1px solid #222c3b}.stu-stage{padding:8px}.stu-hint{display:none}.stu-wrap iframe{min-height:0}}
+.stu-launch{display:grid;gap:10px;margin:18px 0;padding:22px;border-radius:18px;border:1px solid #3a4a6a;background:linear-gradient(135deg,#17213a,#2a1d3f)}.stu-launch b{font-size:1.1rem}.stu-launch p{color:#b7c1d6;font-size:.9rem}
 </style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
@@ -961,7 +993,7 @@
 <!-- =================== BUILDER =================== -->
 <main class="view" id="v-build">
   <div data-nav="dark" style="min-height:100vh">
-    <div class="page-head"><h1>Build your website.</h1><p>Answer a few questions and watch the site take shape on the right.</p></div>
+    <div class="page-head"><h1>Build your website.</h1><p>Answer a few questions, then design every detail in the Studio.</p></div>
     <div class="section" style="padding-top:10px">
       <div class="layout">
         <div class="card">
@@ -993,27 +1025,12 @@
 
           <div id="step-2" class="step">
             <h2>2. Brand and style</h2>
-            <p class="sub">Name your site and pick how it looks.</p>
+            <p class="sub">Name your site, then design it freely in the Studio.</p>
             <div class="field"><label>Site name</label><input type="text" id="siteName" placeholder="e.g. AutoFix Express" oninput="renderPreview()"></div>
             <div class="field"><label>About your business (shown on seller profile)</label><textarea id="sellerBio" rows="3" maxlength="650" placeholder="What do you offer? What makes your business special?"></textarea></div>
             <button type="button" class="btn-ghost" onclick="suggestSellerBio()">✦ Suggest a business intro</button>
             <p class="note" style="margin-top:8px">The suggestion uses your own details. Review before publishing.</p>
-            <label style="display:block;margin-top:18px">Website layout</label>
-            <p class="note">Choose a real page layout, not just a color. Preview changes instantly.</p>
-            <div class="go-layout-choices" id="layoutChoices">
-              <button type="button" class="go-layout-choice on" data-layout="signature" onclick="selectLayout('signature')"><span class="go-layout-art go-layout-signature"><i></i><i></i></span><b>Signature</b><small>Cinematic, dark &amp; premium</small></button>
-              <button type="button" class="go-layout-choice" data-layout="editorial" onclick="selectLayout('editorial')"><span class="go-layout-art go-layout-editorial"><i></i><i></i></span><b>Editorial</b><small>Light, elegant &amp; spacious</small></button>
-              <button type="button" class="go-layout-choice" data-layout="market" onclick="selectLayout('market')"><span class="go-layout-art go-layout-market"><i></i><i></i></span><b>Modern Market</b><small>Bold, commerce-first &amp; clean</small></button>
-              <button type="button" class="go-layout-choice" data-layout="neon" onclick="selectLayout('neon')"><span class="go-layout-art go-layout-neon"><i></i><i></i></span><b>Neon Grid</b><small>Modern, gamer &amp; high-tech</small></button>
-              <button type="button" class="go-layout-choice" data-layout="mono" onclick="selectLayout('mono')"><span class="go-layout-art go-layout-mono"><i></i><i></i></span><b>Minimal Mono</b><small>Minimal, sharp &amp; business</small></button>
-              <button type="button" class="go-layout-choice" data-layout="atelier" onclick="selectLayout('atelier')"><span class="go-layout-art go-layout-atelier"><i></i><i></i></span><b>Atelier</b><small>Art gallery · warm editorial</small></button>
-              <button type="button" class="go-layout-choice" data-layout="arcade" onclick="selectLayout('arcade')"><span class="go-layout-art go-layout-arcade"><i></i><i></i></span><b>Arcade</b><small>Gaming · electric energy</small></button>
-              <button type="button" class="go-layout-choice" data-layout="aurora" onclick="selectLayout('aurora')"><span class="go-layout-art go-layout-aurora"><i></i><i></i></span><b>Aurora</b><small>Immersive · fluid &amp; luminous</small></button>
-            </div>
-            <label>Color theme</label>
-            <div class="swatches" id="swatches"></div>
-            <label>Font style</label>
-            <div class="fonts" id="fonts"></div>
+            <div class="stu-launch"><b>Design Studio</b><p>Your whole site on a big live screen. Click anything, drag it, recolor any letter, add your own text, buttons and images. Desktop and phone separately.</p><button type="button" class="btn btn-lg btn-block" onclick="openStudio()">Open Design Studio</button></div>
             <div class="note" id="verificationState" style="margin:14px 0"><b>Seller verification</b> · Only approved sellers get a verified badge. <button type="button" class="link-btn" style="width:auto;margin:3px 0 0" onclick="requestSellerVerification()">Request verification</button></div>
             <button class="btn btn-block" onclick="step2Next()">Continue</button>
             <button class="link-btn" onclick="goStep(1)">Back</button>
@@ -1052,7 +1069,7 @@
             <div class="row">
               <button class="btn-ghost" onclick="copyUrl()">Copy link</button>
               <button class="btn-ghost" onclick="goStep(3)">Add or edit offers</button>
-              <button class="btn-ghost" onclick="changeDesign()">Change colors and font</button>
+              <button class="btn-ghost" onclick="openStudio()">Open Design Studio</button>
             </div>
             <div class="field" style="margin-top:22px">
               <label>Change the address name</label>
@@ -1063,17 +1080,41 @@
           </div>
         </div>
 
-        <div class="preview">
-          <div class="pbar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url" id="pvUrl">your-site</span></div>
-          <div class="screen">
-            <div class="top"><h3 id="pvName">Your brand</h3><p id="pvCat">Business category</p></div>
-            <div class="body" id="pvOffers"></div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
 </main>
+
+<!-- =================== DESIGN STUDIO (full-screen editor) =================== -->
+<div id="studio" class="stu" hidden>
+  <div class="stu-top">
+    <button class="stu-b" onclick="closeStudio()" title="Back">&larr; Exit</button>
+    <select id="stuPage" class="stu-s" onchange="stuGo(this.value)" aria-label="Page"></select>
+    <div class="stu-seg"><button id="stuDesk" class="on" onclick="stuDevice(false)">Desktop</button><button id="stuPhone" onclick="stuDevice(true)">Phone</button></div>
+    <button class="stu-b" id="stuUndo" onclick="stuUndo()" title="Undo (Ctrl+Z)">&#8630;</button><button class="stu-b" id="stuRedo" onclick="stuRedo()" title="Redo (Ctrl+Y)">&#8631;</button>
+    <span class="stu-sp"></span><span id="stuSave" class="stu-note">Draft</span>
+    <button class="stu-b" onclick="stuVersions()">History</button><button class="stu-b" onclick="stuDownload()">Download</button><button class="stu-b pri" onclick="stuPublish()">Publish</button>
+  </div>
+  <div class="stu-main">
+    <div class="stu-stage" id="stuStage"><div class="stu-hint" id="stuHint">Click anything to select it &middot; drag to move &middot; double-click text to type &middot; corner handle resizes</div><div class="stu-wrap" id="stuWrap"><iframe id="stuFrame" title="Your website"></iframe></div></div>
+    <aside class="stu-side">
+      <div class="stu-tabs"><button data-t="el" class="on" onclick="stuTab('el')">Element</button><button data-t="site" onclick="stuTab('site')">Whole site</button><button data-t="add" onclick="stuTab('add')">Add</button></div>
+      <div class="stu-pane" id="stuPane"></div>
+    </aside>
+  </div>
+  <div class="stu-modal" id="stuModal" hidden><div class="stu-card" id="stuModalBody"></div></div>
+</div>
+
+<!-- =================== ORDERS =================== -->
+<main class="view" id="v-orders"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Order Center</h1><p>Accept, process and complete requests. Customers get a tracking link.</p></div><input id="ordQ" class="wk-in" placeholder="Search orders" oninput="renderOrders()"></div><div id="ordBoard" class="wk-board"></div></div></main>
+<!-- =================== CALENDAR =================== -->
+<main class="view" id="v-calendar"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Booking Calendar</h1><p>Set your working hours. Customers can only pick free times, so double booking cannot happen.</p></div></div><div id="calBody"></div></div></main>
+<!-- =================== CUSTOMERS =================== -->
+<main class="view" id="v-customers"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Customers</h1><p>Everyone who ordered, booked or wrote to you. Private to your account.</p></div><div style="display:flex;gap:8px"><input id="cusQ" class="wk-in" placeholder="Search" oninput="renderCustomers()"><button class="btn-ghost" onclick="exportCustomers()">Export CSV</button></div></div><div id="cusBody"></div></div></main>
+<!-- =================== SYSTEM HEALTH =================== -->
+<main class="view" id="v-system"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>System Health</h1><p>Live checks of the database, messenger, uploads, orders, bookings and calls.</p></div><button class="btn" onclick="loadSystem()">Run checks</button></div><div id="sysBody"></div></div></main>
+<!-- =================== RELEASES =================== -->
+<main class="view" id="v-releases"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Release Center</h1><p>What your GoldOffer can do, what changed, and whether it is healthy.</p></div></div><div id="relBody"></div></div></main>
 
 <!-- =================== RESET PASSWORD =================== -->
 <main class="view" id="v-reset">
@@ -1224,7 +1265,7 @@
 </div></main>
 <!-- =================== STUDIO SETTINGS =================== -->
 <main class="view" id="v-settings"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Settings</h1><p>Choose where to manage each part of your site.</p></div></div>
-  <div class="go-setting-grid"><a href="/build" data-link><strong>Website appearance →</strong><span>Brand, theme, business details and publishing</span></a><a href="/messages" data-link><strong>Messages →</strong><span>Talk to visitors in a dedicated inbox</span></a><a href="/reviews" data-link><strong>Customer reviews →</strong><span>View visitor feedback on your store</span></a><a href="/business" data-link><strong>Business Hub →</strong><span>Appointments, stock, notes, shop tools</span></a><a href="/analytics" data-link><strong>Analytics →</strong><span>Completed orders, revenue and offers</span></a></div>
+  <div class="go-setting-grid"><a href="/build" data-link><strong>Website appearance →</strong><span>Brand, theme, business details and publishing</span></a><a href="/messages" data-link><strong>Messages →</strong><span>Talk to visitors in a dedicated inbox</span></a><a href="/reviews" data-link><strong>Customer reviews →</strong><span>View visitor feedback on your store</span></a><a href="/business" data-link><strong>Business Hub →</strong><span>Appointments, stock, notes, shop tools</span></a><a href="/analytics" data-link><strong>Analytics →</strong><span>Completed orders, revenue and offers</span></a><a href="/studio" data-link><strong>Design Studio →</strong><span>Drag, recolor and rewrite your whole site</span></a><a href="/orders" data-link><strong>Order Center →</strong><span>Accept, process, complete, tracking links</span></a><a href="/calendar" data-link><strong>Booking Calendar →</strong><span>Working hours, breaks, free slots</span></a><a href="/customers" data-link><strong>Customers →</strong><span>Mini CRM, notes, export, erase</span></a><a href="/system" data-link><strong>System Health →</strong><span>Database, messenger, uploads, calls</span></a><a href="/releases" data-link><strong>Release Center →</strong><span>Version, features and recent changes</span></a></div>
   <div class="panel go-admin"><h2>Verification administration</h2><p>Only the administrator configured with ADMIN_EMAIL in Render can access pending applications.</p><button type="button" class="btn-ghost" onclick="loadVerificationRequests()">Check pending requests</button><div id="adminVerificationList" aria-live="polite"></div></div>
 </div></main>
 <!-- =================== BUSINESS HUB =================== -->
@@ -1473,8 +1514,9 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   }
 
   // ---------- Router: every route is its own page ----------
-  const ROUTES = { '/business':'business', '/analytics':'analytics', '/settings':'settings', '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/messages': 'messages', '/reviews': 'reviews', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset' };
+  const ROUTES = { '/business':'business', '/analytics':'analytics', '/settings':'settings', '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/messages': 'messages', '/reviews': 'reviews', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset', '/studio': 'studio', '/customers': 'customers', '/calendar': 'calendar', '/orders': 'orders', '/system': 'system', '/releases': 'releases' };
   const TITLES = {
+    studio: 'Design Studio - GoldOffer Studio', customers: 'Customers - GoldOffer Studio', calendar: 'Booking Calendar - GoldOffer Studio', orders: 'Order Center - GoldOffer Studio', system: 'System Health - GoldOffer Studio', releases: 'Release Center - GoldOffer Studio',
     business: 'Business Hub - GoldOffer Studio', analytics: 'Analytics - GoldOffer Studio', settings: 'Settings - GoldOffer Studio', privacy: 'Privacy Policy - GoldOffer Studio', terms: 'Terms of use - GoldOffer Studio', reset: 'New password - GoldOffer Studio',
     home: 'GoldOffer Studio - Websites for local businesses', how: 'How it works - GoldOffer Studio', features: 'Features - GoldOffer Studio',
     professions: 'Professions - GoldOffer Studio', pricing: 'Pricing - GoldOffer Studio', about: 'About - GoldOffer Studio',
@@ -1498,6 +1540,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     if (name === 'business') loadBusinessSuite();
     if (name === 'analytics') loadAnalytics();
     if (name === 'messages') openMessagesPage();
+    if (S.user) { if (name === 'orders') loadOrders(); if (name === 'calendar') loadCalendar(); if (name === 'customers') loadCustomers(); if (name === 'system') loadSystem(); if (name === 'releases') loadReleases(); if (name === 'studio') openStudio(); } else if (!S.token && ['orders','calendar','customers','system','releases','studio'].includes(name)) setTimeout(() => openAuth('login'), 50);
     if (name === 'reviews') loadMyReviews();
     if (name === 'reset') prepareReset();
     if (name === 'professions') { renderMarquee(); renderGallery(); }
@@ -1740,6 +1783,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
 
   // ---------- Theme and font pickers ----------
   function buildPickers() {
+    if (!$('swatches') || !$('fonts')) return;
     $('swatches').innerHTML = THEMES.map(t =>
       '<button type="button" class="sw' + (t[0] === S.theme ? ' selected' : '') + '" style="background:' + t[2] + '" title="' + t[1] + '" data-t="' + t[0] + '"></button>').join('');
     $('swatches').onclick = (e) => { const b = e.target.closest('.sw'); if (b) applyTheme(b.dataset.t); };
@@ -1799,8 +1843,8 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     const a = $('authArea');
     if (S.user) {
       const nm = [S.user.firstName, S.user.lastName].filter(Boolean).join(' ');
-      a.innerHTML = '<span class="who" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span><a class="btn-ghost" href="/messages" data-link>Messages<span class="badge-msg who-badge" style="display:none"></span></a><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><button class="btn-ghost" onclick="logout()">Log out</button>';
-      setTimeout(() => { if (S.user) loadInbox(); }, 400);
+      a.innerHTML = '<span class="who" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span>' + bellHtml() + '<a class="btn-ghost" href="/messages" data-link>Messages<span class="badge-msg who-badge" style="display:none"></span></a><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><button class="btn-ghost" onclick="logout()">Log out</button>';
+      setTimeout(() => { if (S.user) { loadInbox(); startBell(); } }, 400);
     } else {
       a.innerHTML = '<button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button><button class="btn" onclick="openAuth(\'signup\')">Get started</button>';
     }
@@ -1957,6 +2001,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     renderPreview(); renderOfferList();
     if (u.published && u.siteUrl) showLive();
     if (currentPage === 'dashboard') loadDashboard(); if (currentPage === 'business') loadBusinessSuite();
+    if (['orders','calendar','customers','system','releases','studio'].includes(currentPage)) navigate('/' + currentPage, false);
   }
 
   // ---------- Builder steps ----------
@@ -1996,7 +2041,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     if (S.backToLive) { S.backToLive = false; showLive(); notify('Your design was updated. The live site shows it now.'); }
     else goStep(3);
   }
-  function changeDesign() { S.backToLive = true; goStep(2); }
+  function changeDesign() { openStudio(); }
 
   // ---------- Offers ----------
   function offerLimit() { return (S.user && S.user.offerLimit) || 10; }
@@ -2174,6 +2219,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     renderPreview();
   }
   function renderPreview() {
+    if (!$('pvName')) return;
     const name = $('siteName').value.trim() || (S.user && S.user.siteName) || '';
     $('pvName').textContent = name || 'Your brand';
     $('pvCat').textContent = S.category || 'Business category';
@@ -2663,6 +2709,304 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   }
 
   init();
+</script>
+<script>
+// ======================= Design Studio (parent side) =======================
+const ST = { D: null, hist: [], fut: [], page: 'home', phone: false, sel: null, scopeAll: false, similar: false, tab: 'el', ticket: '', slug: '', offers: [], fonts: [], layouts: [], layout: 'signature', timer: null, ready: false, dirty: false, last: '' };
+const emptyD = () => ({ v: {}, g: {}, p: {}, m: { g: {}, p: {} }, t: {}, im: {}, f: {}, mf: {} });
+const rid = () => Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 5);
+const stuF = () => $('stuFrame');
+const stuSend = (m) => { m.go = 1; try { stuF().contentWindow.postMessage(m, '*'); } catch (e) {} };
+
+async function openStudio() {
+  if (!S.user) return openAuth('login');
+  const nm = ($('siteName') && $('siteName').value.trim()) || S.user.siteName;
+  if (!nm) return notify('Please enter a site name first.');
+  try {
+    if (!S.user.slug || ($('siteName') && $('siteName').value.trim() !== S.user.siteName)) {
+      const d = await api('/api/site', { method: 'PUT', body: JSON.stringify({ siteName: nm, sellerBio: ($('sellerBio') && $('sellerBio').value.trim()) || S.user.sellerBio || '', category: S.category || S.user.category, city: ($('city') && $('city').value.trim()) || S.user.city, theme: S.theme, layout: S.layout, font: S.font }) });
+      S.user = d.user;
+    }
+    const [t, st] = await Promise.all([api('/api/studio/ticket', { method: 'POST', body: '{}' }), api('/api/studio/state')]);
+    ST.ticket = t.ticket; ST.slug = t.slug; ST.D = Object.assign(emptyD(), st.draft || {}); ST.D.m = Object.assign({ g: {}, p: {} }, ST.D.m); ['f', 'mf', 't', 'im', 'p', 'g', 'v'].forEach(k => { ST.D[k] = ST.D[k] || {}; });
+    ST.offers = st.offers || []; ST.fonts = st.fonts || []; ST.layouts = st.layouts || []; ST.layout = st.layout || 'signature';
+    ST.hist = []; ST.fut = []; ST.sel = null; ST.page = 'home'; ST.last = JSON.stringify(ST.D);
+  } catch (e) { return notify(e.message, 'Studio'); }
+  $('studio').hidden = false; document.body.style.overflow = 'hidden'; document.documentElement.classList.add('stu-open');
+  $('stuPage').innerHTML = '<option value="">Home page</option><option value="/profile">Seller profile</option><option value="/favorites">Saved page</option><option value="/messages">Messages page</option>' + ST.offers.map(o => '<option value="/offer/' + o._id + '">Offer: ' + esc(o.title).slice(0, 30) + '</option>').join('');
+  stuDevice(false); stuLoad(''); stuTab('el'); stuUpdateBtns();
+}
+function closeStudio() { stuFlush(); if (currentPage === 'studio') navigate('/dashboard'); $('studio').hidden = true; document.body.style.overflow = ''; $('stuFrame').src = 'about:blank'; ST.ready = false; if (S.user) { try { api('/api/auth/me').then(d => { S.user = d.user; }); } catch (e) {} } }
+function stuLoad(path) { ST.ready = false; $('stuFrame').src = API + '/site/' + encodeURIComponent(ST.slug) + path + '?studio=' + encodeURIComponent(ST.ticket); }
+function stuGo(p) { ST.sel = null; stuLoad(p); stuTab('el'); }
+function stuDevice(ph) { ST.phone = !!ph; $('stuWrap').classList.toggle('ph', ph); $('stuDesk').classList.toggle('on', !ph); $('stuPhone').classList.toggle('on', ph); stuRender(); }
+function stuPush(keep) { stuSend({ t: 'design', d: ST.D, keep: !!keep }); if (ST.sel && ST.sel.free) setTimeout(() => stuSend({ t: 'select-free', id: ST.sel.free }), 30); }
+function stuUpdateBtns() { $('stuUndo').disabled = !ST.hist.length; $('stuRedo').disabled = !ST.fut.length; }
+function stuCommit(before) {
+  // `before` is the JSON of the design before the change (for undo)
+  if (before !== undefined && before !== JSON.stringify(ST.D)) { ST.hist.push(before); if (ST.hist.length > 100) ST.hist.shift(); ST.fut = []; }
+  ST.dirty = true; $('stuSave').textContent = 'Unsaved changes'; stuPush(true); stuUpdateBtns();
+  clearTimeout(ST.timer); ST.timer = setTimeout(stuFlush, 1300);
+}
+async function stuFlush() {
+  clearTimeout(ST.timer); if (!ST.dirty || !ST.D) return; ST.dirty = false; $('stuSave').textContent = 'Saving...';
+  try { await api('/api/studio/draft', { method: 'PUT', body: JSON.stringify({ design: ST.D, layout: ST.layout }) }); $('stuSave').textContent = 'Draft saved'; } catch (e) { ST.dirty = true; $('stuSave').textContent = 'Not saved - ' + e.message; }
+}
+function stuUndo() { if (!ST.hist.length) return; ST.fut.push(JSON.stringify(ST.D)); ST.D = JSON.parse(ST.hist.pop()); stuCommit(); stuRender(); }
+function stuRedo() { if (!ST.fut.length) return; ST.hist.push(JSON.stringify(ST.D)); ST.D = JSON.parse(ST.fut.pop()); stuCommit(); stuRender(); }
+function stuDo(fn) { const b = JSON.stringify(ST.D); fn(ST.D); stuCommit(b); }
+
+// ---- where element rules live ----
+function stuRules(create) {
+  const D = ST.D, pg = ST.page;
+  if (ST.phone) { if (ST.scopeAll) return D.m.g; if (create) D.m.p[pg] = D.m.p[pg] || {}; return D.m.p[pg]; }
+  if (ST.scopeAll) return D.g; if (create) D.p[pg] = D.p[pg] || {}; return D.p[pg];
+}
+function stuSelKey() { const s = ST.sel; if (!s) return null; return (ST.similar && s.sim) ? s.sim : s.sel; }
+function stuFree() { return ST.sel && ST.sel.free ? ((ST.D.f[ST.page] || []).find(x => x.id === ST.sel.free) || null) : null; }
+function stuStyle() { const f = stuFree(); if (f) return f.s || (f.s = {}); const r = stuRules(false), k = stuSelKey(); return (r && k && r[k]) || {}; }
+function stuSet(prop, val) {
+  if (!ST.sel) return; const b = JSON.stringify(ST.D); const f = stuFree();
+  if (f) { f.s = f.s || {}; if (val === null || val === '') delete f.s[prop]; else f.s[prop] = String(val); }
+  else { const k = stuSelKey(); if (!k) return notify('This element cannot be edited precisely. Pick a parent or a neighbor.'); const r = stuRules(true); r[k] = r[k] || {}; if (val === null || val === '') delete r[k][prop]; else r[k][prop] = String(val); if (!Object.keys(r[k]).length) delete r[k]; }
+  stuCommit(b); stuSend({ t: 'refresh' });
+}
+function stuSetV(k, val) { stuDo(D => { if (val === null || val === '' || val === false) delete D.v[k]; else D.v[k] = val; }); }
+const hex = (c) => { const m = String(c || '').match(/\d+(\.\d+)?/g); if (!m || m.length < 3) return '#000000'; return '#' + [0, 1, 2].map(i => Number(m[i]).toString(16).padStart(2, '0')).join(''); };
+const stuNum = (v, d) => { const n = parseFloat(v); return Number.isFinite(n) ? n : d; };
+
+// ---- messages from the frame ----
+window.addEventListener('message', (e) => {
+  const m = e.data; if (!m || m.go !== 1 || e.source !== stuF().contentWindow) return;
+  if (m.t === 'ready') { ST.ready = true; ST.page = m.page || 'home'; ST.sel = null; stuPush(); stuRender(); }
+  else if (m.t === 'select') {
+    const prev = ST.sel; const next = m.sel === null && !m.free ? null : m;
+    const same = prev && next && prev.sel === next.sel && prev.free === next.free;
+    ST.sel = next; if (!same) ST.similar = false;
+    const a = document.activeElement; const typing = a && $('stuPane').contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName);
+    if (same && typing) return;
+    if (next && ST.tab !== 'el') ST.tab = 'el', document.querySelectorAll('.stu-tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === 'el'));
+    stuRender();
+  }
+  else if (m.t === 'move') {
+    stuDo(D => { const r = stuRules(true); const k = (ST.similar && ST.sel && ST.sel.sim) ? ST.sel.sim : m.sel; if (!k) return; r[k] = r[k] || {}; const cur = String(r[k].translate || '0px 0px').split(/\s+/).map(x => parseFloat(x) || 0); r[k].translate = (cur[0] + m.dx) + 'px ' + ((cur[1] || 0) + m.dy) + 'px'; });
+    stuSend({ t: 'refresh' });
+  } else if (m.t === 'size') { stuDo(D => { const r = stuRules(true); const k = m.sel; if (!k) return; r[k] = r[k] || {}; r[k].width = m.w + 'px'; r[k].height = m.h + 'px'; }); }
+  else if (m.t === 'free') {
+    stuDo(D => { const it = (D.f[ST.page] || []).find(x => x.id === m.id); if (!it) return; if (ST.phone) { const mf = (D.mf[ST.page] = D.mf[ST.page] || {}); const o = (mf[m.id] = mf[m.id] || {}); ['x', 'y', 'w', 'h'].forEach(k => { if (m[k] !== undefined) o[k] = m[k]; }); } else ['x', 'y', 'w', 'h'].forEach(k => { if (m[k] !== undefined) it[k] = m[k]; }); });
+  } else if (m.t === 'freeText') { stuDo(D => { const it = (D.f[ST.page] || []).find(x => x.id === m.id); if (it) it.text = m.text; }); }
+  else if (m.t === 'text') { stuDo(D => { D.t[ST.page] = D.t[ST.page] || {}; D.t[ST.page][m.sel] = m.text; }); }
+  else if (m.t === 'key') stuKey(m);
+});
+function stuKey(m) {
+  if (m.ctrl && m.k.toLowerCase() === 'z') return m.shift ? stuRedo() : stuUndo();
+  if (m.ctrl && m.k.toLowerCase() === 'y') return stuRedo();
+  if (m.ctrl && m.k.toLowerCase() === 'd') return stuDup();
+  if (!ST.sel) return;
+  if (m.k === 'Delete' || m.k === 'Backspace') return stuDelete();
+  const step = m.shift ? 10 : 1, d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[m.k]; if (d) stuNudge(d[0], d[1]);
+}
+document.addEventListener('keydown', (e) => { if ($('studio').hidden || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return; stuKey({ k: e.key, ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey }); });
+function stuNudge(dx, dy) {
+  const f = stuFree();
+  if (f) { stuDo(D => { if (ST.phone) { const o = ((D.mf[ST.page] = D.mf[ST.page] || {})[f.id] = (D.mf[ST.page][f.id] || {})); o.x = (o.x !== undefined ? o.x : f.x) + dx / 10; o.y = (o.y !== undefined ? o.y : f.y) + dy; } else { f.x += dx / 10; f.y += dy; } }); return; }
+  const cur = String(stuStyle().translate || '0px 0px').split(/\s+/).map(x => parseFloat(x) || 0); stuSet('translate', (cur[0] + dx) + 'px ' + ((cur[1] || 0) + dy) + 'px');
+}
+function stuDelete() { const f = stuFree(); if (f) { stuDo(D => { D.f[ST.page] = (D.f[ST.page] || []).filter(x => x.id !== f.id); }); ST.sel = null; stuSend({ t: 'deselect' }); stuRender(); } else stuSet('display', 'none'); }
+function stuDup() { const f = stuFree(); if (!f) return; stuDo(D => { const c = JSON.parse(JSON.stringify(f)); c.id = rid(); c.x += 3; c.y += 30; D.f[ST.page].push(c); }); }
+function stuReset() { const k = stuSelKey(); stuDo(D => { const r = stuRules(false); if (r && k) delete r[k]; if (D.t[ST.page] && ST.sel) delete D.t[ST.page][ST.sel.sel]; if (D.im[ST.page] && ST.sel) delete D.im[ST.page][ST.sel.sel]; }); }
+function stuAdd(kind) {
+  const y = 160; const id = rid();
+  const base = { text: { k: 'text', w: 40, text: 'Your text', s: { 'font-size': '34px', 'font-weight': '800', color: '#ffffff' } }, btn: { k: 'btn', w: 24, h: 48, text: 'Button', href: '', s: {} }, shape: { k: 'shape', w: 30, h: 160, s: { 'border-radius': '24px', 'background-image': 'linear-gradient(135deg,#ff3d81,#ffcf00)' } } }[kind];
+  stuDo(D => { D.f[ST.page] = D.f[ST.page] || []; D.f[ST.page].push(Object.assign({ id, x: 30, y }, base)); });
+  setTimeout(() => stuSend({ t: 'select-free', id }), 120);
+}
+async function stuUpload(cb) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return; const fd = new FormData(); fd.append('file', f);
+    try { const r = await fetch(API + '/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + S.token }, body: fd }); const j = await r.json(); if (!r.ok) throw new Error(j.message); cb(j.url); } catch (e) { notify(e.message, 'Upload'); }
+  }; inp.click();
+}
+function stuAddImage() { stuUpload(url => { const id = rid(); stuDo(D => { D.f[ST.page] = D.f[ST.page] || []; D.f[ST.page].push({ id, k: 'img', x: 30, y: 160, w: 34, h: 240, src: url, text: '', s: {} }); }); }); }
+function stuReplaceImg() { stuUpload(url => { const f = stuFree(); if (f) return stuDo(D => { f.src = url; }); if (!ST.sel || !ST.sel.sel) return; stuDo(D => { D.im[ST.page] = D.im[ST.page] || {}; D.im[ST.page][ST.sel.sel] = url; }); }); }
+
+// ---- inspector ----
+function stuTab(t, fromSel) { ST.tab = t; document.querySelectorAll('.stu-tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); stuRender(); }
+const cRow = (label, prop, cur, extra) => '<div class="stu-r"><label>' + label + '</label><input type="color" value="' + hex(cur) + '" oninput="stuSet(\'' + prop + '\',this.value)"><button class="stu-x" onclick="stuSet(\'' + prop + '\',null)">clear</button>' + (extra || '') + '</div>';
+const nRow = (label, prop, cur, unit, min, max, step) => '<div class="stu-r"><label>' + label + '</label><input type="number" min="' + min + '" max="' + max + '" step="' + (step || 1) + '" value="' + (Number.isFinite(cur) ? cur : '') + '" onchange="stuSet(\'' + prop + '\',this.value===\'\'?null:this.value+\'' + unit + '\')"><button class="stu-x" onclick="stuSet(\'' + prop + '\',null)">clear</button></div>';
+function gradRow(label, prop, cur) {
+  const m = String(cur || '').match(/#[0-9a-f]{6}/gi) || ['#ff3d81', '#ffcf00']; const ang = (String(cur || '').match(/(\d+)deg/) || [0, 135])[1];
+  return '<div class="stu-r"><label>' + label + '</label><input type="color" id="g1' + prop + '" value="' + m[0] + '" oninput="stuGrad(\'' + prop + '\')"><input type="color" id="g2' + prop + '" value="' + (m[1] || m[0]) + '" oninput="stuGrad(\'' + prop + '\')"><input type="number" id="ga' + prop + '" value="' + ang + '" min="0" max="360" style="max-width:62px" onchange="stuGrad(\'' + prop + '\')"><button class="stu-x" onclick="stuSet(\'' + prop + '\',null)">clear</button></div>';
+}
+function stuGrad(prop) { stuSet(prop, 'linear-gradient(' + ($('ga' + prop).value || 135) + 'deg,' + $('g1' + prop).value + ',' + $('g2' + prop).value + ')'); }
+function stuRender() {
+  const pane = $('stuPane'); if (!pane) return;
+  if (ST.tab === 'site') return stuSiteTab(pane);
+  if (ST.tab === 'add') { pane.innerHTML = '<h5>Add anything, anywhere</h5><p style="color:#8a97ad;margin-bottom:10px">New items float on top of the page. Drag them wherever you want, then style them in the Element tab.</p><div class="stu-tg" style="flex-direction:column"><button onclick="stuAdd(\'text\')">+ Text or heading</button><button onclick="stuAdd(\'btn\')">+ Button (link)</button><button onclick="stuAddImage()">+ Image (upload)</button><button onclick="stuAdd(\'shape\')">+ Shape / colored block</button></div><h5>Tips</h5><p style="color:#8a97ad;line-height:1.5">Phone mode keeps its own positions for added items. Switch to Phone, then drag to fix how it looks on mobile.</p>'; return; }
+  const s = ST.sel;
+  if (!s) { pane.innerHTML = '<div class="stu-pill">Nothing selected</div><p style="color:#8a97ad;line-height:1.6">Click any text, picture, button or box on your site. Then change its color, font, size, position, effects and more. Double-click text to retype it. Use <b>Whole site</b> for global colors, fonts and effects.</p>'; return; }
+  const st = stuStyle(), cs = s.cs || {}, fr = stuFree(); const get = (p, d) => st[p] !== undefined ? st[p] : d;
+  const tr = String(st.translate || '0px 0px').split(/\s+/).map(x => parseFloat(x) || 0);
+  let h = '<div class="stu-pill">' + (fr ? 'Added ' + ({ text: 'text', btn: 'button', img: 'image', shape: 'shape' }[fr.k]) : esc(s.label || s.tag)) + (ST.phone ? ' &middot; <b>phone</b>' : '') + '</div>';
+  if (!fr) h += '<div class="stu-tg"><button class="' + (ST.scopeAll ? '' : 'on') + '" onclick="ST.scopeAll=false;stuRender()">This page</button><button class="' + (ST.scopeAll ? 'on' : '') + '" onclick="ST.scopeAll=true;stuRender()">All pages</button>' + (s.sim ? '<button class="' + (ST.similar ? 'on' : '') + '" onclick="ST.similar=!ST.similar;stuRender()">All like this</button>' : '') + '</div>';
+  if (fr && (fr.k === 'text' || fr.k === 'btn')) h += '<div class="stu-r"><label>Text</label><input type="text" value="' + esc(fr.text || '') + '" onchange="stuDo(D=>{stuFree().text=this.value})"></div>';
+  if (fr && fr.k === 'btn') h += '<div class="stu-r"><label>Link</label><input type="text" placeholder="https://... or tel:+359..." value="' + esc(fr.href || '') + '" onchange="stuDo(D=>{stuFree().href=this.value})"></div>';
+  if (s.img || (fr && fr.k === 'img')) h += '<div class="stu-tg"><button onclick="stuReplaceImg()">Replace image</button></div>';
+  if (s.text || (fr && fr.k !== 'img' && fr.k !== 'shape')) {
+    h += '<h5>Text</h5>' + cRow('Color', 'color', get('color', cs.color)) + gradRow('Gradient text', 'gradText', st.gradText);
+    h += '<div class="stu-r"><label>Font</label><select onchange="stuSet(\'font-family\',this.value||null)"><option value="">Default</option>' + ST.fonts.map(f => '<option value="' + f[0] + '"' + (get('font-family') === f[0] ? ' selected' : '') + '>' + f[1] + ' - ' + f[3] + '</option>').join('') + '</select></div>';
+    h += nRow('Size (px)', 'font-size', stuNum(get('font-size'), Math.round(cs.size)), 'px', 8, 200);
+    h += '<div class="stu-tg"><button class="' + (get('font-weight') === '800' ? 'on' : '') + '" onclick="stuSet(\'font-weight\',' + (get('font-weight') === '800' ? 'null' : '\'800\'') + ')"><b>B</b></button><button class="' + (get('font-style') === 'italic' ? 'on' : '') + '" onclick="stuSet(\'font-style\',' + (get('font-style') === 'italic' ? 'null' : '\'italic\'') + ')"><i>I</i></button><button class="' + (get('text-decoration') === 'underline' ? 'on' : '') + '" onclick="stuSet(\'text-decoration\',' + (get('text-decoration') === 'underline' ? 'null' : '\'underline\'') + ')"><u>U</u></button><button class="' + (get('text-transform') === 'uppercase' ? 'on' : '') + '" onclick="stuSet(\'text-transform\',' + (get('text-transform') === 'uppercase' ? 'null' : '\'uppercase\'') + ')">AA</button>' + ['left', 'center', 'right'].map(a => '<button class="' + (get('text-align') === a ? 'on' : '') + '" onclick="stuSet(\'text-align\',\'' + a + '\')">' + a[0].toUpperCase() + '</button>').join('') + '</div>';
+    h += nRow('Letter space', 'letter-spacing', stuNum(get('letter-spacing'), 0), 'px', -5, 40, 0.5) + nRow('Line height', 'line-height', stuNum(get('line-height'), NaN), '', 0.8, 4, 0.1);
+    h += '<div class="stu-r"><label>Text glow</label><select onchange="stuSet(\'text-shadow\',this.value||null)"><option value="">None</option><option value="0 2px 12px rgba(0,0,0,.6)">Soft shadow</option><option value="3px 3px 0 rgba(0,0,0,.6)">Hard shadow</option><option value="0 0 18px #ffcf00">Gold glow</option><option value="0 0 18px #00e5ff">Cyan glow</option><option value="0 0 18px #ff3d81">Pink glow</option></select></div>';
+  }
+  h += '<h5>Box</h5>' + cRow('Fill', 'background-color', get('background-color', cs.bg), '<button class="stu-x" onclick="stuSet(\'background-color\',\'transparent\')">none</button>') + gradRow('Gradient fill', 'background-image', st['background-image']);
+  h += nRow('Corners', 'border-radius', stuNum(get('border-radius'), Math.round(cs.radius || 0)), 'px', 0, 200) + nRow('Border', 'border-width', stuNum(get('border-width'), NaN), 'px', 0, 30) + cRow('Border color', 'border-color', get('border-color', '#ffffff'));
+  if (st['border-width'] && !st['border-style']) setTimeout(() => stuSet('border-style', 'solid'), 0);
+  h += '<div class="stu-r"><label>Shadow</label><select onchange="stuSet(\'box-shadow\',this.value||null)"><option value="">None</option><option value="0 10px 30px rgba(0,0,0,.35)">Soft</option><option value="0 24px 60px rgba(0,0,0,.55)">Deep</option><option value="6px 6px 0 rgba(0,0,0,.7)">Hard</option><option value="0 0 30px var(--a)">Accent glow</option><option value="0 0 40px #ff3d81">Pink glow</option></select></div>';
+  h += '<div class="stu-r"><label>Opacity</label><input type="range" min="0" max="1" step="0.05" value="' + get('opacity', 1) + '" oninput="stuSet(\'opacity\',this.value)"></div>';
+  h += '<h5>Position &amp; size</h5>';
+  if (!fr) h += nRow('Move X', 'translate-x', tr[0], '', -2000, 2000).replace(/stuSet\('translate-x',[^)]*\)/g, "stuMoveAxis(0,this.value)") + nRow('Move Y', 'translate-y', tr[1], '', -2000, 2000).replace(/stuSet\('translate-y',[^)]*\)/g, "stuMoveAxis(1,this.value)");
+  h += nRow('Width', 'width', stuNum(get('width'), cs.w), 'px', 10, 3000) + nRow('Height', 'height', stuNum(get('height'), cs.h), 'px', 10, 3000);
+  h += nRow('Rotate', 'rotate', stuNum(get('rotate'), 0), 'deg', -360, 360) + nRow('Scale', 'scale', stuNum(get('scale'), 1), '', 0.1, 5, 0.05) + nRow('Padding', 'padding', stuNum(get('padding'), NaN), 'px', 0, 200);
+  h += '<h5>Effects</h5><div class="stu-r"><label>Animation</label><select onchange="stuSet(\'anim\',this.value===\'none\'?null:this.value)">' + ['none', 'float', 'pulse', 'glow', 'shake', 'wiggle', 'spin', 'fadein', 'rise', 'rainbow'].map(a => '<option' + (get('anim', 'none') === a ? ' selected' : '') + '>' + a + '</option>').join('') + '</select></div>' + nRow('Blur', 'filter', NaN, 'px', 0, 40).replace(/stuSet\('filter',([^)]*)\)/, "stuSet('filter',this.value===''?null:'blur('+this.value+'px)')");
+  h += '<h5>Actions</h5><div class="stu-tg"><button onclick="stuSet(\'display\',\'none\')">Hide</button><button onclick="stuSet(\'display\',null)">Show</button>' + (fr ? '<button onclick="stuDup()">Duplicate</button><button onclick="stuDelete()">Delete</button>' : '<button onclick="stuReset()">Reset element</button>') + '</div><p style="color:#6f7d94;margin-top:8px">Arrow keys nudge &middot; Shift = 10x &middot; Delete hides</p>';
+  pane.innerHTML = h;
+}
+function stuMoveAxis(i, val) { const cur = String(stuStyle().translate || '0px 0px').split(/\s+/).map(x => parseFloat(x) || 0); cur[i] = parseFloat(val) || 0; stuSet('translate', (cur[0] || 0) + 'px ' + (cur[1] || 0) + 'px'); }
+function stuSiteTab(pane) {
+  const v = ST.D.v, fo = (k) => '<option value="">Default</option>' + ST.fonts.map(f => '<option value="' + f[0] + '"' + (v[k] === f[0] ? ' selected' : '') + '>' + f[1] + ' - ' + f[3] + '</option>').join('');
+  const cr = (l, k, d) => '<div class="stu-r"><label>' + l + '</label><input type="color" value="' + (v[k] || d) + '" oninput="stuSetV(\'' + k + '\',this.value)"><button class="stu-x" onclick="stuSetV(\'' + k + '\',null)">clear</button></div>';
+  const tg = (l, k, val) => '<button class="' + (v[k] === val ? 'on' : '') + '" onclick="stuSetV(\'' + k + '\',' + (v[k] === val ? 'null' : JSON.stringify(val)) + ')">' + l + '</button>';
+  pane.innerHTML = '<h5>Colors</h5>' + cr('Accent', 'accent', '#ffdf00') + cr('Accent 2', 'accent2', '#ff9000') + cr('Background', 'bg', '#05070b') + cr('Panels', 'panel', '#0d121b') + cr('Text', 'text', '#f1eee8')
+    + '<div class="stu-r"><label>Background gradient</label><input type="color" id="bg1" value="#0b1020" oninput="stuBg()"><input type="color" id="bg2" value="#2a0f3d" oninput="stuBg()"><button class="stu-x" onclick="stuSetV(\'bgGrad\',null)">clear</button></div><div class="stu-tg"><button onclick="stuUpload(u=>stuSetV(\'bgImg\',u))">Background photo</button><button onclick="stuSetV(\'bgImg\',null)">Remove photo</button></div>'
+    + '<h5>Fonts</h5><div class="stu-r"><label>Body</label><select onchange="stuSetV(\'font\',this.value)">' + fo('font') + '</select></div><div class="stu-r"><label>Headings</label><select onchange="stuSetV(\'headFont\',this.value)">' + fo('headFont') + '</select></div>'
+    + '<div class="stu-r"><label>Text size</label><input type="range" min="0.8" max="1.4" step="0.05" value="' + (v.scale || 1) + '" oninput="stuSetV(\'scale\',Number(this.value))"></div><div class="stu-r"><label>Roundness</label><input type="range" min="0" max="40" value="' + (v.radius === undefined ? 14 : v.radius) + '" oninput="stuSetV(\'radius\',Number(this.value))"></div>'
+    + '<h5>Atmosphere</h5><div class="stu-r"><label>Effect</label><select onchange="stuSetV(\'fx\',this.value===\'none\'?null:this.value)">' + ['none', 'grain', 'vignette', 'scanlines', 'grid', 'glow', 'aurora', 'snow', 'confetti', 'stars', 'bubbles'].map(a => '<option' + (v.fx === a ? ' selected' : '') + '>' + a + '</option>').join('') + '</select></div><div class="stu-tg">' + tg('Glow cursor', 'glowCursor', true) + tg('Scroll bar', 'progress', true) + tg('No reveal anim', 'noReveal', true) + '<button class="' + (v.stickyBar === false ? 'on' : '') + '" onclick="stuSetV(\'stickyBar\',' + (v.stickyBar === false ? 'null' : 'false') + ')">Static header</button></div>'
+    + '<h5>Base template</h5><div class="stu-r"><select onchange="ST.layout=this.value;stuCommit();stuLoad($(\'stuPage\').value)">' + ST.layouts.map(l => '<option' + (ST.layout === l ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div><p style="color:#6f7d94">Your edits stay when you change the template.</p>'
+    + '<h5>Danger zone</h5><div class="stu-tg"><button onclick="if(confirm(\'Remove ALL your design changes (a version is kept in History)?\'))stuDo(D=>{Object.assign(D,emptyD())})">Reset everything</button></div>';
+}
+function stuBg() { stuSetV('bgGrad', 'linear-gradient(135deg,' + $('bg1').value + ',' + $('bg2').value + ')'); }
+
+// ---- publish / history / download ----
+async function stuPublish() {
+  await stuFlush();
+  try { await api('/api/studio/publish', { method: 'POST', body: JSON.stringify({ label: prompt('Name this version (optional)', '') || 'Published' }) }); $('stuSave').textContent = 'Published ' + new Date().toLocaleTimeString(); notify('Published! Your live site now shows this design. The previous version is saved in History.', 'Published'); } catch (e) { notify(e.message, 'Publish'); }
+}
+async function stuDownload() {
+  await stuFlush();
+  try { const r = await fetch(API + '/api/studio/export', { headers: { Authorization: 'Bearer ' + S.token } }); if (!r.ok) throw new Error('Download failed'); const b = await r.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = (ST.slug || 'site') + '.html'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); } catch (e) { notify(e.message, 'Download'); }
+}
+async function stuVersions() {
+  await stuFlush(); const m = $('stuModal'), body = $('stuModalBody'); m.hidden = false; body.innerHTML = 'Loading...';
+  try {
+    const d = await api('/api/studio/versions');
+    body.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><h3>Version history</h3><button class="stu-b" onclick="$(\'stuModal\').hidden=true">Close</button></div><p style="color:#8a97ad;margin:6px 0 10px">Restoring changes only the look of your site. Offers, messages, orders, bookings and customers are never touched.</p><button class="stu-b pri" onclick="stuCheckpoint()">Save a checkpoint now</button>'
+      + (d.versions.length ? d.versions.map(v => '<div class="stu-v"><div><b>' + esc(v.label || v.kind) + '</b><small>' + new Date(v.createdAt).toLocaleString() + ' &middot; ' + esc(v.kind) + ' &middot; ' + v.summary.styled + ' styles, ' + v.summary.added + ' added items</small></div><button class="stu-b" onclick="stuRestore(\'' + v._id + '\')">Restore</button></div>').join('') : '<p style="margin-top:14px;color:#8a97ad">No versions yet. A version is saved each time you publish.</p>');
+  } catch (e) { body.textContent = e.message; }
+}
+async function stuCheckpoint() { try { await api('/api/studio/versions', { method: 'POST', body: JSON.stringify({ label: prompt('Checkpoint name', 'Checkpoint') || 'Checkpoint' }) }); stuVersions(); } catch (e) { notify(e.message); } }
+async function stuRestore(id) {
+  if (!confirm('Restore this version? Your current design is saved as a version first.')) return;
+  try { const r = await api('/api/studio/versions/' + id + '/restore', { method: 'POST', body: '{}' }); ST.D = Object.assign(emptyD(), r.design); ST.hist = []; ST.fut = []; $('stuModal').hidden = true; stuPush(); stuLoad($('stuPage').value); notify(r.note, 'Restored'); } catch (e) { notify(e.message); }
+}
+// ======================= Orders =======================
+const ORD_COLS = [['Pending', 'New'], ['Accepted', 'Accepted'], ['Processing', 'In progress'], ['Completed', 'Completed'], ['Cancelled', 'Cancelled']];
+let ORDERS = [];
+async function loadOrders() { try { ORDERS = (await api('/api/orders')).orders; renderOrders(); } catch (e) { $('ordBoard').textContent = e.message; } }
+function renderOrders() {
+  const q = ($('ordQ').value || '').toLowerCase();
+  const rows = ORDERS.filter(o => !q || [o.offerTitle, o.customerName, o.customerContact].join(' ').toLowerCase().includes(q));
+  const next = { Pending: ['Accepted', 'Accept'], Accepted: ['Processing', 'Start work'], Processing: ['Completed', 'Complete'] };
+  $('ordBoard').innerHTML = ORD_COLS.map(([k, label]) => {
+    const list = rows.filter(o => (o.status || 'Pending') === k);
+    return '<div class="wk-col"><h3>' + label + '<span>' + list.length + '</span></h3>' + (list.map(o => '<div class="wk-card"><b>' + esc(o.offerTitle || 'Request') + '</b><small>' + esc(o.customerName || '') + ' &middot; EUR ' + money(o.amount) + '</small><small>' + esc((o.customerContact || '').slice(0, 90)) + '</small>' + (o.note ? '<small>&ldquo;' + esc(o.note.slice(0, 120)) + '&rdquo;</small>' : '') + '<small>' + new Date(o.createdAt).toLocaleString() + '</small><div class="wk-act">' + (next[k] ? '<button class="pri" onclick="ordSet(\'' + o._id + '\',\'' + next[k][0] + '\')">' + next[k][1] + '</button>' : '') + (o.trackUrl ? '<button onclick="copyTxt(\'' + esc(o.trackUrl) + '\')">Copy tracking link</button>' : '') + (k !== 'Cancelled' && k !== 'Completed' ? '<button onclick="ordSet(\'' + o._id + '\',\'Cancelled\')">Cancel</button>' : '') + (k === 'Cancelled' ? '<button onclick="ordSet(\'' + o._id + '\',\'Pending\')">Reopen</button>' : '') + '</div></div>').join('') || '<small style="color:#6f7d94;padding:6px">Nothing here</small>') + '</div>';
+  }).join('');
+}
+async function ordSet(id, status) { try { await api('/api/orders/' + id, { method: 'PATCH', body: JSON.stringify({ status }) }); await loadOrders(); } catch (e) { notify(e.message, 'Order'); } }
+function copyTxt(t) { navigator.clipboard.writeText(t).then(() => notify('Copied.'), () => prompt('Copy this link', t)); }
+
+// ======================= Calendar =======================
+const DOW = [['mon', 'Mon'], ['tue', 'Tue'], ['wed', 'Wed'], ['thu', 'Thu'], ['fri', 'Fri'], ['sat', 'Sat'], ['sun', 'Sun']];
+let CAL = null;
+async function loadCalendar() { try { CAL = await api('/api/calendar'); renderCalendar(); } catch (e) { $('calBody').textContent = e.message; } }
+function renderCalendar() {
+  const c = CAL.config, now = Date.now();
+  const hrs = DOW.map(([k, l]) => { const h = c.hours[k] || { on: false, from: '09:00', to: '18:00' }; return '<div class="wk-hrs"><b>' + l + '</b><input type="checkbox" id="ch_' + k + '"' + (h.on ? ' checked' : '') + '><input type="time" id="cf_' + k + '" value="' + h.from + '"><input type="time" id="ct_' + k + '" value="' + h.to + '"></div>'; }).join('');
+  const brk = (c.breaks || [])[0] || { from: '', to: '' };
+  const byDay = {}; CAL.appointments.forEach(a => { const d = new Date(a.startsAt).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }); (byDay[d] = byDay[d] || []).push(a); });
+  $('calBody').innerHTML = '<div class="wk-panel"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px"><h3>Online booking is ' + (c.enabled ? '<span class="wk-chip ok">ON</span>' : '<span class="wk-chip warn">OFF</span>') + '</h3><button class="btn" onclick="calSave(' + (!c.enabled) + ')">' + (c.enabled ? 'Turn off' : 'Turn on and save') + '</button></div>'
+    + '<h4 style="margin:14px 0 4px">Working hours</h4>' + hrs
+    + '<div class="wk-grid" style="margin-top:12px"><label>Break from<input type="time" id="cbf" value="' + brk.from + '"></label><label>Break to<input type="time" id="cbt" value="' + brk.to + '"></label><label>Visit length (min)<input type="number" id="cdur" min="5" max="600" value="' + c.durationMin + '"></label><label>Slot step (min)<select id="cstep">' + [10, 15, 20, 30, 45, 60].map(n => '<option' + (c.stepMin === n ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label><label>Buffer after (min)<input type="number" id="cbuf" min="0" max="120" value="' + c.bufferMin + '"></label><label>Min. notice (hours)<input type="number" id="cnot" min="0" max="168" value="' + c.noticeHours + '"></label><label>Book up to (days)<input type="number" id="cdays" min="1" max="365" value="' + c.daysAhead + '"></label><label>Time zone<input id="ctz" value="' + esc(c.tz) + '"></label></div>'
+    + '<label style="display:block;margin-top:12px;font-size:.78rem;color:#9aa6ba">Days off (YYYY-MM-DD, one per line)<textarea id="cclosed" rows="2">' + esc((c.closedDates || []).join('\n')) + '</textarea></label>'
+    + '<h4 style="margin:14px 0 4px">Length per service (optional)</h4><div class="wk-grid">' + CAL.offers.map(o => '<label>' + esc(o.title) + '<input type="number" class="cdo" data-id="' + o._id + '" min="5" max="600" placeholder="' + c.durationMin + '" value="' + ((c.durations || {})[o._id] || '') + '"></label>').join('') + '</div>'
+    + '<div style="margin-top:14px"><button class="btn" onclick="calSave()">Save calendar</button></div></div>'
+    + '<div class="wk-panel"><h3>Bookings</h3>' + (Object.keys(byDay).length ? Object.entries(byDay).map(([d, list]) => '<h4 style="margin:12px 0 4px;color:#9aa6ba">' + d + '</h4>' + list.map(a => { const t = new Date(a.startsAt); return '<div class="wk-row"><div style="flex:1"><b>' + t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + (a.durationMin ? ' &middot; ' + a.durationMin + ' min' : '') + ' &middot; ' + esc(a.customer) + '</b><small>' + esc(a.contact) + (a.note ? ' &middot; ' + esc(a.note) : '') + '</small></div><span class="wk-chip ' + (a.status === 'Confirmed' || a.status === 'Completed' ? 'ok' : a.status === 'Cancelled' ? '' : 'warn') + '">' + a.status + '</span><div class="wk-act" style="margin:0">' + (a.status === 'Pending' ? '<button class="pri" onclick="calSt(\'' + a._id + '\',\'Confirmed\')">Confirm</button>' : '') + (a.status === 'Confirmed' ? '<button onclick="calSt(\'' + a._id + '\',\'Completed\')">Done</button>' : '') + (a.status === 'Pending' || a.status === 'Confirmed' ? '<button onclick="calSt(\'' + a._id + '\',\'Cancelled\')">Cancel</button>' : '') + '</div></div>'; }).join('')).join('') : '<p style="color:#8a97ad">No bookings in this period.</p>')
+    + '<h4 style="margin:18px 0 6px">Add a booking by hand</h4><div class="wk-grid"><label>Name<input id="mbn"></label><label>Contact<input id="mbc"></label><label>Start<input type="datetime-local" id="mbs"></label><label>Minutes<input type="number" id="mbd" value="' + c.durationMin + '"></label></div><div style="margin-top:10px"><button class="btn-ghost" onclick="calManual()">Add booking</button></div></div>';
+}
+async function calSave(toggle) {
+  const hours = {}; DOW.forEach(([k]) => { hours[k] = { on: $('ch_' + k).checked, from: $('cf_' + k).value, to: $('ct_' + k).value }; });
+  const durations = {}; document.querySelectorAll('.cdo').forEach(i => { if (i.value) durations[i.dataset.id] = Number(i.value); });
+  const body = { hours, breaks: $('cbf').value && $('cbt').value ? [{ from: $('cbf').value, to: $('cbt').value }] : [], durationMin: +$('cdur').value, stepMin: +$('cstep').value, bufferMin: +$('cbuf').value, noticeHours: +$('cnot').value, daysAhead: +$('cdays').value, tz: $('ctz').value.trim(), closedDates: $('cclosed').value.split(/\s+/).filter(Boolean), durations };
+  if (typeof toggle === 'boolean') body.enabled = toggle;
+  try { await api('/api/calendar', { method: 'PUT', body: JSON.stringify(body) }); await loadCalendar(); notify('Calendar saved.'); } catch (e) { notify(e.message, 'Calendar'); }
+}
+async function calSt(id, status) { try { await api('/api/business/appointments/' + id, { method: 'PATCH', body: JSON.stringify({ status }) }); loadCalendar(); } catch (e) { notify(e.message, 'Booking'); } }
+async function calManual() { try { const d = new Date($('mbs').value); await api('/api/business/appointments', { method: 'POST', body: JSON.stringify({ customer: $('mbn').value, contact: $('mbc').value, startsAt: d.toISOString(), durationMin: +$('mbd').value }) }); loadCalendar(); } catch (e) { notify(e.message, 'Booking'); } }
+
+// ======================= Customers =======================
+let CUS = [];
+async function loadCustomers() { try { CUS = (await api('/api/customers')).customers; renderCustomers(); } catch (e) { $('cusBody').textContent = e.message; } }
+function renderCustomers() {
+  const q = ($('cusQ').value || '').toLowerCase(); const rows = CUS.filter(c => !q || (c.name + ' ' + c.contacts.join(' ') + ' ' + c.tags.join(' ')).toLowerCase().includes(q));
+  $('cusBody').innerHTML = '<div class="wk-panel" style="padding:6px 18px">' + (rows.map((c, i) => '<div class="wk-row"><div style="flex:1;min-width:0"><b>' + esc(c.name) + '</b> <span class="wk-chip ' + (c.status === 'vip' ? 'vip' : c.status === 'customer' ? 'ok' : '') + '">' + esc(c.status) + '</span>' + c.tags.map(t => '<span class="wk-chip">' + esc(t) + '</span>').join('') + '<small>' + esc(c.contacts.join(' · ').slice(0, 120)) + '</small><small>' + c.orders + ' orders · EUR ' + money(c.spent) + ' · ' + c.bookings + ' bookings · ' + c.chats + ' chats' + (c.last ? ' · last ' + new Date(c.last).toLocaleDateString() : '') + '</small></div><button class="btn-ghost" onclick="cusOpen(' + CUS.indexOf(c) + ')">Open</button></div>').join('') || '<p style="padding:16px;color:#8a97ad">No customers yet. They appear automatically when someone orders, books or writes to you.</p>') + '</div><p style="color:#6f7d94;font-size:.82rem">Privacy: this list is built only from your own orders, bookings and chats and is visible only to you. Use Erase to delete a person&rsquo;s personal data on request.</p>';
+}
+function cusOpen(i) {
+  const c = CUS[i]; const w = document.createElement('div'); w.className = 'stu-modal'; w.style.cssText = 'position:fixed;z-index:3000;display:grid'; w.id = 'cusM';
+  w.innerHTML = '<div class="stu-card" style="color:#e9edf5"><div style="display:flex;justify-content:space-between"><h3>' + esc(c.name) + '</h3><button class="stu-b" onclick="$(\'cusM\').remove()">Close</button></div><small style="color:#8a97ad">' + esc(c.contacts.join(' · ')) + '</small>'
+    + '<div class="stu-r"><label>Status</label><select id="cmS">' + ['lead', 'customer', 'vip', 'inactive'].map(s => '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></div><div class="stu-r"><label>Tags</label><input type="text" id="cmT" placeholder="comma separated" value="' + esc(c.tags.join(', ')) + '"></div>'
+    + '<div class="stu-r"><label>New note</label><input type="text" id="cmN" placeholder="Private note, only you see it"></div>' + (c.notes.length ? '<h5 style="margin:12px 0 4px;color:#8a97ad">Notes</h5>' + c.notes.map(n => '<div class="stu-v"><div>' + esc(n.text) + '<small>' + new Date(n.at).toLocaleString() + '</small></div></div>').join('') : '')
+    + '<div class="stu-tg" style="margin-top:14px"><button class="stu-b pri" onclick="cusSave(' + i + ')">Save</button><button class="stu-b" onclick="cusErase(' + i + ')">Erase personal data</button></div></div>';
+  document.body.appendChild(w);
+}
+async function cusSave(i) { const c = CUS[i]; try { await api('/api/customers/profile', { method: 'PUT', body: JSON.stringify({ key: c.key, status: $('cmS').value, tags: $('cmT').value.split(',').map(x => x.trim()).filter(Boolean), note: $('cmN').value }) }); $('cusM').remove(); loadCustomers(); } catch (e) { notify(e.message); } }
+async function cusErase(i) { const c = CUS[i]; if (!confirm('Erase all personal data of ' + c.name + '? Their chats are deleted and names/contacts in orders and bookings are blanked. This cannot be undone.')) return; try { await api('/api/customers/erase', { method: 'POST', body: JSON.stringify({ key: c.key }) }); $('cusM').remove(); loadCustomers(); } catch (e) { notify(e.message); } }
+async function exportCustomers() { try { const r = await fetch(API + '/api/customers/export.csv', { headers: { Authorization: 'Bearer ' + S.token } }); const b = await r.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'customers.csv'; a.click(); } catch (e) { notify(e.message); } }
+
+// ======================= System Health + Releases =======================
+async function loadSystem() {
+  $('sysBody').innerHTML = '<div class="wk-panel">Running checks...</div>';
+  try {
+    const h = await api('/api/system/health');
+    $('sysBody').innerHTML = '<div class="wk-panel"><h3>' + ({ ok: 'Everything works', warn: 'Works, with things to look at', fail: 'Something is broken' }[h.overall]) + '</h3><small style="color:#8a97ad">v' + h.version + ' &middot; Node ' + esc(h.node) + ' &middot; up ' + Math.round(h.uptimeSec / 60) + ' min &middot; ' + new Date(h.at).toLocaleTimeString() + '</small>' + h.checks.map(c => '<div class="wk-row"><span class="wk-dot wk-' + c.status + '" style="margin-top:5px"></span><div style="flex:1"><b>' + esc(c.label) + '</b><small>' + esc(c.detail) + '</small></div><small>' + c.ms + ' ms</small></div>').join('') + '</div>';
+  } catch (e) { $('sysBody').textContent = e.message; }
+}
+async function loadReleases() {
+  try {
+    const r = await api('/api/system/release'); const sc = { available: 'ok', 'needs-setup': 'warn', planned: '' };
+    $('relBody').innerHTML = '<div class="wk-panel"><h3>GoldOffer ' + esc(r.version) + '</h3><p>Last check: <span class="wk-chip ' + (r.check.overall === 'ok' ? 'ok' : 'warn') + '">' + r.check.overall.toUpperCase() + '</span> ' + (r.check.warnings.length ? 'Look at: ' + r.check.warnings.map(esc).join(', ') : 'No warnings') + (r.check.failed.length ? ' &middot; FAILED: ' + r.check.failed.map(esc).join(', ') : '') + ' <a href="/system" data-link style="color:#ffcf00">Open System Health</a></p></div>'
+      + '<div class="wk-panel"><h3>Available features</h3>' + r.features.map(f => '<div class="wk-row"><span class="wk-chip ' + sc[f.status] + '">' + esc(f.status) + '</span><div><b>' + esc(f.name) + '</b>' + (f.note ? '<small>' + esc(f.note) + '</small>' : '') + '</div></div>').join('') + '</div>'
+      + '<div class="wk-panel"><h3>Recent changes</h3>' + r.changelog.map(c => '<h4 style="margin:12px 0 4px">' + esc(c.version) + ' <small style="color:#8a97ad;font-weight:400">' + esc(c.date) + '</small></h4><ul style="padding-left:18px;color:#c9d1df;line-height:1.7">' + c.items.map(i => '<li>' + esc(i) + '</li>').join('') + '</ul>').join('') + '</div>';
+  } catch (e) { $('relBody').textContent = e.message; }
+}
+
+// ======================= Notification bell =======================
+let BELL = { rows: [], unread: 0, open: false, timer: null };
+function bellHtml() { return '<span class="bellw"><button class="bell-b" id="bellBtn" onclick="toggleBell(event)" aria-label="Notifications" title="Notifications">&#128276;<span class="bell-n" id="bellN" style="display:none"></span></button></span>'; }
+async function pollBell() {
+  if (!S.token) return; try { const d = await api('/api/notifications'); const was = BELL.unread; BELL.rows = d.notifications; BELL.unread = d.unread; const n = $('bellN'); if (n) { n.style.display = d.unread ? 'grid' : 'none'; n.textContent = d.unread > 9 ? '9+' : d.unread; } document.title = (d.unread ? '(' + d.unread + ') ' : '') + document.title.replace(/^\(\d+\)\s*/, ''); if (d.unread > was && was !== undefined && 'Notification' in window && Notification.permission === 'granted' && document.hidden) new Notification(d.notifications[0].title, { body: d.notifications[0].text }); if (BELL.open) renderBell(); } catch (e) {}
+}
+function startBell() { clearInterval(BELL.timer); BELL.unread = 0; pollBell(); BELL.timer = setInterval(pollBell, 25000); }
+function toggleBell(ev) { if (ev) ev.stopPropagation(); BELL.open = !BELL.open; if (BELL.open) { renderBell(); if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } else closeBell(); }
+function closeBell() { BELL.open = false; const p = $('bellP'); if (p) p.remove(); }
+function renderBell() {
+  let p = $('bellP'); if (!p) { p = document.createElement('div'); p.id = 'bellP'; p.className = 'bell-p'; document.body.appendChild(p); }
+  p.innerHTML = '<h4><b>Notifications</b><button class="stu-x" onclick="bellRead()">Mark all read</button></h4>' + (BELL.rows.length ? BELL.rows.map(n => '<a class="bell-i' + (n.read ? '' : ' un') + '" href="' + esc(n.link || '/dashboard') + '" data-link onclick="closeBell()"><b>' + esc(n.title) + (n.count > 1 ? ' (' + n.count + ')' : '') + '</b><small>' + esc(n.text || '') + '</small><small>' + new Date(n.updatedAt).toLocaleString() + '</small></a>').join('') : '<p style="padding:18px;color:#8a97ad">Nothing new. Messages, requests, orders and bookings will show up here.</p>') + '<p style="padding:10px 16px;color:#6f7d94;font-size:.76rem">Alerts appear while GoldOffer is open. Alerts when the app is closed need push setup (planned).</p>';
+}
+async function bellRead() { try { await api('/api/notifications/read', { method: 'POST', body: '{}' }); await pollBell(); } catch (e) {} }
+document.addEventListener('click', (e) => { if (BELL.open && !e.target.closest('#bellP') && !e.target.closest('#bellBtn')) closeBell(); });
+
 </script>
 </body>
 </html>

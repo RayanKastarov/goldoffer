@@ -119,6 +119,8 @@ const UserSchema = new mongoose.Schema({
   notifyOn: { type: Boolean, default: true },
   bookingEnabled: {type:Boolean,default:false},
   announcementText:{type:String,default:''},
+  design:{type:mongoose.Schema.Types.Mixed},
+  designDraft:{type:mongoose.Schema.Types.Mixed},
   faqItems:{type:[{question:String,answer:String,_id:false}],default:[]},
   termsAcceptedAt: Date,
   resetTokenHash: String,
@@ -152,7 +154,8 @@ const OrderSchema = new mongoose.Schema({
   contacts: [{ type: { type: String }, value: String, _id: false }],
   note: String,
   amount: Number,
-  status: { type: String, default: 'Pending' }, // Pending, Completed, Cancelled
+  status: { type: String, default: 'Pending' }, // Pending, Accepted, Processing, Completed, Cancelled
+  trackToken: { type: String, index: true }, history: { type: [{ status: String, at: Date, by: String, _id: false }], default: [] }, stockApplied: { type: Boolean, default: false }, ownerNote: String, anonymized: Boolean,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -931,32 +934,6 @@ app.delete('/api/offers/:id/image', authenticateToken, async (req, res) => {
 });
 
 // ---------- Orders ----------
-app.patch('/api/orders/:id', authenticateToken, async (req, res) => {
-  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
-  const status = req.body && req.body.status;
-  if (!['Pending', 'Completed', 'Cancelled'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
-  try {
-    const old = await Order.findOne({_id:req.params.id,userId:req.user.id});
-    if(!old)return res.status(404).json({message:'Order not found'});
-    if(old.status===status)return res.json({order:old});
-    // Only a completed, offer-linked order consumes one item. Do not decrement on a request.
-    if(status==='Completed'&&old.status!=='Completed'&&old.offerId){
-      const key='stock.'+String(old.offerId);
-      const setting=await ShopSetting.findOne({sellerId:req.user.id}).lean();
-      if(setting&&setting.stock&&setting.stock[key.slice(6)]!==undefined){
-        const reserved=await ShopSetting.findOneAndUpdate({sellerId:req.user.id,[key]:{$gt:0}},{$inc:{[key]:-1}});
-        if(!reserved)return res.status(409).json({message:'Not enough stock to complete this order.'});
-      }
-    }
-    // Completed order cannot be silently reversed in stock accounting.
-    if(old.status==='Completed'&&status!=='Completed'&&old.offerId){
-      const key='stock.'+String(old.offerId);
-      await ShopSetting.updateOne({sellerId:req.user.id,[key]:{$exists:true}},{$inc:{[key]:1}});
-    }
-    old.status=status;await old.save();res.json({order:old});
-  }catch(e){res.status(500).json({message:'Could not change order status'})}
-});
-
 app.post('/api/orders', authenticateToken, async (req, res) => {
   const { offerTitle, customerName, amount } = req.body || {};
   const a = Number(amount);
@@ -1510,6 +1487,7 @@ app.post('/site/:slug/chat/start', startLimiter, rejectOwnerSelfAction, async (r
       userId: user._id, offerId: offer._id, offerTitle: offer.title, customerName: name, customerEmail: email || undefined,
       tokenHash: tokHash(token), messages: [{ from: 'customer', text, at: new Date() }], unreadSeller: 1, lastAt: new Date(), sellerMailedAt: new Date()
     });
+    void pushNote(user._id, 'message', String(conv._id), 'New conversation', `${name}: ${String(text).slice(0, 80)}`, '/messages');
     if (user.notifyOn !== false) {
       sendMail({
         to: user.notifyEmail || user.email,
@@ -1582,6 +1560,7 @@ async function pushCustomerMessage(user, conv, text, att) {
   const mailNow = user.notifyOn !== false && (!conv.sellerMailedAt || Date.now() - new Date(conv.sellerMailedAt).getTime() > MAIL_GAP_MS);
   if (mailNow) conv.sellerMailedAt = new Date();
   await conv.save();
+  void pushNote(user._id, 'message', String(conv._id), 'New message', `${conv.customerName || 'A customer'}: ${String(text || (att ? 'sent a file' : '')).slice(0, 80)}`, '/messages');
   if (mailNow) {
     const shown = text || (att ? `File: ${att.name}` : '');
     sendMail({
@@ -1754,7 +1733,7 @@ Visit.schema.index({sellerId:1,createdAt:-1});
 const Appointment = mongoose.model('GOAppointment',new mongoose.Schema({
  sellerId:{type:mongoose.Schema.Types.ObjectId,index:true,required:true}, offerId:mongoose.Schema.Types.ObjectId,
  customer:{type:String,required:true,maxlength:80}, contact:{type:String,required:true,maxlength:140},
- startsAt:{type:Date,required:true},note:{type:String,maxlength:500},
+ startsAt:{type:Date,required:true},endsAt:Date,durationMin:Number,anonymized:Boolean,note:{type:String,maxlength:500},
  status:{type:String,enum:['Pending','Confirmed','Cancelled','Completed'],default:'Pending'},
  createdAt:{type:Date,default:Date.now}
 }));
@@ -1810,26 +1789,6 @@ app.get('/api/business/overview',authenticateToken,async(req,res)=>{
  res.set('Cache-Control','no-store').json({visits:Object.fromEntries(visits.map(v=>[v._id,v.total])),bookings,notes,reminders,setting:setting||{},orders,unreadConversations:conversations,turnConfigured:!!process.env.TURN_URL});
  }catch(e){res.status(500).json({message:'Could not load business data'})}
 });
-app.post('/api/business/appointments',authenticateToken,async(req,res)=>{
- try{const b=req.body||{};const d=new Date(b.startsAt);if(!Number.isFinite(d.valueOf())||d<Date.now()-86400000||d>Date.now()+366*86400000)return res.status(400).json({message:'Invalid appointment date'});
- const row=await Appointment.create({sellerId:req.user.id,startsAt:d,customer:String(b.customer||'').trim().slice(0,80)||'Manual booking',contact:String(b.contact||'').slice(0,140)||'Created by owner',note:String(b.note||'').slice(0,500)});res.status(201).json({appointment:row})}catch(e){res.status(500).json({message:'Could not save booking'})}
-});
-app.post('/site/:slug/appointment',publicLimiter,rejectOwnerSelfAction,async(req,res)=>{
- try{const owner=await User.findOne({slug:req.params.slug,published:true}).select('_id siteName email notifyEmail');if(!owner)return res.sendStatus(404);
- const b=req.body||{};if(b.consent!=='1')return res.status(400).send('Please accept the privacy notice.');const d=new Date(b.startsAt);const customer=String(b.customer||'').trim().slice(0,80),contact=String(b.contact||'').trim().slice(0,140);
- if(!customer||contact.length<5||!Number.isFinite(d.valueOf())||d<Date.now()+3600000||d>Date.now()+180*86400000)return res.status(400).send('Check the date and contact details.');
- if(await Appointment.exists({sellerId:owner._id,startsAt:d,status:{$in:['Pending','Confirmed']}}))return res.status(409).send('This slot has already been requested. Please pick another time.');
- const setting=await ShopSetting.findOne({sellerId:owner._id}).lean();if(!setting?.slotsEnabled)return res.status(403).send('Booking is not enabled for this business.');
- if(mongoose.isValidObjectId(b.offerId)){if(!await Offer.exists({_id:b.offerId,userId:owner._id}))return res.sendStatus(404)}
- await Appointment.create({sellerId:owner._id,offerId:mongoose.isValidObjectId(b.offerId)?b.offerId:undefined,startsAt:d,customer,contact,note:String(b.note||'').slice(0,500)});
- if(owner.email)void sendMail({to:owner.notifyEmail||owner.email,subject:'New booking request',text:`${customer} requested ${d.toISOString()}. Contact: ${contact}`});
- res.redirect(303,`/site/${encodeURIComponent(req.params.slug)}?booking=1`);
- }catch(e){if(e.code===11000)return res.status(409).send('This slot is already taken. Please choose another time.');res.status(500).send('Booking could not be saved')}
-});
-app.patch('/api/business/appointments/:id',authenticateToken,async(req,res)=>{
- if(!mongoose.isValidObjectId(req.params.id)||!['Pending','Confirmed','Cancelled','Completed'].includes(req.body?.status))return res.sendStatus(400);
- try{const row=await Appointment.findOneAndUpdate({_id:req.params.id,sellerId:req.user.id},{$set:{status:req.body.status}},{new:true});return row?res.json({appointment:row}):res.sendStatus(404);}catch(e){if(e.code===11000)return res.status(409).json({message:'The requested time is no longer available.'});return res.sendStatus(500)}
-});
 app.put('/api/business/settings',authenticateToken,async(req,res)=>{
  const b=req.body||{}, update={updatedAt:new Date()};
  if(typeof b.slotsEnabled==='boolean')update.slotsEnabled=b.slotsEnabled;
@@ -1873,6 +1832,788 @@ app.get('/api/business/export',authenticateToken,async(req,res)=>{
  res.set('Content-Disposition','attachment; filename="goldoffer-data.json"');res.set('Cache-Control','no-store');res.json({exportedAt:new Date(),offers,orders,appointments});
  }catch(e){res.sendStatus(500)}
 });
+
+// ---------- GoldOffer Design Engine (shared by the server and the Studio editor) ----------
+// goDesignCore() runs on the server AND (as text) inside the visitor's / editor's browser.
+// The server re-validates every design with sanitizeDesign(); the browser copy only draws.
+function goDesignCore() {
+  const FONT_LIST = [
+    ['inter', 'Inter', 'Inter:wght@400;600;800', 'Clean'],
+    ['poppins', 'Poppins', 'Poppins:wght@400;600;800', 'Friendly'],
+    ['montserrat', 'Montserrat', 'Montserrat:wght@400;600;800', 'Geometric'],
+    ['raleway', 'Raleway', 'Raleway:wght@400;600;800', 'Elegant sans'],
+    ['space', 'Space Grotesk', 'Space+Grotesk:wght@400;600;700', 'Techy'],
+    ['playfair', 'Playfair Display', 'Playfair+Display:wght@500;800', 'Luxury serif'],
+    ['dmserif', 'DM Serif Display', 'DM+Serif+Display', 'Magazine'],
+    ['lora', 'Lora', 'Lora:wght@400;700', 'Book'],
+    ['merri', 'Merriweather', 'Merriweather:wght@400;700', 'Classic serif'],
+    ['oswald', 'Oswald', 'Oswald:wght@500;700', 'Condensed'],
+    ['anton', 'Anton', 'Anton', 'Poster'],
+    ['bebas', 'Bebas Neue', 'Bebas+Neue', 'Headline'],
+    ['archivo', 'Archivo Black', 'Archivo+Black', 'Heavy'],
+    ['orbitron', 'Orbitron', 'Orbitron:wght@500;800', 'Sci-fi'],
+    ['righteous', 'Righteous', 'Righteous', 'Retro'],
+    ['pacifico', 'Pacifico', 'Pacifico', 'Brush'],
+    ['lobster', 'Lobster', 'Lobster', 'Bold script'],
+    ['dancing', 'Dancing Script', 'Dancing+Script:wght@500;700', 'Handwriting'],
+    ['caveat', 'Caveat', 'Caveat:wght@500;700', 'Marker'],
+    ['marker', 'Permanent Marker', 'Permanent+Marker', 'Graffiti'],
+    ['jetbrains', 'JetBrains Mono', 'JetBrains+Mono:wght@400;700', 'Code'],
+    ['comfortaa', 'Comfortaa', 'Comfortaa:wght@500;700', 'Rounded']
+  ];
+  const FONTS = {}; FONT_LIST.forEach(f => { FONTS[f[0]] = { name: f[1], gf: f[2], tag: f[3] }; });
+  const fam = (k) => FONTS[k] ? "'" + FONTS[k].name + "',sans-serif" : null;
+
+  // ----- validators: each returns the cleaned value or null -----
+  const C_HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+  const C_RGB = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(?:,\s*(?:0|1|0?\.\d{1,3})\s*)?\)$/i;
+  const C_NAME = /^(?:transparent|white|black|red|blue|green|yellow|orange|purple|pink|gray|grey|gold|silver|cyan|magenta|currentcolor)$/i;
+  const color = (v) => { v = String(v).trim(); return (C_HEX.test(v) || C_RGB.test(v) || C_NAME.test(v)) ? v : null; };
+  const BAD = /url|expression|javascript|import|attr\(|var\(|env\(|\\|;|\{|\}|<|>|@|\/\*|"|'/i;
+  const gradient = (v) => {
+    v = String(v).trim();
+    if (v.length > 320 || BAD.test(v) || !/^(?:repeating-)?(?:linear|radial|conic)-gradient\([#a-z0-9%.,()\s-]+\)$/i.test(v)) return null;
+    let depth = 0; for (const ch of v) { if (ch === '(') depth++; if (ch === ')') depth--; if (depth < 0) return null; }
+    return depth === 0 ? v : null;
+  };
+  const LEN1 = /^-?\d{1,4}(?:\.\d{1,2})?(?:px|%|em|rem|vw|vh)?$/;
+  const len = (v) => { v = String(v).trim(); return (LEN1.test(v) || v === 'auto') ? v : null; };
+  const lens = (v, max) => { const p = String(v).trim().split(/\s+/); if (p.length < 1 || p.length > (max || 4)) return null; const o = p.map(len); return o.every(x => x !== null) ? o.join(' ') : null; };
+  const num = (v, lo, hi) => { const n = Number(v); return (Number.isFinite(n) && n >= lo && n <= hi) ? String(Math.round(n * 1000) / 1000) : null; };
+  const oneOf = (list) => (v) => list.includes(String(v)) ? String(v) : null;
+  const shadow = (v) => { v = String(v).trim(); if (v === 'none') return v; return (v.length <= 260 && !BAD.test(v) && /^[#a-z0-9%.,()\s-]+$/i.test(v) && /\d/.test(v)) ? v : null; };
+  const filt = (v) => { v = String(v).trim(); return /^(?:(?:blur|brightness|contrast|saturate|grayscale|hue-rotate|sepia|invert)\(-?\d{1,3}(?:\.\d{1,2})?(?:px|deg|%)?\)\s*){1,5}$/i.test(v) ? v : null; };
+  const ANIMS = ['none', 'float', 'pulse', 'glow', 'shake', 'spin', 'wiggle', 'fadein', 'rise', 'rainbow'];
+  // property table. 'k' is also the CSS property name (except the pseudo-props handled in decl()).
+  const PROPS = {
+    'color': color, 'background-color': color, 'border-color': color, 'outline-color': color,
+    'background-image': (v) => v === 'none' ? 'none' : gradient(v),
+    'gradText': gradient, 'bgImg': (v) => /^https:\/\/[A-Za-z0-9._~:\/?#@!$&*+,;=%-]{4,500}$/.test(String(v)) ? String(v) : null,
+    'font-family': (v) => FONTS[v] ? v : null,
+    'font-size': (v) => { v = String(v); return /^\d{1,3}(?:\.\d{1,2})?(?:px|em|rem|%|vw)$/.test(v) ? v : null; },
+    'font-weight': oneOf(['100', '200', '300', '400', '500', '600', '700', '800', '900', 'normal', 'bold']),
+    'font-style': oneOf(['normal', 'italic']),
+    'text-decoration': oneOf(['none', 'underline', 'line-through', 'overline']),
+    'text-transform': oneOf(['none', 'uppercase', 'lowercase', 'capitalize']),
+    'text-align': oneOf(['left', 'center', 'right', 'justify']),
+    'letter-spacing': (v) => /^-?\d{1,2}(?:\.\d{1,2})?(?:px|em)$/.test(String(v)) ? String(v) : null,
+    'line-height': (v) => /^\d(?:\.\d{1,2})?$/.test(String(v)) || /^\d{1,3}(?:\.\d{1,2})?(?:px|em|%)$/.test(String(v)) ? String(v) : null,
+    'text-shadow': shadow, 'box-shadow': shadow,
+    'opacity': (v) => num(v, 0, 1),
+    'border-radius': (v) => lens(v, 4),
+    'border-width': (v) => lens(v, 4),
+    'border-style': oneOf(['none', 'solid', 'dashed', 'dotted', 'double']),
+    'padding': (v) => lens(v, 4), 'margin': (v) => lens(v, 4),
+    'width': len, 'height': len, 'max-width': len, 'min-height': len, 'min-width': len,
+    'gap': len,
+    'display': oneOf(['none', 'block', 'flex', 'grid', 'inline-block', 'inline-flex']),
+    'flex-direction': oneOf(['row', 'column', 'row-reverse', 'column-reverse']),
+    'justify-content': oneOf(['flex-start', 'center', 'flex-end', 'space-between', 'space-around']),
+    'align-items': oneOf(['flex-start', 'center', 'flex-end', 'stretch']),
+    'translate': (v) => lens(v, 2),
+    'rotate': (v) => /^-?\d{1,3}(?:\.\d{1,2})?deg$/.test(String(v)) ? String(v) : null,
+    'scale': (v) => num(v, 0.1, 5),
+    'filter': filt, 'backdrop-filter': filt,
+    'mix-blend-mode': oneOf(['normal', 'multiply', 'screen', 'overlay', 'difference', 'soft-light', 'hard-light', 'lighten', 'darken']),
+    'z-index': (v) => /^-?\d{1,3}$/.test(String(v)) ? String(v) : null,
+    'overflow': oneOf(['hidden', 'visible']),
+    'object-fit': oneOf(['cover', 'contain', 'fill']),
+    'cursor': oneOf(['pointer', 'default', 'crosshair', 'grab', 'zoom-in', 'not-allowed']),
+    'order': (v) => /^-?\d{1,2}$/.test(String(v)) ? String(v) : null,
+    'anim': oneOf(ANIMS)
+  };
+  const PROP_NAMES = Object.keys(PROPS);
+  const clean = (style) => {
+    const out = {}; let n = 0;
+    if (!style || typeof style !== 'object') return out;
+    for (const k of Object.keys(style)) {
+      if (n >= 30) break;
+      if (!Object.prototype.hasOwnProperty.call(PROPS, k)) continue;
+      const v = PROPS[k](style[k]);
+      if (v !== null && v !== undefined) { out[k] = v; n++; }
+    }
+    return out;
+  };
+  // style object -> "a:b!important;..."
+  const decl = (st) => {
+    let o = '';
+    for (const k of Object.keys(st || {})) {
+      const v = st[k]; if (!PROPS[k] || PROPS[k](v) === null) continue;
+      if (k === 'font-family') o += 'font-family:' + fam(v) + '!important;';
+      else if (k === 'gradText') o += 'background-image:' + v + '!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;color:transparent!important;';
+      else if (k === 'bgImg') o += 'background-image:url("' + v + '")!important;background-size:cover!important;background-position:center!important;';
+      else if (k === 'anim') { if (v !== 'none') o += 'animation:go-a-' + v + ' ' + (v === 'spin' ? '8s linear' : v === 'rainbow' ? '6s linear' : v === 'fadein' || v === 'rise' ? '1.1s ease-out both' : '3s ease-in-out') + (v === 'fadein' || v === 'rise' ? '' : ' infinite') + '!important;'; }
+      else o += k + ':' + v + '!important;';
+    }
+    return o;
+  };
+  const SEL_OK = /^(?:[a-z][a-z0-9]*|\.[A-Za-z_][\w-]*|#[A-Za-z_][\w-]*|:nth-child\(\d{1,3}\)|:nth-of-type\(\d{1,3}\)|\s*>\s*|\s+)+$/;
+  const selOk = (s) => typeof s === 'string' && s.length > 0 && s.length <= 240 && SEL_OK.test(s) && !/^\s*(?:html|body)\b/i.test(s) && !/\.go-(?:st|fr)/.test(s);
+  const rulesCss = (map, pre) => {
+    let o = '';
+    for (const sel of Object.keys(map || {})) { if (!selOk(sel)) continue; const d = decl(map[sel]); if (d) o += pre + sel + '{' + d + '}\n'; }
+    return o;
+  };
+  const luminance = (c) => {
+    let h = String(c).trim(); let r = 255, g = 255, b = 255;
+    const m = h.match(/^#([0-9a-f]{3,8})$/i);
+    if (m) { let x = m[1]; if (x.length < 6) x = x.split('').map(ch => ch + ch).join(''); r = parseInt(x.slice(0, 2), 16); g = parseInt(x.slice(2, 4), 16); b = parseInt(x.slice(4, 6), 16); }
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  };
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+  const idOk = (id) => /^[a-z0-9]{4,12}$/.test(String(id));
+  const hrefOk = (h) => { h = String(h || ''); return /^(?:https:\/\/[^\s"'<>\\]{3,400}|\/[A-Za-z0-9\/_\-?=&#.%]{0,300}|tel:\+?[\d\s()-]{4,30}|mailto:[^\s"'<>\\]{3,120}|#[\w-]{0,60})$/.test(h) ? h : ''; };
+  const FX = ['none', 'grain', 'vignette', 'scanlines', 'grid', 'glow', 'aurora', 'snow', 'confetti', 'stars', 'bubbles'];
+
+  const KEYFRAMES = '@keyframes go-a-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}@keyframes go-a-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}@keyframes go-a-glow{0%,100%{filter:drop-shadow(0 0 0 transparent)}50%{filter:drop-shadow(0 0 14px currentColor)}}@keyframes go-a-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}@keyframes go-a-spin{to{transform:rotate(360deg)}}@keyframes go-a-wiggle{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}@keyframes go-a-fadein{from{opacity:0}to{opacity:1}}@keyframes go-a-rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}@keyframes go-a-rainbow{to{filter:hue-rotate(360deg)}}';
+
+  function fxCss(fx) {
+    switch (fx) {
+      case 'grain': return 'body::after{content:"";position:fixed;inset:0;z-index:2147483000;pointer-events:none;opacity:.09;background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%27.8%27 numOctaves=%272%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E")}';
+      case 'vignette': return 'body::after{content:"";position:fixed;inset:0;z-index:2147483000;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.55) 100%)}';
+      case 'scanlines': return 'body::after{content:"";position:fixed;inset:0;z-index:2147483000;pointer-events:none;opacity:.35;background:repeating-linear-gradient(0deg,rgba(0,0,0,.28) 0,rgba(0,0,0,.28) 1px,transparent 1px,transparent 3px)}';
+      case 'grid': return 'body::after{content:"";position:fixed;inset:0;z-index:2147483000;pointer-events:none;opacity:.12;background-image:linear-gradient(var(--a) 1px,transparent 1px),linear-gradient(90deg,var(--a) 1px,transparent 1px);background-size:46px 46px}';
+      case 'glow': return 'body::after{content:"";position:fixed;inset:-20%;z-index:2147483000;pointer-events:none;opacity:.22;background:radial-gradient(circle at 20% 15%,var(--a),transparent 38%),radial-gradient(circle at 85% 80%,var(--b),transparent 40%)}';
+      case 'aurora': return 'body::after{content:"";position:fixed;inset:-30%;z-index:2147483000;pointer-events:none;opacity:.25;mix-blend-mode:screen;background:conic-gradient(from 0deg at 50% 50%,var(--a),var(--b),#00e5ff,#b300ff,var(--a));filter:blur(90px);animation:go-a-spin 28s linear infinite}';
+      default: return '';
+    }
+  }
+
+  function css(d, page) {
+    d = d || {}; const v = d.v || {}; let o = KEYFRAMES;
+    const root = [];
+    if (color(v.accent || '')) { root.push('--a:' + v.accent, '--on:' + (luminance(v.accent) > 0.6 ? '#111111' : '#ffffff')); }
+    if (color(v.accent2 || '')) root.push('--b:' + v.accent2);
+    if (color(v.bg || '')) root.push('--bg:' + v.bg);
+    if (color(v.panel || '')) root.push('--panel:' + v.panel);
+    if (root.length) o += ':root{' + root.map(x => x + '!important').join(';') + '}\n';
+    let b = '';
+    if (FONTS[v.font]) b += 'font-family:' + fam(v.font) + '!important;';
+    if (color(v.text || '')) b += 'color:' + v.text + '!important;';
+    if (v.bgGrad && gradient(v.bgGrad)) b += 'background:' + v.bgGrad + ' fixed!important;';
+    else if (v.bgImg && PROPS.bgImg(v.bgImg)) b += 'background:url("' + v.bgImg + '") center/cover fixed!important;';
+    else if (color(v.bg || '')) b += 'background:' + v.bg + '!important;';
+    if (b) o += 'html body{' + b + '}\n';
+    if (FONTS[v.headFont]) o += 'html body h1,html body h2,html body h3,html body h4,html body .bar b{font-family:' + fam(v.headFont) + '!important}\n';
+    const sc = Number(v.scale); if (sc && sc >= 0.7 && sc <= 1.6 && sc !== 1) o += 'html{font-size:' + Math.round(sc * 16 * 100) / 100 + 'px!important}\n';
+    const rad = Number(v.radius); if (v.radius !== undefined && v.radius !== '' && rad >= 0 && rad <= 60) o += 'html body .glass,html body .card,html body .tile,html body .feature-card,html body .abtn,html body .btn,html body button,html body input,html body textarea,html body select,html body .cine-visual,html body .main-screen{border-radius:' + rad + 'px!important}\n';
+    if (v.noReveal) o += 'html body .rv,html body .copyline,html body .reveal-band{opacity:1!important;transform:none!important;transition:none!important}\n';
+    if (v.stickyBar === false) o += 'html body .bar{position:absolute!important}\n';
+    o += fxCss(v.fx);
+    o += rulesCss(d.g, 'html body ');
+    if (page && d.p) o += rulesCss(d.p[page], 'html body ');
+    // free-floating elements
+    o += '.go-free{position:absolute;left:0;top:0;width:100%;height:0;z-index:60;pointer-events:none}.go-fi{position:absolute;pointer-events:auto;box-sizing:border-box;margin:0;line-height:1.25;overflow-wrap:anywhere;font-family:inherit}.go-ft{color:#fff;font-size:28px;font-weight:700}.go-fb{display:flex;align-items:center;justify-content:center;text-decoration:none;font-weight:700;font-size:16px;color:var(--on);background:var(--a);border-radius:999px;padding:10px 18px;cursor:pointer}.go-fm{object-fit:cover;border-radius:14px;display:block}.go-fs{background:var(--a);border-radius:16px;opacity:.9}.go-fi.go-hid{display:none}\n';
+    const fr = (page && d.f && d.f[page]) || [];
+    const mf = (d.mf && page && d.mf[page]) || {};
+    let base = '', mob = '';
+    for (const it of fr) {
+      if (!it || !idOk(it.id)) continue;
+      const x = Number(it.x) || 0, y = Number(it.y) || 0, w = Number(it.w) || 20, h = Number(it.h) || 0;
+      base += '#gf-' + it.id + '{left:' + x + '%;top:' + y + 'px;width:' + w + '%;' + (h ? 'height:' + h + 'px;' : '') + (it.r ? 'rotate:' + Number(it.r) + 'deg;' : '') + decl(it.s) + '}\n';
+      const m = mf[it.id];
+      if (m) mob += '#gf-' + it.id + '{' + (m.x !== undefined ? 'left:' + Number(m.x) + '%!important;' : '') + (m.y !== undefined ? 'top:' + Number(m.y) + 'px!important;' : '') + (m.w !== undefined ? 'width:' + Number(m.w) + '%!important;' : '') + (m.h !== undefined ? 'height:' + Number(m.h) + 'px!important;' : '') + (m.hide ? 'display:none!important;' : '') + (m.s ? decl(m.s) : '') + '}\n';
+    }
+    o += base;
+    const md = d.m || {};
+    let mm = rulesCss(md.g, 'html body ') + (page && md.p ? rulesCss(md.p[page], 'html body ') : '') + mob;
+    if (mm) o += '@media(max-width:700px){\n' + mm + '}\n';
+    return o;
+  }
+
+  function freeHtml(d, page) {
+    const fr = (d && d.f && d.f[page]) || []; if (!fr.length) return '<div class="go-free" id="go-free"></div>';
+    let o = '<div class="go-free" id="go-free">';
+    for (const it of fr) {
+      if (!it || !idOk(it.id)) continue;
+      const id = 'gf-' + it.id; const t = esc(String(it.text || '').slice(0, 600)).replace(/\n/g, '<br>');
+      if (it.k === 'img') { const src = PROPS.bgImg(it.src || ''); o += src ? '<img class="go-fi go-fm" id="' + id + '" src="' + esc(src) + '" alt="' + esc(it.text || '') + '" loading="lazy">' : ''; }
+      else if (it.k === 'btn') { const hr = hrefOk(it.href); o += '<a class="go-fi go-fb" id="' + id + '"' + (hr ? ' href="' + esc(hr) + '"' + (/^https:/.test(hr) ? ' target="_blank" rel="noopener"' : '') : '') + '>' + t + '</a>'; }
+      else if (it.k === 'shape') o += '<div class="go-fi go-fs" id="' + id + '"></div>';
+      else o += '<div class="go-fi go-ft" id="' + id + '">' + t + '</div>';
+    }
+    return o + '</div>';
+  }
+  function fontLinks(d) {
+    const used = new Set(); const v = (d && d.v) || {};
+    if (FONTS[v.font]) used.add(v.font); if (FONTS[v.headFont]) used.add(v.headFont);
+    const scan = (map) => { for (const s of Object.keys(map || {})) { const f = map[s] && map[s]['font-family']; if (FONTS[f]) used.add(f); } };
+    scan(d && d.g); scan(d && d.m && d.m.g);
+    for (const p of Object.keys((d && d.p) || {})) scan(d.p[p]);
+    for (const p of Object.keys((d && d.m && d.m.p) || {})) scan(d.m.p[p]);
+    for (const p of Object.keys((d && d.f) || {})) for (const it of (d.f[p] || [])) { const f = it && it.s && it.s['font-family']; if (FONTS[f]) used.add(f); }
+    return [...used].map(k => FONTS[k].gf);
+  }
+  return { FONTS, FONT_LIST, PROPS, PROP_NAMES, clean, decl, css, freeHtml, fontLinks, selOk, color, gradient, idOk, hrefOk, FX, ANIMS, esc, luminance };
+}
+const GD = goDesignCore();
+
+// Strict server-side clean-up of a design coming from the browser. Anything unknown is dropped.
+function sanitizeDesign(raw) {
+  const d = { v: {}, g: {}, p: {}, m: { g: {}, p: {} }, t: {}, im: {}, f: {}, mf: {} };
+  if (!raw || typeof raw !== 'object') return d;
+  const PAGES = ['home', 'offer', 'profile', 'favorites', 'messages', 'track'];
+  const v = raw.v && typeof raw.v === 'object' ? raw.v : {};
+  ['accent', 'accent2', 'bg', 'panel', 'text'].forEach(k => { if (v[k] && GD.color(v[k])) d.v[k] = String(v[k]).trim(); });
+  if (v.font && GD.FONTS[v.font]) d.v.font = v.font;
+  if (v.headFont && GD.FONTS[v.headFont]) d.v.headFont = v.headFont;
+  if (v.bgGrad && GD.gradient(v.bgGrad)) d.v.bgGrad = String(v.bgGrad).trim();
+  if (v.bgImg && GD.PROPS.bgImg(v.bgImg)) d.v.bgImg = String(v.bgImg);
+  if (Number.isFinite(Number(v.scale)) && Number(v.scale) >= 0.7 && Number(v.scale) <= 1.6) d.v.scale = Number(v.scale);
+  if (v.radius !== undefined && v.radius !== '' && Number(v.radius) >= 0 && Number(v.radius) <= 60) d.v.radius = Number(v.radius);
+  if (GD.FX.includes(v.fx)) d.v.fx = v.fx;
+  if (v.noReveal === true) d.v.noReveal = true;
+  if (v.stickyBar === false) d.v.stickyBar = false;
+  if (v.glowCursor === true) d.v.glowCursor = true;
+  if (v.progress === true) d.v.progress = true;
+  const rules = (map, cap) => {
+    const out = {}; let n = 0;
+    if (!map || typeof map !== 'object') return out;
+    for (const sel of Object.keys(map)) {
+      if (n >= (cap || 300)) break;
+      if (!GD.selOk(sel)) continue;
+      const st = GD.clean(map[sel]); if (Object.keys(st).length) { out[sel] = st; n++; }
+    }
+    return out;
+  };
+  d.g = rules(raw.g);
+  if (raw.m && typeof raw.m === 'object') d.m.g = rules(raw.m.g);
+  const texts = (map) => {
+    const out = {}; let n = 0; if (!map || typeof map !== 'object') return out;
+    for (const sel of Object.keys(map)) { if (n >= 150) break; if (!GD.selOk(sel)) continue; const t = String(map[sel] == null ? '' : map[sel]).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').slice(0, 400); out[sel] = t; n++; }
+    return out;
+  };
+  const imgs = (map) => {
+    const out = {}; let n = 0; if (!map || typeof map !== 'object') return out;
+    for (const sel of Object.keys(map)) { if (n >= 60) break; if (!GD.selOk(sel)) continue; const u = GD.PROPS.bgImg(map[sel]); if (u) { out[sel] = u; n++; } }
+    return out;
+  };
+  PAGES.forEach(pg => {
+    if (raw.p && raw.p[pg]) { const r = rules(raw.p[pg]); if (Object.keys(r).length) d.p[pg] = r; }
+    if (raw.m && raw.m.p && raw.m.p[pg]) { const r = rules(raw.m.p[pg]); if (Object.keys(r).length) d.m.p[pg] = r; }
+    if (raw.t && raw.t[pg]) { const r = texts(raw.t[pg]); if (Object.keys(r).length) d.t[pg] = r; }
+    if (raw.im && raw.im[pg]) { const r = imgs(raw.im[pg]); if (Object.keys(r).length) d.im[pg] = r; }
+    if (Array.isArray(raw.f && raw.f[pg])) {
+      const items = []; const seen = new Set();
+      for (const it of raw.f[pg].slice(0, 40)) {
+        if (!it || typeof it !== 'object' || !GD.idOk(it.id) || seen.has(it.id)) continue; seen.add(it.id);
+        if (!['text', 'btn', 'img', 'shape'].includes(it.k)) continue;
+        const o = { id: it.id, k: it.k, x: Math.max(-50, Math.min(150, Number(it.x) || 0)), y: Math.max(-200, Math.min(20000, Number(it.y) || 0)), w: Math.max(1, Math.min(150, Number(it.w) || 20)), h: Math.max(0, Math.min(3000, Number(it.h) || 0)) };
+        if (Number(it.r)) o.r = Math.max(-360, Math.min(360, Number(it.r)));
+        if (it.text) o.text = String(it.text).slice(0, 600);
+        if (it.k === 'img') { const u = GD.PROPS.bgImg(it.src || ''); if (!u) continue; o.src = u; }
+        if (it.k === 'btn') { const h = GD.hrefOk(it.href); if (h) o.href = h; }
+        o.s = GD.clean(it.s);
+        items.push(o);
+      }
+      if (items.length) d.f[pg] = items;
+    }
+    if (raw.mf && raw.mf[pg] && typeof raw.mf[pg] === 'object') {
+      const out = {};
+      for (const id of Object.keys(raw.mf[pg]).slice(0, 40)) {
+        if (!GD.idOk(id)) continue; const m = raw.mf[pg][id] || {}; const o = {};
+        ['x', 'w'].forEach(k => { if (Number.isFinite(Number(m[k])) && m[k] !== null && m[k] !== '') o[k] = Math.max(-50, Math.min(150, Number(m[k]))); });
+        ['y', 'h'].forEach(k => { if (Number.isFinite(Number(m[k])) && m[k] !== null && m[k] !== '') o[k] = Math.max(0, Math.min(20000, Number(m[k]))); });
+        if (m.hide === true) o.hide = true;
+        if (Object.keys(o).length) out[id] = o;
+      }
+      if (Object.keys(out).length) d.mf[pg] = out;
+    }
+  });
+  if (JSON.stringify(d).length > 400000) return { v: {}, g: {}, p: {}, m: { g: {}, p: {} }, t: {}, im: {}, f: {}, mf: {} };
+  return d;
+}
+const designIsEmpty = (d) => !d || (!Object.keys(d.v || {}).length && !Object.keys(d.g || {}).length && !Object.keys(d.p || {}).length && !Object.keys((d.m && d.m.g) || {}).length && !Object.keys((d.m && d.m.p) || {}).length && !Object.keys(d.t || {}).length && !Object.keys(d.im || {}).length && !Object.keys(d.f || {}).length);
+
+// Runs in every visitor's browser (sent as text): applies text/image overrides and visual effects.
+function goApplyClient() {
+  var node = document.getElementById('go-design'); var D = {};
+  try { D = JSON.parse(node ? node.textContent : '{}') || {}; } catch (e) { D = {}; }
+  var page = document.body.getAttribute('data-page') || 'home';
+  var orig = {}; var fxNodes = [];
+  function each(map, fn) { Object.keys(map || {}).forEach(function (sel) { var els; try { els = document.querySelectorAll(sel); } catch (e) { return; } for (var i = 0; i < els.length; i++) fn(els[i], map[sel], sel); }); }
+  function apply(d) {
+    D = d || D;
+    each((D.t || {})[page], function (el, t, sel) { if (el.children.length === 0) { if (!(sel in orig)) orig[sel] = el.textContent; el.textContent = t; } });
+    each((D.im || {})[page], function (el, u) { if (el.tagName === 'IMG') { el.removeAttribute('srcset'); el.src = u; } else el.style.backgroundImage = 'url("' + u + '")'; });
+    var v = D.v || {};
+    fxNodes.forEach(function (n) { n.remove(); }); fxNodes = [];
+    var fx = v.fx;
+    if (['snow', 'confetti', 'stars', 'bubbles'].indexOf(fx) >= 0) {
+      var box = document.createElement('div'); box.setAttribute('aria-hidden', 'true'); box.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:2147482000';
+      var cols = ['#ffd700', '#ff4d6d', '#4dd2ff', '#7cff6b', '#b388ff'];
+      for (var i = 0; i < 34; i++) {
+        var s = document.createElement('i'); var sz = fx === 'stars' ? 2 + Math.random() * 3 : fx === 'bubbles' ? 10 + Math.random() * 30 : 5 + Math.random() * 7;
+        s.style.cssText = 'position:absolute;left:' + Math.random() * 100 + '%;top:' + (fx === 'bubbles' ? '105%' : '-5%') + ';width:' + sz + 'px;height:' + (fx === 'confetti' ? sz * 1.6 : sz) + 'px;border-radius:' + (fx === 'confetti' ? '2px' : '50%') + ';background:' + (fx === 'snow' ? '#fff' : fx === 'stars' ? '#fff' : fx === 'bubbles' ? 'rgba(255,255,255,.14)' : cols[i % 5]) + ';' + (fx === 'bubbles' ? 'border:1px solid rgba(255,255,255,.35);' : '') + 'opacity:' + (fx === 'stars' ? .85 : .75) + ';animation:' + (fx === 'stars' ? 'goTw ' + (2 + Math.random() * 3) + 's ease-in-out infinite' : (fx === 'bubbles' ? 'goUp ' : 'goFall ') + (7 + Math.random() * 9) + 's linear infinite') + ';animation-delay:-' + Math.random() * 14 + 's';
+        if (fx === 'stars') s.style.top = Math.random() * 100 + '%';
+        box.appendChild(s);
+      }
+      var st = document.createElement('style'); st.textContent = '@keyframes goFall{to{transform:translateY(110vh) rotate(360deg)}}@keyframes goUp{to{transform:translateY(-115vh)}}@keyframes goTw{0%,100%{opacity:.15}50%{opacity:1}}';
+      document.body.appendChild(st); document.body.appendChild(box); fxNodes.push(st, box);
+    }
+    if (v.progress) { var bar = document.createElement('div'); bar.style.cssText = 'position:fixed;left:0;top:0;height:3px;width:0;background:var(--a);z-index:2147483001'; document.body.appendChild(bar); fxNodes.push(bar); window.addEventListener('scroll', function () { var h = document.documentElement; bar.style.width = (h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight) * 100) + '%'; }, { passive: true }); }
+    if (v.glowCursor && matchMedia('(pointer:fine)').matches) { var g = document.createElement('div'); g.style.cssText = 'position:fixed;left:0;top:0;width:260px;height:260px;margin:-130px 0 0 -130px;border-radius:50%;pointer-events:none;z-index:2147482500;background:radial-gradient(circle,var(--a),transparent 65%);opacity:.18;mix-blend-mode:screen;transition:transform .08s'; document.body.appendChild(g); fxNodes.push(g); window.addEventListener('pointermove', function (e) { g.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px)'; }, { passive: true }); }
+  }
+  window.__goApply = apply;
+  apply(D);
+}
+
+// Runs ONLY inside the Studio editor frame (never for visitors): select, drag, resize, edit text.
+function goStudioClient(GDtxt) {
+  var GDc = GDtxt();
+  var page = document.body.getAttribute('data-page') || 'home';
+  var parentWin = window.parent; var selEl = null; var box, hov;
+  var STATE = ['in-view', 'on', 'active', 'open', 'show', 'visible', 'rv', 'is-active', 'is-open'];
+  function post(m) { m.go = 1; parentWin.postMessage(m, '*'); }
+  var st = document.createElement('style'); st.textContent = '.go-st-box{position:absolute;z-index:2147483600;pointer-events:none;outline:2px solid #5b8cff;box-shadow:0 0 0 1px #fff8 inset}.go-st-h{position:absolute;right:-7px;bottom:-7px;width:13px;height:13px;border-radius:3px;background:#5b8cff;border:2px solid #fff;pointer-events:auto;cursor:nwse-resize}.go-st-hov{position:absolute;z-index:2147483500;pointer-events:none;outline:1px dashed #5b8cffaa}.go-st-tag{position:absolute;left:-2px;top:-22px;background:#5b8cff;color:#fff;font:600 11px system-ui;padding:2px 7px;border-radius:5px;white-space:nowrap}html.go-st *{cursor:default!important;animation-play-state:running}html.go-st [contenteditable=true]{cursor:text!important;outline:2px solid #ffcf00!important}';
+  document.head.appendChild(st); document.documentElement.classList.add('go-st');
+  box = document.createElement('div'); box.className = 'go-st-box'; box.style.display = 'none'; box.innerHTML = '<span class="go-st-tag"></span><i class="go-st-h"></i>'; document.body.appendChild(box);
+  hov = document.createElement('div'); hov.className = 'go-st-hov'; hov.style.display = 'none'; document.body.appendChild(hov);
+  var origText = {};
+  function cls(el) { return [].filter.call(el.classList, function (c) { return /^[A-Za-z_][\w-]*$/.test(c) && STATE.indexOf(c) < 0 && c.indexOf('go-') !== 0; }); }
+  function selOf(el) {
+    if (el.id && /^[A-Za-z_][\w-]*$/.test(el.id) && document.querySelectorAll('#' + el.id).length === 1) return '#' + el.id;
+    var c = cls(el), tag = el.tagName.toLowerCase();
+    for (var i = 0; i < c.length; i++) { var s = tag + '.' + c[i]; if (document.querySelectorAll(s).length === 1) return s; }
+    var parts = [], n = el;
+    while (n && n !== document.body && n.parentElement) {
+      var p = n.parentElement, idx = [].indexOf.call(p.children, n) + 1, seg = n.tagName.toLowerCase(), c1 = cls(n)[0];
+      if (c1) seg += '.' + c1; seg += ':nth-child(' + idx + ')'; parts.unshift(seg); n = p;
+      if (n.id && /^[A-Za-z_][\w-]*$/.test(n.id)) { parts.unshift('#' + n.id); break; }
+    }
+    var sel = parts.join(' > '); try { if (document.querySelector(sel) === el) return sel; } catch (e) {}
+    return null;
+  }
+  function simSel(el) { var c = cls(el)[0]; return c ? el.tagName.toLowerCase() + '.' + c : null; }
+  function place(b, el, tag) { var r = el.getBoundingClientRect(); b.style.display = 'block'; b.style.left = (r.left + scrollX) + 'px'; b.style.top = (r.top + scrollY) + 'px'; b.style.width = r.width + 'px'; b.style.height = r.height + 'px'; if (tag !== undefined) b.firstChild.textContent = tag; }
+  function info(el) {
+    var cs = getComputedStyle(el), fr = el.closest('.go-fi');
+    var o = { t: 'select', sel: fr ? null : selOf(el), sim: fr ? null : simSel(el), free: fr ? fr.id.replace('gf-', '') : null, tag: el.tagName.toLowerCase(), text: el.children.length === 0 && !/^(IMG|VIDEO|INPUT|IFRAME)$/.test(el.tagName), img: el.tagName === 'IMG', cs: { color: cs.color, bg: cs.backgroundColor, size: parseFloat(cs.fontSize), weight: cs.fontWeight, family: cs.fontFamily, radius: parseFloat(cs.borderTopLeftRadius) || 0, opacity: cs.opacity, align: cs.textAlign, ls: parseFloat(cs.letterSpacing) || 0, lh: cs.lineHeight, w: Math.round(el.getBoundingClientRect().width), h: Math.round(el.getBoundingClientRect().height) }, label: (el.tagName.toLowerCase() + (cls(el)[0] ? '.' + cls(el)[0] : '')) };
+    if (fr) { var it = ((GDc._D && GDc._D.f && GDc._D.f[page]) || []).filter(function (x) { return x.id === o.free; })[0]; o.freeItem = it || null; }
+    return o;
+  }
+  function select(el) { if (!el || el === document.body || el === document.documentElement) { selEl = null; box.style.display = 'none'; post({ t: 'select', sel: null }); return; } selEl = el; var i = info(el); place(box, el, i.label); post(i); }
+  document.addEventListener('mousemove', function (e) { var el = e.target; if (el.closest && el.closest('.go-st-box')) return; if (el === document.body || el === document.documentElement || el === selEl) { hov.style.display = 'none'; return; } place(hov, el); }, true);
+  document.addEventListener('click', function (e) { if (e.target.classList && e.target.classList.contains('go-st-h')) return; e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; select(e.target.closest('.go-fi') || e.target); }, true);
+  document.addEventListener('submit', function (e) { e.preventDefault(); }, true);
+  var drag = null;
+  document.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0) return; var el = e.target;
+    if (el.classList && el.classList.contains('go-st-h')) { if (!selEl) return; var r0 = selEl.getBoundingClientRect(); drag = { mode: 'size', x: e.clientX, y: e.clientY, w: r0.width, h: r0.height }; e.preventDefault(); return; }
+    if (el.isContentEditable) return;
+    var t = el.closest('.go-fi') || el; if (t === document.body || t === document.documentElement) return;
+    if (t !== selEl) select(t);
+    var fr = selEl && selEl.closest('.go-fi'); var cs = getComputedStyle(selEl);
+    drag = { mode: 'move', x: e.clientX, y: e.clientY, dx: 0, dy: 0, free: fr, l: fr ? fr.offsetLeft : 0, t: fr ? fr.offsetTop : 0, moved: false, base: cs.translate };
+  }, true);
+  document.addEventListener('pointermove', function (e) {
+    if (!drag || !selEl) return; var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (drag.mode === 'move') { if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return; drag.moved = true; drag.dx = dx; drag.dy = dy; if (drag.free) { drag.free.style.left = (drag.l + dx) + 'px'; drag.free.style.top = (drag.t + dy) + 'px'; } else selEl.style.setProperty('translate', 'calc(' + (drag.base && drag.base !== 'none' ? drag.base.split(' ')[0] : '0px') + ' + ' + dx + 'px) calc(' + (drag.base && drag.base !== 'none' && drag.base.split(' ')[1] ? drag.base.split(' ')[1] : '0px') + ' + ' + dy + 'px)', 'important'); }
+    else { selEl.style.setProperty('width', Math.max(10, drag.w + dx) + 'px', 'important'); selEl.style.setProperty('height', Math.max(10, drag.h + dy) + 'px', 'important'); }
+    place(box, selEl);
+  }, true);
+  document.addEventListener('pointerup', function () {
+    if (!drag || !selEl) { drag = null; return; } var d = drag; drag = null;
+    if (d.mode === 'move' && d.moved) {
+      if (d.free) { var W = document.documentElement.clientWidth; post({ t: 'free', id: d.free.id.replace('gf-', ''), x: Math.round((d.free.offsetLeft / W) * 1000) / 10, y: Math.round(d.free.offsetTop) }); }
+      else { selEl.style.removeProperty('translate'); post({ t: 'move', sel: selOf(selEl), dx: Math.round(d.dx), dy: Math.round(d.dy) }); }
+    } else if (d.mode === 'size') {
+      var r = selEl.getBoundingClientRect(), fr = selEl.closest('.go-fi');
+      selEl.style.removeProperty('width'); selEl.style.removeProperty('height');
+      if (fr) post({ t: 'free', id: fr.id.replace('gf-', ''), w: Math.round((r.width / document.documentElement.clientWidth) * 1000) / 10, h: Math.round(r.height) });
+      else post({ t: 'size', sel: selOf(selEl), w: Math.round(r.width), h: Math.round(r.height) });
+    }
+  }, true);
+  document.addEventListener('dblclick', function (e) {
+    var el = e.target.closest('.go-fi') || e.target; if (el.children.length) { var kid = [].filter.call(el.children, function (c) { return c.children.length === 0 && c.textContent.trim(); })[0]; if (kid && e.target === kid) el = kid; else return; }
+    if (/^(IMG|VIDEO|INPUT|IFRAME|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+    e.preventDefault(); var sel = el.closest('.go-fi') ? null : selOf(el), free = el.closest('.go-fi'); var before = el.innerText;
+    el.contentEditable = 'true'; el.focus(); var r = document.createRange(); r.selectNodeContents(el); var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    function done() { el.removeEventListener('blur', done); el.contentEditable = 'false'; el.removeAttribute('contenteditable'); var txt = el.innerText; if (txt !== before) post(free ? { t: 'freeText', id: free.id.replace('gf-', ''), text: txt } : { t: 'text', sel: sel, text: txt.replace(/\n+/g, ' ').trim() }); place(box, el); }
+    el.addEventListener('blur', done); el.addEventListener('keydown', function (k) { k.stopPropagation(); if (k.key === 'Escape' || (k.key === 'Enter' && !free)) { k.preventDefault(); el.blur(); } });
+  }, true);
+  document.addEventListener('keydown', function (e) { if (e.target.isContentEditable) return; post({ t: 'key', k: e.key, ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey }); if (['Delete', 'Backspace', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].indexOf(e.key) >= 0 || ((e.ctrlKey || e.metaKey) && 'zyd'.indexOf(e.key.toLowerCase()) >= 0)) e.preventDefault(); }, true);
+  window.addEventListener('scroll', function () { if (selEl) place(box, selEl); }, { passive: true });
+  window.addEventListener('resize', function () { if (selEl) place(box, selEl); });
+  window.addEventListener('message', function (e) {
+    if (e.source !== parentWin) return; var m = e.data; if (!m || m.go !== 1) return;
+    if (m.t === 'design') {
+      GDc._D = m.d; var s = document.getElementById('go-design-css'); if (s) s.textContent = GDc.css(m.d, page);
+      var f = document.getElementById('go-free'); if (f) f.outerHTML = GDc.freeHtml(m.d, page);
+      GDc.fontLinks(m.d).forEach(function (g) { var id = 'gf-font-' + g.replace(/\W/g, ''); if (!document.getElementById(id)) { var l = document.createElement('link'); l.id = id; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=' + g + '&display=swap'; document.head.appendChild(l); } });
+      var tm = (m.d.t || {})[page] || {};
+      Object.keys(origText).forEach(function (sel) { if (!(sel in tm)) { try { var n = document.querySelector(sel); if (n) n.textContent = origText[sel]; } catch (er) {} delete origText[sel]; } });
+      Object.keys(tm).forEach(function (sel) { try { var n = document.querySelector(sel); if (n && n.children.length === 0) { if (!(sel in origText)) origText[sel] = n.textContent; n.textContent = tm[sel]; } } catch (er) {} });
+      if (window.__goApply) window.__goApply(m.d);
+      if (selEl && !document.contains(selEl) && m.keep) selEl = null;
+      if (selEl) place(box, selEl); else box.style.display = 'none';
+    } else if (m.t === 'select-free') { var el = document.getElementById('gf-' + m.id); if (el) select(el); }
+    else if (m.t === 'deselect') { selEl = null; box.style.display = 'none'; }
+    else if (m.t === 'refresh') { if (selEl) { place(box, selEl); post(info(selEl)); } }
+  });
+  post({ t: 'ready', page: page, path: location.pathname });
+}
+
+const GO_APPLY_JS='('+goApplyClient.toString()+')()';
+// ======================= GoldOffer 5.0 — Studio, Orders, Calendar, CRM, Notifications, Health, Releases =======================
+const APP_VERSION = '5.0.0';
+const oid = (x) => new mongoose.Types.ObjectId(String(x));
+const okId = (x) => mongoose.isValidObjectId(x);
+
+// ----- Notifications -----
+const GONotification = mongoose.model('GONotification', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, index: true, required: true },
+  kind: String, ref: String, title: String, text: String, link: String,
+  count: { type: Number, default: 1 }, read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now, expires: 7776000 }, updatedAt: { type: Date, default: Date.now }
+}));
+async function pushNote(sellerId, kind, ref, title, text, link) {
+  try {
+    const hit = await GONotification.findOneAndUpdate({ sellerId, kind, ref: String(ref || ''), read: false }, { $set: { text: String(text || '').slice(0, 200), updatedAt: new Date() }, $inc: { count: 1 } });
+    if (!hit) await GONotification.create({ sellerId, kind, ref: String(ref || ''), title, text: String(text || '').slice(0, 200), link });
+  } catch (e) { /* notifications must never break the main action */ }
+}
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  const rows = await GONotification.find({ sellerId: req.user.id }).sort({ updatedAt: -1 }).limit(40).lean();
+  res.set('Cache-Control', 'no-store').json({ notifications: rows, unread: rows.filter(r => !r.read).length });
+});
+app.post('/api/notifications/read', authenticateToken, async (req, res) => {
+  const q = { sellerId: req.user.id }; if (okId(req.body && req.body.id)) q._id = req.body.id;
+  await GONotification.updateMany(q, { $set: { read: true } }); res.json({ ok: true });
+});
+
+// ----- Version history -----
+const GOVersion = mongoose.model('GOVersion', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, index: true, required: true },
+  kind: String, label: String, snapshot: mongoose.Schema.Types.Mixed, createdAt: { type: Date, default: Date.now }
+}));
+const snapOf = (u, d) => ({ design: d || u.design || sanitizeDesign(null), theme: u.theme, layout: u.layout, font: u.font, siteName: u.siteName, sellerBio: u.sellerBio, announcementText: u.announcementText || '' });
+async function saveVersion(u, kind, label, design) {
+  await GOVersion.create({ sellerId: u._id, kind, label: String(label || '').slice(0, 80), snapshot: snapOf(u, design) });
+  const all = await GOVersion.find({ sellerId: u._id }).sort({ createdAt: -1 }).select('_id');
+  for (const old of all.slice(40)) await GOVersion.deleteOne({ _id: old._id });
+}
+const summarize = (d) => { d = d || {}; const n = (o) => Object.keys(o || {}).length; let rules = n(d.g); Object.values(d.p || {}).forEach(p => rules += n(p)); let free = 0; Object.values(d.f || {}).forEach(a => free += a.length); return { styled: rules, added: free, texts: Object.values(d.t || {}).reduce((a, b) => a + n(b), 0) }; };
+app.get('/api/studio/versions', authenticateToken, async (req, res) => {
+  const rows = await GOVersion.find({ sellerId: req.user.id }).sort({ createdAt: -1 }).limit(40).lean();
+  res.json({ versions: rows.map(r => ({ _id: r._id, kind: r.kind, label: r.label, createdAt: r.createdAt, siteName: r.snapshot && r.snapshot.siteName, summary: summarize(r.snapshot && r.snapshot.design) })) });
+});
+app.post('/api/studio/versions', authenticateToken, async (req, res) => {
+  const u = await User.findById(req.user.id); if (!u) return res.sendStatus(404);
+  await saveVersion(u, 'checkpoint', String((req.body && req.body.label) || 'Checkpoint'), u.designDraft || u.design); res.json({ ok: true });
+});
+app.post('/api/studio/versions/:id/restore', authenticateToken, async (req, res) => {
+  if (!okId(req.params.id)) return res.sendStatus(400);
+  const u = await User.findById(req.user.id); const v = await GOVersion.findOne({ _id: req.params.id, sellerId: req.user.id });
+  if (!u || !v) return res.sendStatus(404);
+  await saveVersion(u, 'before-restore', 'Before restoring ' + new Date(v.createdAt).toISOString().slice(0, 16).replace('T', ' '), u.design);
+  const s = v.snapshot || {};
+  // Only look & feel is restored. Offers, messages, orders, bookings and customers are never touched.
+  u.design = sanitizeDesign(s.design); u.designDraft = u.design;
+  if (THEMES[s.theme]) u.theme = s.theme; if (LAYOUTS[s.layout]) u.layout = s.layout; if (FONTS[s.font]) u.font = s.font;
+  if (typeof s.siteName === 'string' && s.siteName) u.siteName = s.siteName.slice(0, 80);
+  if (typeof s.sellerBio === 'string') u.sellerBio = s.sellerBio.slice(0, 650);
+  if (typeof s.announcementText === 'string') u.announcementText = s.announcementText.slice(0, 300);
+  u.markModified('design'); u.markModified('designDraft'); await u.save();
+  res.json({ ok: true, design: u.design, note: 'Design restored. Offers, messages and orders were not changed.' });
+});
+app.delete('/api/studio/versions/:id', authenticateToken, async (req, res) => { if (okId(req.params.id)) await GOVersion.deleteOne({ _id: req.params.id, sellerId: req.user.id }); res.json({ ok: true }); });
+
+// ----- Studio routes -----
+app.post('/api/studio/ticket', authenticateToken, async (req, res) => {
+  const u = await User.findById(req.user.id); if (!u) return res.sendStatus(404);
+  if (!u.slug) { if (!u.siteName) return res.status(400).json({ message: 'Please enter a site name first.' }); u.slug = await uniqueSlug(u.siteName, u._id); await u.save(); }
+  res.json({ ticket: jwt.sign({ id: String(u._id), studio: true }, process.env.JWT_SECRET, { expiresIn: '6h' }), slug: u.slug, base: PUBLIC_BASE });
+});
+app.get('/api/studio/state', authenticateToken, async (req, res) => {
+  const u = await User.findById(req.user.id); if (!u) return res.sendStatus(404);
+  const offers = await Offer.find({ userId: u._id }).sort({ createdAt: -1 }).limit(12).select('_id title');
+  res.json({ draft: u.designDraft || u.design || sanitizeDesign(null), live: u.design || sanitizeDesign(null), layout: u.layout, theme: u.theme, offers, slug: u.slug, published: !!u.published, fonts: GD.FONT_LIST, layouts: Object.keys(LAYOUTS) });
+});
+app.put('/api/studio/draft', authenticateToken, async (req, res) => {
+  const u = await User.findById(req.user.id); if (!u) return res.sendStatus(404);
+  u.designDraft = sanitizeDesign(req.body && req.body.design); u.markModified('designDraft');
+  if (req.body && LAYOUTS[req.body.layout]) u.layout = req.body.layout;
+  await u.save(); res.json({ ok: true, design: u.designDraft });
+});
+app.post('/api/studio/publish', authenticateToken, async (req, res) => {
+  const u = await User.findById(req.user.id); if (!u) return res.sendStatus(404);
+  if (!u.designDraft) return res.json({ ok: true, unchanged: true });
+  if (u.design && !designIsEmpty(u.design)) await saveVersion(u, 'auto', 'Before publish', u.design);
+  u.design = sanitizeDesign(u.designDraft); u.markModified('design'); await u.save();
+  await saveVersion(u, 'publish', String((req.body && req.body.label) || 'Published'), u.design);
+  res.json({ ok: true });
+});
+app.get('/api/studio/export', authenticateToken, async (req, res) => {
+  const u = await User.findById(req.user.id); if (!u) return res.sendStatus(404);
+  const offers = await Offer.find({ userId: u._id }).sort({ createdAt: -1 });
+  u._gd = u.designDraft || u.design; u._stockMap = {};
+  res.set({ 'Content-Type': 'text/html; charset=utf-8', 'Content-Disposition': `attachment; filename="${(u.slug || 'site').replace(/[^\w-]/g, '')}.html"` }).send(renderSite(u, offers, false).replace(/(href|action)="\/(?!\/)/g, `$1="${PUBLIC_BASE}/`));
+});
+
+// ----- Orders: Pending -> Accepted -> Processing -> Completed, with a customer tracking link -----
+const ORDER_FLOW = ['Pending', 'Accepted', 'Processing', 'Completed', 'Cancelled'];
+const STOCK_STATES = ['Accepted', 'Processing', 'Completed'];
+async function applyStock(order, sellerId, to) {
+  // Atomic guards make double clicks and repeated requests harmless: stock changes at most once per direction.
+  if (!order.offerId) return { ok: true };
+  const key = 'stock.' + String(order.offerId);
+  if (STOCK_STATES.includes(to) && !order.stockApplied) {
+    const setting = await ShopSetting.findOne({ sellerId }).lean();
+    const tracked = setting && setting.stock && (setting.stock[String(order.offerId)] !== undefined);
+    if (tracked) {
+      const claimed = await Order.findOneAndUpdate({ _id: order._id, stockApplied: { $ne: true } }, { $set: { stockApplied: true } });
+      if (!claimed) return { ok: true };
+      const got = await ShopSetting.findOneAndUpdate({ sellerId, [key]: { $gt: 0 } }, { $inc: { [key]: -1 } });
+      if (!got) { await Order.updateOne({ _id: order._id }, { $set: { stockApplied: false } }); return { ok: false, message: 'Not enough stock to accept this order.' }; }
+      order.stockApplied = true;
+    }
+  } else if (!STOCK_STATES.includes(to) && order.stockApplied) {
+    const released = await Order.findOneAndUpdate({ _id: order._id, stockApplied: true }, { $set: { stockApplied: false } });
+    if (released) await ShopSetting.updateOne({ sellerId, [key]: { $exists: true } }, { $inc: { [key]: 1 } });
+    order.stockApplied = false;
+  }
+  return { ok: true };
+}
+app.get('/api/orders', authenticateToken, async (req, res) => {
+  const rows = await Order.find({ userId: req.user.id }).sort({ createdAt: -1 }).limit(300).lean();
+  res.set('Cache-Control', 'no-store').json({ orders: rows.map(o => ({ ...o, trackUrl: o.trackToken ? PUBLIC_BASE + '/track/' + o.trackToken : '' })) });
+});
+app.patch('/api/orders/:id', authenticateToken, async (req, res) => {
+  if (!okId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
+  const status = req.body && req.body.status;
+  if (status !== undefined && !ORDER_FLOW.includes(status)) return res.status(400).json({ message: 'Invalid status' });
+  try {
+    const order = await Order.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (typeof (req.body && req.body.ownerNote) === 'string') order.ownerNote = req.body.ownerNote.slice(0, 600);
+    if (status && status !== order.status) {
+      const r = await applyStock(order, req.user.id, status);
+      if (!r.ok) return res.status(409).json({ message: r.message });
+      order.status = status; order.history = (order.history || []).concat([{ status, at: new Date() }]).slice(-20);
+      if (!order.trackToken) order.trackToken = crypto.randomBytes(12).toString('hex');
+      const mail = (order.contacts || []).find(c => c.type === 'email' && isEmail(c.value));
+      if (mail) void sendMail({ to: mail.value, subject: `Your request "${order.offerTitle}" is now: ${status}`, text: `Status: ${status}\nTrack it any time: ${PUBLIC_BASE}/track/${order.trackToken}` });
+    }
+    await order.save(); res.json({ order, trackUrl: order.trackToken ? PUBLIC_BASE + '/track/' + order.trackToken : '' });
+  } catch (e) { res.status(500).json({ message: 'Could not change order status' }); }
+});
+const trackLimiter = rateLimit({ windowMs: 60 * 1000, max: 40 });
+app.get('/track/:token', trackLimiter, async (req, res) => {
+  try {
+    if (!/^[a-f0-9]{24}$/.test(req.params.token)) return res.status(404).send('Not found');
+    const o = await Order.findOne({ trackToken: req.params.token }); if (!o) return res.status(404).send('Not found');
+    const u = await User.findById(o.userId); if (!u) return res.status(404).send('Not found');
+    u._gd = u.design; res.setHeader('Content-Security-Policy', SITE_CSP); res.setHeader('Cache-Control', 'no-store');
+    const steps = ['Pending', 'Accepted', 'Processing', 'Completed']; const idx = steps.indexOf(o.status); const cancelled = o.status === 'Cancelled';
+    const label = { Pending: 'Received', Accepted: 'Accepted', Processing: 'In progress', Completed: 'Done' };
+    const body = `${siteBar(u, 'page')}<main class="wrap" style="padding:120px 0 80px;max-width:640px"><div class="glass" style="padding:28px"><small style="color:var(--mute)">Your request at ${esc(sellerName(u))}</small><h1 style="margin:6px 0 4px;font-size:clamp(26px,5vw,38px)">${esc(o.offerTitle || 'Request')}</h1><p style="color:var(--soft)">EUR ${Number(o.amount || 0).toFixed(2)} · sent ${esc(new Date(o.createdAt).toISOString().slice(0, 10))}</p>
+<div style="display:grid;gap:10px;margin:24px 0">${cancelled ? '<div class="ok" style="background:#3a1620;border-color:#ff5d73">This request was cancelled.</div>' : steps.map((s, i) => `<div style="display:flex;gap:12px;align-items:center;opacity:${i <= idx ? 1 : .4}"><span style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:${i <= idx ? 'var(--a)' : 'transparent'};color:var(--on);border:1px solid var(--a);font-weight:800">${i <= idx ? '&#10003;' : ''}</span><b>${label[s]}</b>${i === idx ? '<span style="color:var(--a)">&larr; now</span>' : ''}</div>`).join('')}</div>
+${o.status === 'Pending' ? `<form method="POST" action="/track/${o.trackToken}/cancel"><button class="abtn" type="submit">Cancel my request</button></form>` : ''}
+<p style="margin-top:20px"><a class="abtn pri" href="/site/${esc(u.slug)}">Back to ${esc(u.siteName)}</a></p></div></main>`;
+    res.send(pageShell(u, { title: `Track request - ${u.siteName}`, desc: 'Request status', body, page: 'track' }));
+  } catch (e) { res.status(500).send('Server error'); }
+});
+app.post('/track/:token/cancel', trackLimiter, async (req, res) => {
+  if (!/^[a-f0-9]{24}$/.test(req.params.token)) return res.status(404).send('Not found');
+  const o = await Order.findOne({ trackToken: req.params.token }); if (!o) return res.status(404).send('Not found');
+  if (o.status === 'Pending') { o.status = 'Cancelled'; o.history = (o.history || []).concat([{ status: 'Cancelled', at: new Date(), by: 'customer' }]); await o.save(); await pushNote(o.userId, 'order', 'c' + o._id, 'Request cancelled', `${o.customerName || 'A customer'} cancelled "${o.offerTitle}"`, '/orders'); }
+  res.redirect(303, '/track/' + o.trackToken);
+});
+
+// ----- Booking calendar: working hours, breaks, durations, no double booking -----
+const GOCalendar = mongoose.model('GOCalendar', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, unique: true, required: true },
+  enabled: { type: Boolean, default: false }, tz: { type: String, default: 'Europe/Sofia' },
+  hours: { type: mongoose.Schema.Types.Mixed, default: {} }, breaks: { type: [{ from: String, to: String, _id: false }], default: [] },
+  stepMin: { type: Number, default: 30 }, durationMin: { type: Number, default: 60 }, bufferMin: { type: Number, default: 0 },
+  noticeHours: { type: Number, default: 2 }, daysAhead: { type: Number, default: 60 }, closedDates: { type: [String], default: [] },
+  durations: { type: mongoose.Schema.Types.Mixed, default: {} }
+}));
+const GOSlot = mongoose.model('GOSlot', new mongoose.Schema({ sellerId: { type: mongoose.Schema.Types.ObjectId, required: true }, t: { type: Date, required: true }, apptId: mongoose.Schema.Types.ObjectId }));
+GOSlot.schema.index({ sellerId: 1, t: 1 }, { unique: true });
+const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const hhmm = (s) => { const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(s || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+const pad2 = (n) => String(n).padStart(2, '0');
+function tzOffsetMin(tz, ms) { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(ms)).map(x => [x.type, x.value])); return (Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - ms) / 60000; }
+function zonedToUtc(dateStr, min, tz) { const [y, m, d] = dateStr.split('-').map(Number); const g = Date.UTC(y, m - 1, d, Math.floor(min / 60), min % 60); let o = tzOffsetMin(tz, g); let u = g - o * 60000; o = tzOffsetMin(tz, u); return g - o * 60000; }
+const UNIT = 15 * 60000;
+const durationFor = (cal, offerId) => { const d = offerId && cal.durations && Number(cal.durations[String(offerId)]); return Math.max(5, Math.min(600, d || cal.durationMin || 60)); };
+async function slotsFor(cal, dateStr, durationMin) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || '')) return [];
+  const tz = cal.tz || 'Europe/Sofia'; const [y, m, d] = dateStr.split('-').map(Number);
+  const dow = DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]; const h = (cal.hours || {})[dow];
+  if (!h || !h.on || (cal.closedDates || []).includes(dateStr)) return [];
+  const from = hhmm(h.from), to = hhmm(h.to); if (from === null || to === null || to <= from) return [];
+  const step = [10, 15, 20, 30, 45, 60].includes(cal.stepMin) ? cal.stepMin : 30; const buffer = cal.bufferMin || 0;
+  const dayStart = zonedToUtc(dateStr, 0, tz), dayEnd = dayStart + 36 * 3600000;
+  const locks = new Set((await GOSlot.find({ sellerId: cal.sellerId, t: { $gte: new Date(dayStart - 12 * 3600000), $lt: new Date(dayEnd) } }).lean()).map(l => new Date(l.t).getTime()));
+  const brk = (cal.breaks || []).map(b => [hhmm(b.from), hhmm(b.to)]).filter(b => b[0] !== null && b[1] !== null && b[1] > b[0]);
+  const now = Date.now() + (cal.noticeHours || 0) * 3600000, out = [];
+  for (let t = from; t + durationMin <= to; t += step) {
+    if (brk.some(b => t < b[1] && t + durationMin > b[0])) continue;
+    const s = zonedToUtc(dateStr, t, tz); if (s < now) continue;
+    let free = true; for (let u = Math.floor(s / UNIT) * UNIT; u < s + (durationMin + buffer) * 60000; u += UNIT) if (locks.has(u)) { free = false; break; }
+    if (free) out.push({ time: pad2(Math.floor(t / 60)) + ':' + pad2(t % 60), iso: new Date(s).toISOString() });
+  }
+  return out;
+}
+async function lockRange(sellerId, startMs, durationMin, bufferMin, apptId) {
+  const made = [];
+  try {
+    for (let u = Math.floor(startMs / UNIT) * UNIT; u < startMs + (durationMin + (bufferMin || 0)) * 60000; u += UNIT) { await GOSlot.create({ sellerId, t: new Date(u), apptId }); made.push(u); }
+    return true;
+  } catch (e) { await GOSlot.deleteMany({ sellerId, apptId }); return false; }
+}
+const calOf = async (sellerId) => (await GOCalendar.findOne({ sellerId }).lean()) || { sellerId, enabled: false, tz: 'Europe/Sofia', hours: {}, breaks: [], stepMin: 30, durationMin: 60, bufferMin: 0, noticeHours: 2, daysAhead: 60, closedDates: [], durations: {} };
+const defaultHours = () => Object.fromEntries(DAYS.map(d => [d, { on: !['sat', 'sun'].includes(d), from: '09:00', to: '18:00' }]));
+app.get('/api/calendar', authenticateToken, async (req, res) => {
+  const cal = await calOf(req.user.id); if (!cal.hours || !Object.keys(cal.hours).length) cal.hours = defaultHours();
+  const from = new Date(req.query.from || Date.now() - 7 * 86400000), to = new Date(req.query.to || Date.now() + 60 * 86400000);
+  const appts = await Appointment.find({ sellerId: req.user.id, startsAt: { $gte: from, $lte: to } }).sort({ startsAt: 1 }).lean();
+  const offers = await Offer.find({ userId: req.user.id }).select('_id title').lean();
+  res.set('Cache-Control', 'no-store').json({ config: cal, appointments: appts, offers });
+});
+app.put('/api/calendar', authenticateToken, async (req, res) => {
+  const b = req.body || {}; const set = {};
+  if (typeof b.enabled === 'boolean') set.enabled = b.enabled;
+  if (typeof b.tz === 'string') { try { new Intl.DateTimeFormat('en', { timeZone: b.tz }); set.tz = b.tz; } catch (e) { return res.status(400).json({ message: 'Unknown time zone' }); } }
+  if (b.hours && typeof b.hours === 'object') { const h = {}; DAYS.forEach(d => { const x = b.hours[d] || {}; const f = hhmm(x.from), t = hhmm(x.to); h[d] = { on: !!x.on && f !== null && t !== null && t > f, from: f !== null ? x.from : '09:00', to: t !== null ? x.to : '18:00' }; }); set.hours = h; }
+  if (Array.isArray(b.breaks)) set.breaks = b.breaks.slice(0, 6).filter(x => hhmm(x.from) !== null && hhmm(x.to) !== null && hhmm(x.to) > hhmm(x.from)).map(x => ({ from: x.from, to: x.to }));
+  const n = (k, lo, hi) => { if (b[k] !== undefined && Number.isFinite(Number(b[k]))) set[k] = Math.max(lo, Math.min(hi, Math.round(Number(b[k])))); };
+  n('stepMin', 10, 60); n('durationMin', 5, 600); n('bufferMin', 0, 120); n('noticeHours', 0, 168); n('daysAhead', 1, 365);
+  if (Array.isArray(b.closedDates)) set.closedDates = b.closedDates.filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(0, 200);
+  if (b.durations && typeof b.durations === 'object') { const d = {}; Object.keys(b.durations).slice(0, 100).forEach(k => { if (okId(k) && Number(b.durations[k]) >= 5 && Number(b.durations[k]) <= 600) d[k] = Math.round(Number(b.durations[k])); }); set.durations = d; }
+  const cal = await GOCalendar.findOneAndUpdate({ sellerId: req.user.id }, { $set: set }, { new: true, upsert: true, setDefaultsOnInsert: true });
+  if (typeof b.enabled === 'boolean') { await User.updateOne({ _id: req.user.id }, { $set: { bookingEnabled: b.enabled } }); await ShopSetting.findOneAndUpdate({ sellerId: req.user.id }, { $set: { slotsEnabled: b.enabled } }, { upsert: true }); }
+  res.json({ config: cal });
+});
+const slotLimiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+app.get('/site/:slug/slots', slotLimiter, async (req, res) => {
+  const u = await User.findOne({ slug: req.params.slug, published: true }).select('_id'); if (!u) return res.sendStatus(404);
+  const cal = await calOf(u._id); if (!cal.enabled) return res.json({ slots: [], tz: cal.tz, configured: false });
+  const date = String(req.query.date || ''); const max = Date.now() + (cal.daysAhead || 60) * 86400000;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || zonedToUtc(date, 0, cal.tz) > max) return res.json({ slots: [], tz: cal.tz, configured: true });
+  const dur = durationFor(cal, okId(req.query.offerId) ? req.query.offerId : null);
+  res.set('Cache-Control', 'no-store').json({ slots: await slotsFor(cal, date, dur), tz: cal.tz, duration: dur, configured: true });
+});
+// public booking (replaces the old free-text one: only real free slots are accepted)
+app.post('/site/:slug/appointment', publicLimiter, rejectOwnerSelfAction, async (req, res) => {
+  try {
+    const owner = await User.findOne({ slug: req.params.slug, published: true }).select('_id siteName email notifyEmail'); if (!owner) return res.sendStatus(404);
+    const b = req.body || {}; if (b.consent !== '1') return res.status(400).send('Please accept the privacy notice.');
+    const cal = await calOf(owner._id); if (!cal.enabled) return res.status(403).send('Booking is not enabled for this business.');
+    const customer = String(b.customer || '').trim().slice(0, 80), contact = String(b.contact || '').trim().slice(0, 140);
+    const d = new Date(b.startsAt); if (!customer || contact.length < 5 || !Number.isFinite(d.valueOf())) return res.status(400).send('Check the date and contact details.');
+    const offerId = okId(b.offerId) ? b.offerId : undefined; if (offerId && !(await Offer.exists({ _id: offerId, userId: owner._id }))) return res.sendStatus(404);
+    const dur = durationFor(cal, offerId);
+    const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: cal.tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    const free = await slotsFor(cal, dateStr, dur);
+    if (!free.some(s => new Date(s.iso).getTime() === d.getTime())) return res.status(409).send('This time is no longer available. Please go back and pick another slot.');
+    const appt = await Appointment.create({ sellerId: owner._id, offerId, startsAt: d, endsAt: new Date(d.getTime() + dur * 60000), durationMin: dur, customer, contact, note: String(b.note || '').slice(0, 500) });
+    if (!(await lockRange(owner._id, d.getTime(), dur, cal.bufferMin, appt._id))) { await Appointment.deleteOne({ _id: appt._id }); return res.status(409).send('Someone just booked this time. Please pick another slot.'); }
+    await pushNote(owner._id, 'booking', String(appt._id), 'New booking', `${customer} · ${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`, '/calendar');
+    if (owner.email) void sendMail({ to: owner.notifyEmail || owner.email, subject: 'New booking', text: `${customer} booked ${d.toISOString()}. Contact: ${contact}` });
+    res.redirect(303, `/site/${encodeURIComponent(req.params.slug)}?booking=1`);
+  } catch (e) { res.status(500).send('Booking could not be saved'); }
+});
+app.post('/api/business/appointments', authenticateToken, async (req, res) => {
+  try {
+    const b = req.body || {}; const d = new Date(b.startsAt); if (!Number.isFinite(d.valueOf())) return res.status(400).json({ message: 'Invalid appointment date' });
+    const cal = await calOf(req.user.id); const dur = Math.max(5, Math.min(600, Number(b.durationMin) || durationFor(cal, okId(b.offerId) ? b.offerId : null)));
+    const appt = await Appointment.create({ sellerId: req.user.id, startsAt: d, endsAt: new Date(d.getTime() + dur * 60000), durationMin: dur, customer: String(b.customer || '').trim().slice(0, 80) || 'Manual booking', contact: String(b.contact || '').slice(0, 140) || 'Added by owner', note: String(b.note || '').slice(0, 500) });
+    if (!(await lockRange(req.user.id, d.getTime(), dur, cal.bufferMin, appt._id))) { await Appointment.deleteOne({ _id: appt._id }); return res.status(409).json({ message: 'That time overlaps another booking.' }); }
+    res.status(201).json({ appointment: appt });
+  } catch (e) { res.status(e.code === 11000 ? 409 : 500).json({ message: e.code === 11000 ? 'That time is already booked.' : 'Could not save booking' }); }
+});
+app.patch('/api/business/appointments/:id', authenticateToken, async (req, res) => {
+  const st = req.body && req.body.status; if (!okId(req.params.id) || !['Pending', 'Confirmed', 'Cancelled', 'Completed'].includes(st)) return res.sendStatus(400);
+  try {
+    const row = await Appointment.findOne({ _id: req.params.id, sellerId: req.user.id }); if (!row) return res.sendStatus(404);
+    const wasActive = ['Pending', 'Confirmed'].includes(row.status), active = ['Pending', 'Confirmed'].includes(st);
+    if (wasActive && st === 'Cancelled') await GOSlot.deleteMany({ sellerId: req.user.id, apptId: row._id });
+    if (!wasActive && active) { const cal = await calOf(req.user.id); if (!(await lockRange(req.user.id, new Date(row.startsAt).getTime(), row.durationMin || cal.durationMin || 60, cal.bufferMin, row._id))) return res.status(409).json({ message: 'The requested time is no longer available.' }); }
+    row.status = st; await row.save(); res.json({ appointment: row });
+  } catch (e) { res.status(e.code === 11000 ? 409 : 500).json({ message: 'Could not change booking' }); }
+});
+
+// ----- Customers (mini CRM). Only the seller's own data; erase and export are built in. -----
+const GOCustomer = mongoose.model('GOCustomer', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true }, key: { type: String, required: true },
+  status: { type: String, default: 'lead' }, tags: { type: [String], default: [] }, notes: { type: [{ text: String, at: Date, _id: false }], default: [] }, createdAt: { type: Date, default: Date.now }
+}));
+GOCustomer.schema.index({ sellerId: 1, key: 1 }, { unique: true });
+const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i, PHONE_RE = /\+?\d[\d\s().-]{6,}\d/;
+function keyOf(name, contact) {
+  const t = String(contact || ''); const e = t.match(EMAIL_RE); if (e) return 'e:' + e[0].toLowerCase();
+  const p = t.match(PHONE_RE); if (p) return 'p:' + p[0].replace(/\D/g, '');
+  return 'n:' + String(name || '').trim().toLowerCase().slice(0, 60);
+}
+async function customersFor(sellerId) {
+  const [orders, appts, convs, prof] = await Promise.all([Order.find({ userId: sellerId }).lean(), Appointment.find({ sellerId }).lean(), Conversation.find({ userId: sellerId }).select('customerName customerEmail lastAt').lean(), GOCustomer.find({ sellerId }).lean()]);
+  const map = new Map(); const prof2 = new Map(prof.map(p => [p.key, p]));
+  const get = (k, name, contact) => { if (!map.has(k)) map.set(k, { key: k, name: name || '', contacts: new Set(), orders: 0, spent: 0, bookings: 0, chats: 0, last: 0 }); const c = map.get(k); if (name && !c.name) c.name = name; if (contact) c.contacts.add(contact); return c; };
+  const touch = (c, d) => { const t = new Date(d || 0).getTime(); if (t > c.last) c.last = t; };
+  orders.forEach(o => { if (o.anonymized) return; const ct = o.customerContact || (o.contacts || []).map(x => x.value).join(' '); const c = get(keyOf(o.customerName, ct), o.customerName, ct); c.orders++; if (o.status === 'Completed') c.spent += Number(o.amount || 0); touch(c, o.createdAt); });
+  appts.forEach(a => { if (a.anonymized) return; const c = get(keyOf(a.customer, a.contact), a.customer, a.contact); c.bookings++; touch(c, a.startsAt); });
+  convs.forEach(v => { const c = get(keyOf(v.customerName, v.customerEmail), v.customerName, v.customerEmail); c.chats++; touch(c, v.lastAt); });
+  return [...map.values()].map(c => { const p = prof2.get(c.key) || {}; return { key: c.key, name: c.name || '(no name)', contacts: [...c.contacts].slice(0, 4), orders: c.orders, spent: Math.round(c.spent * 100) / 100, bookings: c.bookings, chats: c.chats, last: c.last, status: p.status || (c.orders ? 'customer' : 'lead'), tags: p.tags || [], notes: (p.notes || []).slice(-30) }; }).sort((a, b) => b.last - a.last);
+}
+app.get('/api/customers', authenticateToken, async (req, res) => { res.set('Cache-Control', 'no-store').json({ customers: await customersFor(req.user.id) }); });
+app.put('/api/customers/profile', authenticateToken, async (req, res) => {
+  const b = req.body || {}; const key = String(b.key || '').slice(0, 120); if (!/^[epn]:/.test(key)) return res.sendStatus(400);
+  const set = {}; if (['lead', 'customer', 'vip', 'inactive'].includes(b.status)) set.status = b.status;
+  if (Array.isArray(b.tags)) set.tags = b.tags.map(t => String(t).trim().slice(0, 24)).filter(Boolean).slice(0, 8);
+  const upd = { $set: set }; if (typeof b.note === 'string' && b.note.trim()) upd.$push = { notes: { text: b.note.trim().slice(0, 600), at: new Date() } };
+  await GOCustomer.findOneAndUpdate({ sellerId: req.user.id, key }, upd, { upsert: true, new: true }); res.json({ ok: true });
+});
+// Right to erasure: removes the profile and chats, and blanks personal data in orders/bookings (the sales totals stay).
+app.post('/api/customers/erase', authenticateToken, async (req, res) => {
+  const key = String((req.body && req.body.key) || ''); if (!/^[epn]:/.test(key)) return res.sendStatus(400);
+  const sid = req.user.id; let n = 0;
+  for (const o of await Order.find({ userId: sid })) if (keyOf(o.customerName, o.customerContact || (o.contacts || []).map(x => x.value).join(' ')) === key) { o.customerName = 'Erased'; o.customerContact = ''; o.contacts = []; o.note = ''; o.anonymized = true; await o.save(); n++; }
+  for (const a of await Appointment.find({ sellerId: sid })) if (keyOf(a.customer, a.contact) === key) { a.customer = 'Erased'; a.contact = ''; a.note = ''; a.anonymized = true; await a.save(); n++; }
+  for (const c of await Conversation.find({ userId: sid }).select('_id customerName customerEmail')) if (keyOf(c.customerName, c.customerEmail) === key) { await Conversation.deleteOne({ _id: c._id }); n++; }
+  await GOCustomer.deleteOne({ sellerId: sid, key }); res.json({ ok: true, erased: n });
+});
+app.get('/api/customers/export.csv', authenticateToken, async (req, res) => {
+  const safe = (v) => { v = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
+  const rows = await customersFor(req.user.id);
+  res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="customers.csv"', 'Cache-Control': 'no-store' }).send('name,contacts,status,orders,spent,bookings,chats,tags\n' + rows.map(c => [c.name, c.contacts.join(' | '), c.status, c.orders, c.spent, c.bookings, c.chats, c.tags.join(' | ')].map(safe).join(',')).join('\n'));
+});
+
+// ----- System health & releases -----
+const timed = async (fn) => { const t = Date.now(); try { const r = await Promise.race([fn(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout (5s)')), 5000))]); return { ...r, ms: Date.now() - t }; } catch (e) { return { status: 'fail', detail: String(e.message || e).slice(0, 160), ms: Date.now() - t }; } };
+async function runHealth(sellerId) {
+  const u = await User.findById(sellerId).lean();
+  const C = [
+    ['db', 'MongoDB database', async () => { if (mongoose.connection.readyState !== 1) return { status: 'fail', detail: 'Not connected' }; const n = await GONotification.create({ sellerId, kind: 'probe', title: 'probe', read: true }); const back = await GONotification.findById(n._id); await GONotification.deleteOne({ _id: n._id }); return back ? { status: 'ok', detail: 'Connected. Write, read and delete test passed.' } : { status: 'fail', detail: 'Write succeeded but read-back failed' }; }],
+    ['messenger', 'Messenger', async () => { const c = await Conversation.countDocuments({ userId: sellerId }); const unread = await Conversation.countDocuments({ userId: sellerId, unreadSeller: { $gt: 0 } }); return { status: 'ok', detail: `${c} conversation(s), ${unread} unread.` }; }],
+    ['calls', 'Voice call setup', async () => { const turn = !!(process.env.TURN_URL || process.env.METERED_API_KEY || process.env.METERED_DOMAIN); return turn ? { status: 'ok', detail: 'STUN + TURN relay configured.' } : { status: 'warn', detail: 'Only STUN is configured. Calls work on most networks, but can fail behind strict mobile/corporate NAT. Add TURN_URL (or Metered keys) for reliable calls.' }; }],
+    ['images', 'Image upload', async () => { const img = await Image.create({ userId: sellerId, contentType: 'image/gif', data: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64') }); const back = await Image.findById(img._id); await Image.deleteOne({ _id: img._id }); const count = await Image.countDocuments({ userId: sellerId }); return back ? { status: 'ok', detail: `Storage test passed. You have ${count} stored image(s). Limit 5 MB each.` } : { status: 'fail', detail: 'Image could not be read back' }; }],
+    ['orders', 'Orders', async () => { const old = await Order.countDocuments({ userId: sellerId, status: 'Pending', createdAt: { $lt: new Date(Date.now() - 48 * 3600000) } }); return old ? { status: 'warn', detail: `${old} request(s) waiting more than 48 hours.` } : { status: 'ok', detail: 'No stale requests.' }; }],
+    ['bookings', 'Bookings', async () => { const cal = await calOf(sellerId); const active = await Appointment.find({ sellerId, status: { $in: ['Pending', 'Confirmed'] }, startsAt: { $gt: new Date() } }).lean(); let missing = 0; for (const a of active) if (!(await GOSlot.exists({ sellerId, apptId: a._id }))) missing++; if (!cal.enabled) return { status: 'warn', detail: 'Calendar is switched off (customers cannot book).' }; return missing ? { status: 'warn', detail: `${missing} upcoming booking(s) have no time lock (made before the calendar upgrade). They still show, but double booking is possible for them.` } : { status: 'ok', detail: `Calendar on. ${active.length} upcoming booking(s), all protected from double booking.` }; }],
+    ['settings', 'Site & settings', async () => { if (!u || !u.slug) return { status: 'warn', detail: 'Site address not created yet.' }; return u.published ? { status: 'ok', detail: `Published at /site/${u.slug}.` } : { status: 'warn', detail: 'Site is not published yet.' }; }],
+    ['email', 'Email notifications', async () => (process.env.BREVO_API_KEY || process.env.RESEND_API_KEY || process.env.SMTP_HOST) ? { status: 'ok', detail: 'Mail provider configured.' } : { status: 'warn', detail: 'No mail provider configured: email alerts and tracking emails are not sent.' }],
+    ['payments', 'Payments (Stripe)', async () => process.env.STRIPE_SECRET_KEY ? { status: 'ok', detail: 'Stripe key present.' } : { status: 'warn', detail: 'Stripe key missing: subscriptions cannot be started.' }],
+    ['security', 'Security basics', async () => process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 24 ? { status: 'ok', detail: 'JWT secret is set and long enough.' } : { status: 'warn', detail: 'JWT_SECRET is missing or short.' }]
+  ];
+  const checks = []; for (const [id, label, fn] of C) checks.push({ id, label, ...(await timed(fn)) });
+  const worst = checks.some(c => c.status === 'fail') ? 'fail' : checks.some(c => c.status === 'warn') ? 'warn' : 'ok';
+  return { overall: worst, at: new Date(), uptimeSec: Math.round(process.uptime()), node: process.version, version: APP_VERSION, checks };
+}
+app.get('/api/system/health', authenticateToken, async (req, res) => { res.set('Cache-Control', 'no-store').json(await runHealth(req.user.id)); });
+const CHANGELOG = [
+  { version: '5.0.0', date: '2026-10-25', items: ['Design Studio: click, drag, recolor and rewrite anything on your site, on desktop and phone', 'Version History with safe restore (offers, messages and orders are never touched)', 'Booking Calendar with working hours, breaks, durations and no double booking', 'Order Center with Accept → Process → Complete and a customer tracking link', 'Customer Manager (mini CRM) with erase and export', 'Notification Center, System Health and this Release Center'] },
+  { version: '4.0.0', date: '2026-10-20', items: ['Messenger with photos, files and real two-way voice calls', 'English-only interface, mobile polish, "More from <seller>"'] }
+];
+const FEATURES = (turn) => [
+  { id: 'studio', name: 'Design Studio', status: 'available' }, { id: 'versions', name: 'Version History', status: 'available' }, { id: 'orders', name: 'Order Center + tracking', status: 'available' },
+  { id: 'calendar', name: 'Booking Calendar', status: 'available' }, { id: 'crm', name: 'Customer Manager', status: 'available' }, { id: 'notif', name: 'Notification Center (in-app)', status: 'available' },
+  { id: 'push', name: 'Push when the app is closed', status: 'planned', note: 'Needs a web-push service and keys; in-app bell works today.' },
+  { id: 'calls', name: 'Voice calls', status: turn ? 'available' : 'needs-setup', note: turn ? '' : 'Add a TURN server for reliable calls on all networks.' }
+];
+app.get('/api/system/release', authenticateToken, async (req, res) => { const h = await runHealth(req.user.id); res.json({ version: APP_VERSION, features: FEATURES(!!(process.env.TURN_URL || process.env.METERED_API_KEY)), changelog: CHANGELOG, check: { overall: h.overall, at: h.at, failed: h.checks.filter(c => c.status === 'fail').map(c => c.label), warnings: h.checks.filter(c => c.status === 'warn').map(c => c.label), total: h.checks.length } }); });
 
 // ---------- Public customer site: dark luxury design, neon cards, 3D parallax ----------
 const okImg = (u) => /^https:\/\//.test(u || '');
@@ -2412,9 +3153,13 @@ function layoutGlobalCss(layout) {
 `;
 }
 
-function pageShell(user, { title, desc, body, cls }) {
+const sentTrack = (u) => u._track ? ` <a href="/track/${u._track}" style="color:var(--a);font-weight:700">Track your request &rarr;</a>` : '';
+function pageShell(user, { title, desc, body, cls, page }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
+  page = page || 'home';
+  const D = user._gd !== undefined ? user._gd : user.design; const studio = !!user._studio;
+  const dFonts = GD.fontLinks(D).map(g => `<link href="https://fonts.googleapis.com/css2?family=${g}&display=swap" rel="stylesheet">`).join('');
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
@@ -2423,13 +3168,16 @@ function pageShell(user, { title, desc, body, cls }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+${dFonts}<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style><style id="go-design-css">${GD.css(D, page)}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
-<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>
+${GD.freeHtml(D, page)}
+<script type="application/json" id="go-design">${JSON.stringify(D || {}).replace(/</g, '\\u003c')}</script><script>${GO_APPLY_JS}</script>${studio ? `<script>(${goStudioClient.toString()})(${goDesignCore.toString()})</script>` : ''}
+${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
+<script>(function(){var d=document.getElementById('bkDate');if(!d)return;var slug=document.body.getAttribute('data-slug'),box=document.getElementById('bkSlots'),hid=document.getElementById('bkStart'),off=document.getElementById('bkOffer');var t=new Date();d.min=t.toISOString().slice(0,10);function load(){hid.value='';if(!d.value)return;box.textContent='Loading...';fetch('/site/'+encodeURIComponent(slug)+'/slots?date='+d.value+(off&&off.value?'&offerId='+off.value:''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){box.textContent='';if(!j.slots||!j.slots.length){box.textContent='No free times on this day. Try another day.';return}j.slots.forEach(function(s){var b=document.createElement('button');b.type='button';b.textContent=s.time;b.style.cssText='padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font-weight:700;cursor:pointer';b.onclick=function(){hid.value=s.iso;[].forEach.call(box.children,function(x){x.style.background='transparent';x.style.color='inherit'});b.style.background='var(--a)';b.style.color='var(--on)'};box.appendChild(b)})}).catch(function(){box.textContent='Could not load times.'})}d.addEventListener('change',load);if(off)off.addEventListener('change',load);var f=d.form;if(f)f.addEventListener('submit',function(e){if(!hid.value){e.preventDefault();box.textContent='Please pick a time first.'}})})();</script>
 <script>(function(){var form=document.querySelector('#book form');if(form)form.addEventListener('submit',function(){var x=form.querySelector('[name="startsAt"]');if(x){var d=new Date(x.value);if(Number.isFinite(d.getTime())){x.type='hidden';x.value=d.toISOString()}}})})();</script>
 <script>${SITE_JS}</script>
-<script>(function(){
+${studio ? '' : `<script>(function(){
   var slug = document.body.getAttribute('data-slug');
   var token = null;
   try { token = localStorage.getItem('token'); } catch(e) {}
@@ -2455,7 +3203,7 @@ ${body}
         document.body.insertBefore(landing,document.querySelector('footer'));
       }
     }).catch(function(){});
-})();</script>
+})();</script>`}
 <style>.go-owner-banner{position:fixed;z-index:80;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:11px 16px;border-radius:13px;background:rgba(15,21,32,.96);border:1px solid rgba(255,255,255,.15);color:#ecf0f7;box-shadow:0 16px 40px #0008;font:600 13px system-ui}.go-owner-banner a{color:var(--a);text-decoration:none}.go-owner-landing{max-width:650px;min-height:50vh;margin:115px auto 45px;padding:32px 24px;text-align:center}.go-owner-landing h1{font-size:clamp(30px,5vw,52px)}.go-owner-landing p{color:var(--soft);margin:18px 0 25px}.go-owner-landing iframe{display:block;width:100%;height:min(76vh,850px);min-height:540px;border:1px solid var(--line);border-radius:18px;background:#080c13}.go-owner-landing{max-width:1200px;text-align:left}.go-owner-landing a{display:inline-block;border-radius:12px;padding:13px 22px;background:var(--a);color:var(--on);font-weight:700;text-decoration:none}@media(max-width:650px){.go-owner-banner{font-size:11px;gap:8px;padding:10px}}</style>
 </body></html>`;
 }
@@ -2522,7 +3270,7 @@ function renderSellerProfile(user, offers) {
   <script>(function(){const slug=${JSON.stringify(user.slug)},api='/api/storefront/'+encodeURIComponent(slug)+'/reviews';const modal=document.getElementById('spModal'),form=document.getElementById('spForm'),stat=document.getElementById('spStatus');const escText=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const close=()=>{modal.hidden=true;document.body.style.overflow=''};document.getElementById('spLeave').onclick=()=>{modal.hidden=false;document.body.style.overflow='hidden'};document.getElementById('spClose').onclick=close;modal.addEventListener('click',e=>{if(e.target===modal)close()});document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});const follow=document.getElementById('spFollow'),key='goldoffer-follow-'+slug;function updateFollow(){let ok=localStorage.getItem(key)==='1';follow.textContent=ok?'♥ Saved seller':'♡ Save seller';follow.setAttribute('aria-pressed',String(ok))}follow.onclick=async()=>{const willFollow=localStorage.getItem(key)!=='1';localStorage.setItem(key,willFollow?'1':'0');if(willFollow){try{const r=await fetch('/api/storefront/'+encodeURIComponent(slug)+'/updates');const d=await r.json();const newest=d.offers&&d.offers[0];if(newest)localStorage.setItem(key+'-latest',newest.id);}catch(e){}}updateFollow()};updateFollow();
   if(localStorage.getItem(key)==='1'){fetch('/api/storefront/'+encodeURIComponent(slug)+'/updates').then(r=>r.json()).then(d=>{const newest=d.offers&&d.offers[0];if(!newest)return;const prev=localStorage.getItem(key+'-latest');if(prev&&prev!==newest.id){const notice=document.createElement('div');notice.className='sp-update';notice.textContent='New offer from this seller: '+newest.title;document.querySelector('.sp-wrap').prepend(notice);}localStorage.setItem(key+'-latest',newest.id)}).catch(()=>{})} document.getElementById('spShare').onclick=async()=>{try{if(navigator.share)await navigator.share({title:document.title,url:location.href});else{await navigator.clipboard.writeText(location.href);alert('Profile link copied')}}catch(e){}};
   async function load(){try{const r=await fetch(api);if(!r.ok)throw Error('Failed');const d=await r.json();const avg=d.count?d.average.toFixed(1):'—';document.getElementById('spAvg').textContent=avg;document.getElementById('spRating').textContent=d.count?'★ '+avg+' ('+d.count+')':'★ No ratings yet';document.getElementById('spReviewCount').textContent=d.count?'('+d.count+')':'';document.getElementById('spStars').textContent=d.count?'★'.repeat(Math.round(d.average))+'☆'.repeat(5-Math.round(d.average)):'☆☆☆☆☆';document.getElementById('spCount').textContent=d.count?d.count+' visitor reviews':'No reviews yet';let bins=[0,0,0,0,0];for(const r of d.reviews)bins[r.rating-1]++;document.getElementById('spBars').innerHTML=d.count?[5,4,3,2,1].map(i=>'<div style="font-size:12px;color:#bfc8d5">'+i+' stars <div class="sp-bar"><i style="width:'+(bins[i-1]/d.count*100)+'%"></i></div></div>').join(''):'';document.getElementById('spReviewList').innerHTML=d.reviews.length?d.reviews.map(x=>'<article class="sp-review-item"><div><strong>'+escText(x.name)+'</strong><span>'+ '★'.repeat(x.rating)+'☆'.repeat(5-x.rating)+'</span></div><p>'+escText(x.comment)+'</p><small>'+new Date(x.createdAt).toLocaleDateString('en-GB')+'</small></article>').join(''):'No visitor reviews yet. Be the first to share your experience.';}catch(e){document.getElementById('spReviewList').textContent='Unable to load reviews right now.'}}form.onsubmit=async e=>{e.preventDefault();stat.textContent='Submitting…';let d=Object.fromEntries(new FormData(form));d.rating=Number(d.rating);try{let r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}),out=await r.json();if(!r.ok)throw Error(out.message||'Could not submit');form.reset();close();load()}catch(e){stat.textContent=e.message}};load()})()</script>`;
-  return pageShell(user,{title:`${sellerName(user)} — Seller profile`,desc:`View offers and visitor feedback for ${sellerName(user)}`,body,cls:'sellerprofile'});
+  return pageShell(user,{title:`${sellerName(user)} — Seller profile`,desc:`View offers and visitor feedback for ${sellerName(user)}`,body,cls:'sellerprofile',page:'profile'});
 }
 
 function renderSite(user, offers, sent) {
@@ -2628,12 +3376,12 @@ function renderSite(user, offers, sent) {
 <main class="wrap top" id="offers">
   <div class="sec-head"><h2>Offers</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/profile#reviews" style="color:inherit;text-decoration:underline">Seller reviews</a></span></div>
   <div class="go-shop-search"><input id="goOfferSearch" type="search" autocomplete="off" aria-label="Search offers" placeholder="Search offers by name or description..."><span id="goFound">${offers.length} offers</span></div>
-  ${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
+  ${sent ? `<div class="ok">Thank you. Your request was sent and the business will contact you.${sentTrack(user)}</div>` : ''}
   <div class="grid" id="goOfferGrid">${cards}</div><p id="goNoResults" style="display:none;padding:28px 0;color:#707781">No matching offers.</p>
 </main>
 
 <section class="wrap" style="padding-top:42px"><a href="/site/${esc(user.slug)}/profile" style="display:flex;gap:15px;align-items:center;border:1px solid #364151;border-radius:18px;background:#161c25;padding:18px 20px;text-decoration:none"><span class="seller-pill" style="display:grid;place-items:center;width:52px;height:52px;color:inherit;font-size:18px;font-weight:800">${esc(initials(sellerName(user)))}</span><span style="flex:1;min-width:0"><b style="display:block;color:#fff">Meet ${esc(sellerName(user))}</b><small style="color:#b1bdcc">Seller profile · Offers · Reviews</small></span><strong style="color:#ffcb31">View profile →</strong></a></section>
-${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book"><div class="sec-head"><h2>Request an appointment</h2><span>Available when the business enables appointments.</span></div><form class="glass" method="POST" action="/site/${esc(user.slug)}/appointment" style="display:grid;gap:12px;max-width:620px"><input name="customer" placeholder="Your name" required maxlength="80"><input name="contact" placeholder="Your contact details" required maxlength="140"><label style="font-size:13px">Preferred date and time</label><input type="datetime-local" name="startsAt" required><textarea name="note" rows="2" placeholder="What do you need? (optional)" maxlength="500"></textarea><label style="font-size:12px;display:flex;gap:9px;align-items:start"><input type="checkbox" name="consent" value="1" required style="width:auto;margin:3px 0"><span>I agree to be contacted about this booking. <a href="${PUBLIC_BASE}/privacy">Privacy Policy</a></span></label><button class="btn" type="submit">Send booking request</button></form>${sent ? '' : ''}</section>
+${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book"><div class="sec-head"><h2>Request an appointment</h2><span>Available when the business enables appointments.</span></div><form class="glass" method="POST" action="/site/${esc(user.slug)}/appointment" style="display:grid;gap:12px;max-width:620px"><input name="customer" placeholder="Your name" required maxlength="80"><input name="contact" placeholder="Your contact details" required maxlength="140"><label style="font-size:13px">Service (optional)</label><select name="offerId" id="bkOffer"><option value="">Any</option>${(user._offerOpts||[]).map(o=>`<option value="${esc(o.id)}">${esc(o.title)}</option>`).join('')}</select><label style="font-size:13px">Pick a day</label><input type="date" id="bkDate" required><div id="bkSlots" style="display:flex;flex-wrap:wrap;gap:8px;min-height:38px;color:var(--soft);font-size:13px">Choose a day to see free times.</div><input type="hidden" name="startsAt" id="bkStart" required><textarea name="note" rows="2" placeholder="What do you need? (optional)" maxlength="500"></textarea><label style="font-size:12px;display:flex;gap:9px;align-items:start"><input type="checkbox" name="consent" value="1" required style="width:auto;margin:3px 0"><span>I agree to be contacted about this booking. <a href="${PUBLIC_BASE}/privacy">Privacy Policy</a></span></label><button class="btn" type="submit">Send booking request</button></form>${sent ? '' : ''}</section>
 ` : ''}${user.faqItems && user.faqItems.length ? `<section class="wrap go-faq" id="faq"><div class="sec-head"><h2>Frequently asked questions</h2></div><div style="display:grid;gap:12px">${user.faqItems.map(x=>`<details class="glass" style="padding:18px 22px"><summary style="cursor:pointer;font-weight:700">${esc(x.question)}</summary><p style="padding-top:10px;color:var(--soft)">${esc(x.answer)}</p></details>`).join('')}</div></section>` : ''}
 <section class="wrap findus" id="about" style="padding-top:60px"><div class="sec-head"><h2>Find us</h2></div>${aboutBlock(user)}</section>
 <footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>
@@ -2705,7 +3453,7 @@ ${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book
 var lines=[].slice.call(document.querySelectorAll('.copyline'));if(lines.length&&'IntersectionObserver' in window){var io=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting)entry.target.classList.add('on');})},{threshold:.45});lines.forEach(function(el){io.observe(el)})}else{lines.forEach(function(el){el.classList.add('on')})}
 var shell=document.querySelector('[data-story-shell]'),canvas=document.querySelector('[data-story-canvas]');if(shell&&canvas&&window.matchMedia('(min-width: 801px)').matches&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){var ticking=false;var run=function(){ticking=false;var rect=shell.getBoundingClientRect(),vh=window.innerHeight||1,total=Math.max(1,shell.offsetHeight-vh),p=Math.min(1,Math.max(0,-rect.top/total));var scale=1-p*.12,shift=p*26;canvas.style.transform='translate3d(0,'+shift+'px,0) scale('+scale+')';canvas.style.borderRadius=(34+p*14)+'px';};addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(run)}},{passive:true});run();}
 var stack=document.querySelector('[data-cine-stack]');if(stack&&matchMedia('(pointer:fine)').matches&&!matchMedia('(prefers-reduced-motion: reduce)').matches){stack.addEventListener('pointermove',function(e){var r=stack.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;stack.style.transform='rotateY('+(x*7)+'deg) rotateX('+(-y*5)+'deg)'});stack.addEventListener('pointerleave',function(){stack.style.transform=''})}})()</script>`;
-  return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body });
+  return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body, page: 'home' });
 }
 
 function renderOfferPage(user, offer, others, sent) {
@@ -2737,7 +3485,7 @@ function renderOfferPage(user, offer, others, sent) {
     ${offer.longDescription ? `<p class="long">${esc(offer.longDescription)}</p>` : ''}
     <div class="glass req" id="request">
       <h2>Request this offer</h2>
-      ${sent ? '<div class="ok" style="margin-bottom:14px">Thank you. Your request was sent and the business will contact you.</div>' : ''}
+      ${sent ? `<div class="ok" style="margin-bottom:14px">Thank you. Your request was sent and the business will contact you.${sentTrack(user)}</div>` : ''}
       <form method="POST" action="/site/${esc(user.slug)}/order">
         <input type="hidden" name="offerId" value="${offer._id}"><input type="hidden" name="from" value="offer">
         <input name="customerName" placeholder="Your name" required maxlength="80">
@@ -2761,7 +3509,7 @@ ${more}
 <div class="lb" id="lb"><img id="lbImg" alt=""></div>
 <div class="stick"><b>${eur(offer.price)}</b><a class="alt" href="#request">Request</a><a href="/site/${esc(user.slug)}/messages?offer=${offer._id}">Message</a></div>
 <footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>`;
-  return pageShell(user, { title: `${offer.title} - ${user.siteName}`, desc: String(offer.description || offer.title).slice(0, 160), body, cls: 'offerpage' });
+  return pageShell(user, { title: `${offer.title} - ${user.siteName}`, desc: String(offer.description || offer.title).slice(0, 160), body, cls: 'offerpage', page: 'offer' });
 }
 
 function renderFavoritesPage(user) {
@@ -2772,7 +3520,7 @@ function renderFavoritesPage(user) {
 <div class="grid" id="favList"><p class="none">Loading...</p></div>
 </main>
 <footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
-  return pageShell(user, { title: `Favorites - ${user.siteName}`, desc: `Offers you saved at ${user.siteName}`, body });
+  return pageShell(user, { title: `Favorites - ${user.siteName}`, desc: `Offers you saved at ${user.siteName}`, body, page: 'favorites' });
 }
 
 // ---------- Header bar shared by all public pages: brand + icon buttons (Saved, Messages) ----------
@@ -3217,7 +3965,7 @@ function renderMessagesPage(user) {
 <audio id="remoteAudio" autoplay playsinline></audio>
 <div class="toast" id="toast" style="display:none"></div>
 <script>${MSG_JS}</script>`;
-  return pageShell(user, { title: `Messages - ${user.siteName}`, desc: `Your conversations with ${user.siteName}`, body, cls: 'mpage' });
+  return pageShell(user, { title: `Messages - ${user.siteName}`, desc: `Your conversations with ${user.siteName}`, body, cls: 'mpage', page: 'messages' });
 }
 
 const SITE_CSP = [
@@ -3282,20 +4030,43 @@ app.get('/api/my/reviews', authenticateToken, async(req,res)=>{
   }catch(e){res.status(500).json({message:'Unable to load feedback'});}
 });
 
+
+// ----- Studio mode: the owner's editor frame loads the real pages with a short-lived ticket -----
+function studioOk(req, user) {
+  try { const t = jwt.verify(String(req.query.studio || ''), process.env.JWT_SECRET); return !!(t && t.studio && user && String(t.id) === String(user._id)); } catch (e) { return false; }
+}
+app.use((req, res, next) => {
+  if (req.query && req.query.studio && String(req.path).startsWith('/site/')) {
+    const orig = res.setHeader.bind(res);
+    res.setHeader = (k, v) => (/^content-security-policy$/i.test(k) ? orig(k, String(v) + '; frame-ancestors ' + FRONTEND_URL + ' ' + PUBLIC_BASE + ' http://localhost:*') : orig(k, v));
+    res.removeHeader('X-Frame-Options'); res.setHeader('Cache-Control', 'no-store');
+  }
+  next();
+});
+// sets the design the page should show (draft inside the editor, live for visitors); returns false if the page must be hidden
+function prepSite(req, user) {
+  if (!user) return false;
+  const studio = !!(req.query && req.query.studio) && studioOk(req, user);
+  if (!user.published && !studio) return false;
+  user._studio = studio; user._gd = studio ? (user.designDraft || user.design) : user.design;
+  user._track = /^[a-f0-9]{24}$/.test(String(req.query.track || '')) ? String(req.query.track) : '';
+  return true;
+}
+
 app.get('/site/:slug', async (req, res) => {
   try {
     const user = await User.findOne({ slug: req.params.slug });
-    if (!user || !user.published) return res.status(404).send('Site not found.');
+    if (!prepSite(req, user)) return res.status(404).send('Site not found.');
     const offers = await Offer.find({ userId: user._id }).sort({ createdAt: -1 });
     res.setHeader('Content-Security-Policy', SITE_CSP); res.setHeader('Cache-Control', 'no-store, max-age=0');
-    const inv=await ShopSetting.findOne({sellerId:user._id}).select('stock').lean();user._stockMap=inv?.stock?Object.fromEntries(Object.entries(inv.stock)):{};res.send(renderSite(user, offers, req.query.sent === '1'));
+    const inv=await ShopSetting.findOne({sellerId:user._id}).select('stock').lean();user._stockMap=inv?.stock?Object.fromEntries(Object.entries(inv.stock)):{};user._offerOpts=offers.map(o=>({id:String(o._id),title:o.title}));res.send(renderSite(user, offers, req.query.sent === '1'));
   } catch (err) {
     res.status(500).send('Server error');
   }
 });
 
 app.get('/site/:slug/profile', async(req,res)=>{
-  try { const user=await User.findOne({slug:req.params.slug,published:true}); if(!user)return res.status(404).send('Site not found');const offers=await Offer.find({userId:user._id}).sort({createdAt:-1});res.setHeader('Content-Security-Policy',SITE_CSP);const inv=await ShopSetting.findOne({sellerId:user._id}).select('stock').lean();user._stockMap=inv?.stock?Object.fromEntries(Object.entries(inv.stock)):{};res.send(renderSellerProfile(user,offers)); }
+  try { const user=await User.findOne({slug:req.params.slug}); if(!prepSite(req,user))return res.status(404).send('Site not found');const offers=await Offer.find({userId:user._id}).sort({createdAt:-1});res.setHeader('Content-Security-Policy',SITE_CSP);const inv=await ShopSetting.findOne({sellerId:user._id}).select('stock').lean();user._stockMap=inv?.stock?Object.fromEntries(Object.entries(inv.stock)):{};res.send(renderSellerProfile(user,offers)); }
   catch(e){console.error('Seller profile error',e);res.status(500).send('Unable to load seller profile')}
 });
 app.get('/site/:slug/reviews',(req,res)=>res.redirect(302,'/site/'+encodeURIComponent(req.params.slug)+'/profile#reviews'));
@@ -3303,7 +4074,7 @@ app.get('/site/:slug/reviews',(req,res)=>res.redirect(302,'/site/'+encodeURIComp
 app.get('/site/:slug/messages', async (req, res) => {
   try {
     const user = await User.findOne({ slug: req.params.slug });
-    if (!user || !user.published) return res.status(404).send('Site not found.');
+    if (!prepSite(req, user)) return res.status(404).send('Site not found.');
     res.setHeader('Content-Security-Policy', SITE_CSP);
     res.setHeader('Permissions-Policy', 'microphone=(self)');
     res.setHeader('Cache-Control', 'no-store');
@@ -3314,7 +4085,7 @@ app.get('/site/:slug/messages', async (req, res) => {
 app.get('/site/:slug/favorites', async (req, res) => {
   try {
     const user = await User.findOne({ slug: req.params.slug });
-    if (!user || !user.published) return res.status(404).send('Site not found.');
+    if (!prepSite(req, user)) return res.status(404).send('Site not found.');
     res.setHeader('Content-Security-Policy', SITE_CSP); res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.send(renderFavoritesPage(user));
   } catch (err) { res.status(500).send('Server error'); }
@@ -3325,7 +4096,7 @@ app.get('/site/:slug/offer/:id', async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).send('Offer not found.');
     const user = await User.findOne({ slug: req.params.slug });
-    if (!user || !user.published) return res.status(404).send('Site not found.');
+    if (!prepSite(req, user)) return res.status(404).send('Site not found.');
     const offer = await Offer.findOne({ _id: req.params.id, userId: user._id });
     if (!offer) return res.status(404).send('Offer not found.');
     const others = await Offer.find({ userId: user._id, _id: { $ne: offer._id } }).sort({ createdAt: -1 }).limit(3);
@@ -3348,7 +4119,9 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
     if (qty === 0) return res.status(409).send('This offer is currently sold out. Please contact the seller.');
     const parsed = parseContacts(req.body);
     if (parsed.error) return res.status(400).send(`${esc(parsed.error)} Please go back and try again.`);
-    await Order.create({
+    const trackToken = crypto.randomBytes(12).toString('hex');
+    const newOrder = await Order.create({
+      trackToken, history: [{ status: 'Pending', at: new Date() }],
       userId: user._id, offerId: offer._id, offerTitle: offer.title, amount: offer.price,
       customerName: String(req.body.customerName || '').slice(0, 80),
       customerContact: parsed.text.slice(0, 400),
@@ -3356,6 +4129,9 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
       note: String(req.body.note || '').replace(/\r/g, '').trim().slice(0, 1000),
       status: 'Pending'
     });
+    await pushNote(user._id, 'order', String(newOrder._id), 'New request', `${String(req.body.customerName || 'A customer').slice(0, 60)} · ${offer.title}`, '/orders');
+    const mailC = (parsed.contacts || []).find(c => c.type === 'email' && isEmail(c.value));
+    if (mailC) void sendMail({ to: mailC.value, subject: `We received your request: ${offer.title}`, text: `Thank you! Track your request any time:\n${PUBLIC_BASE}/track/${trackToken}` });
     // Tell the business owner right away (not awaited, so the customer never waits for email)
     if (user.notifyOn !== false) {
       const name = String(req.body.customerName || '').slice(0, 80);
@@ -3376,8 +4152,8 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
         })
       });
     }
-    if (req.body.from === 'offer') return res.redirect(303, `/site/${user.slug}/offer/${offer._id}?sent=1#request`);
-    res.redirect(303, `/site/${user.slug}?sent=1`);
+    if (req.body.from === 'offer') return res.redirect(303, `/site/${user.slug}/offer/${offer._id}?sent=1&track=${trackToken}#request`);
+    res.redirect(303, `/site/${user.slug}?sent=1&track=${trackToken}`);
   } catch (err) {
     res.status(500).send('Server error');
   }
@@ -3410,7 +4186,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset'];
+const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
