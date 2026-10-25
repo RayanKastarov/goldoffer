@@ -714,6 +714,42 @@
 @media(max-width:900px){.stu-main{flex-direction:column}.stu-side{width:100%;height:42vh;border-left:0;border-top:1px solid #222c3b}.stu-stage{padding:8px}.stu-hint{display:none}.stu-wrap iframe{min-height:0}}
 .stu-launch{display:grid;gap:10px;margin:18px 0;padding:22px;border-radius:18px;border:1px solid #3a4a6a;background:linear-gradient(135deg,#17213a,#2a1d3f)}.stu-launch b{font-size:1.1rem}.stu-launch p{color:#b7c1d6;font-size:.9rem}
 </style>
+
+<style id="goFresh">
+@keyframes gfUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes gfPulse{0%{box-shadow:0 0 0 0 rgba(47,224,179,.55)}100%{box-shadow:0 0 0 12px rgba(47,224,179,0)}}
+@keyframes gfFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes gfFlow{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+/* dashboard */
+.dash h1{background:linear-gradient(90deg,#fff,#ffd042 60%,#ff9a3c);-webkit-background-clip:text;background-clip:text;color:transparent}
+.go-tools a{transition:transform .2s,border-color .2s,background .2s,box-shadow .2s}
+.go-tools a:hover{transform:translateY(-3px);border-color:#ffd042;background:rgba(255,208,66,.1);box-shadow:0 8px 22px rgba(255,208,66,.15)}
+.dash .stat{position:relative;overflow:hidden;padding:24px 24px 22px;border-radius:20px;background:linear-gradient(160deg,#151d2b,#0d131d);animation:gfUp .6s both;transition:transform .25s,box-shadow .25s,border-color .25s}
+.dash .stat.s2{animation-delay:.08s}.dash .stat.s3{animation-delay:.16s}.dash .stat.s4{animation-delay:.24s}
+.dash .stat::before{content:'';position:absolute;left:0;top:0;right:0;height:3px;background:linear-gradient(90deg,var(--c1,#ffd042),var(--c2,#ff9a3c),var(--c1,#ffd042));background-size:200% 100%;animation:gfFlow 4s linear infinite}
+.dash .stat::after{content:'';position:absolute;right:-40px;bottom:-50px;width:140px;height:140px;border-radius:50%;background:var(--c1,#ffd042);opacity:.08;transition:opacity .3s,transform .3s}
+.dash .stat:hover{transform:translateY(-5px);border-color:var(--c1,#ffd042);box-shadow:0 16px 40px rgba(0,0,0,.4)}
+.dash .stat:hover::after{opacity:.16;transform:scale(1.25)}
+.dash .stat.s1{--c1:#ffd042;--c2:#ff9a3c}.dash .stat.s2{--c1:#2fe0b3;--c2:#3ab8ff}.dash .stat.s3{--c1:#ff9a3c;--c2:#ff5d73}.dash .stat.s4{--c1:#b28cff;--c2:#ff6fd8}
+.dash .stat-ic{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;font-size:20px;margin-bottom:14px;background:color-mix(in srgb,var(--c1) 18%,transparent);border:1px solid color-mix(in srgb,var(--c1) 40%,transparent);animation:gfFloat 4s ease-in-out infinite}
+.dash .stat h3{color:#b9c4d6;font-size:.92rem;font-weight:600}
+.dash .stat .v{font-size:2.5rem;color:#fff;text-shadow:0 0 28px color-mix(in srgb,var(--c1) 35%,transparent)}
+.dash .panel{border-radius:20px;background:linear-gradient(160deg,#131a27,#0d121b);animation:gfUp .7s .3s both}
+.dash .panel h2{font-size:1.25rem;color:#fff}
+.dash table td{color:#e6ebf4;font-size:.92rem}.dash table th{color:#9fb0c8}
+.dash tbody tr{transition:background .2s}.dash tbody tr:hover{background:rgba(255,208,66,.06)}
+.pill.Pending{background:rgba(255,154,60,.18);color:#ffb866}.pill.Completed{background:rgba(47,224,179,.18);color:#43f0c3}
+/* live link step */
+#step-4 .live-hero{display:flex;gap:18px;align-items:center;margin-bottom:6px}
+#step-4 .live-ill{width:112px;flex:none;animation:gfFloat 4.5s ease-in-out infinite;filter:drop-shadow(0 12px 22px rgba(0,0,0,.45))}
+#step-4 .live-badge{display:inline-flex;align-items:center;gap:7px;font-size:.72rem;font-weight:800;letter-spacing:.14em;color:#2fe0b3;background:rgba(47,224,179,.12);border:1px solid rgba(47,224,179,.4);border-radius:99px;padding:4px 11px;margin-bottom:6px}
+#step-4 .live-badge i{width:8px;height:8px;border-radius:50%;background:#2fe0b3;animation:gfPulse 1.6s infinite}
+#step-4 .url-box{position:relative;font-size:1.05rem;padding:18px 18px;border:0;border-radius:16px;background:linear-gradient(#0a0f17,#0a0f17) padding-box,linear-gradient(110deg,#ffd042,#2fe0b3,#3ab8ff,#ffd042) border-box;border:2px solid transparent;background-size:100% 100%,300% 100%;animation:gfFlow 6s linear infinite}
+#step-4 .url-box a{color:#43f0c3;font-size:1.05rem}
+#step-4 .live-actions .btn-ghost{transition:transform .2s,border-color .2s,box-shadow .2s;font-weight:600}
+#step-4 .live-actions .btn-ghost:hover{transform:translateY(-3px);border-color:#ffd042;box-shadow:0 10px 24px rgba(255,208,66,.15)}
+@media(max-width:560px){#step-4 .live-hero{flex-direction:column;align-items:flex-start}}
+</style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
 
@@ -1063,13 +1099,13 @@
           </div>
 
           <div id="step-4" class="step">
-            <h2>Your website is live</h2>
-            <p class="sub">Anyone can open it with this link:</p>
+            <div class="live-hero"><svg class="live-ill" viewBox="0 0 120 90" aria-hidden="true"><rect x="6" y="10" width="108" height="70" rx="10" fill="#0d1420" stroke="#2c3a52"/><rect x="6" y="10" width="108" height="16" rx="10" fill="#18233a"/><circle cx="18" cy="18" r="3" fill="#ff5d73"/><circle cx="28" cy="18" r="3" fill="#ffd042"/><circle cx="38" cy="18" r="3" fill="#2fe0b3"/><rect x="16" y="36" width="50" height="8" rx="4" fill="#ffd042"/><rect x="16" y="50" width="70" height="5" rx="2.5" fill="#34425c"/><rect x="16" y="60" width="56" height="5" rx="2.5" fill="#34425c"/><rect x="82" y="34" width="24" height="30" rx="6" fill="#2fe0b3" opacity=".85"/></svg>
+              <div><span class="live-badge"><i></i>LIVE</span><h2>Your website is live</h2><p class="sub">Anyone can open it with this link:</p></div></div>
             <div class="url-box" id="siteUrlBox"></div>
-            <div class="row">
-              <button class="btn-ghost" onclick="copyUrl()">Copy link</button>
-              <button class="btn-ghost" onclick="goStep(3)">Add or edit offers</button>
-              <button class="btn-ghost" onclick="openStudio()">Open Design Studio</button>
+            <div class="row live-actions">
+              <button class="btn-ghost" onclick="copyUrl()">&#128203; Copy link</button>
+              <button class="btn-ghost" onclick="goStep(3)">&#128722; Add or edit offers</button>
+              <button class="btn-ghost" onclick="openStudio()">&#127912; Open Design Studio</button>
             </div>
             <div class="field" style="margin-top:22px">
               <label>Change the address name</label>
@@ -1088,7 +1124,7 @@
 <!-- =================== DESIGN STUDIO (full-screen editor) =================== -->
 <div id="studio" class="stu" hidden>
   <div class="stu-top">
-    <button class="stu-b" onclick="closeStudio()" title="Back">&larr; Exit</button>
+    <button class="stu-b" onclick="stuExit()" title="Back">&larr; Exit</button>
     <select id="stuPage" class="stu-s" onchange="stuGo(this.value)" aria-label="Page"></select>
     <div class="stu-seg"><button id="stuDesk" class="on" onclick="stuDevice(false)">Desktop</button><button id="stuPhone" onclick="stuDevice(true)">Phone</button></div>
     <button class="stu-b" id="stuUndo" onclick="stuUndo()" title="Undo (Ctrl+Z)">&#8630;</button><button class="stu-b" id="stuRedo" onclick="stuRedo()" title="Redo (Ctrl+Y)">&#8631;</button>
@@ -1305,10 +1341,10 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     <div id="dashGate" class="panel" style="display:none">Please sign up or log in to see your dashboard.</div>
     <div id="dashBody">
       <div class="stats">
-        <div class="stat"><h3>Revenue (completed)</h3><div class="v" id="sRevenue">0.00 EUR</div></div>
-        <div class="stat"><h3>Completed orders</h3><div class="v" id="sCompleted">0</div></div>
-        <div class="stat"><h3>Pending requests</h3><div class="v" id="sPending">0</div></div>
-        <div class="stat"><h3>Active offers</h3><div class="v" id="sOffers">0</div></div>
+        <div class="stat s1"><span class="stat-ic">&#128176;</span><h3>Revenue (completed)</h3><div class="v" id="sRevenue">0.00 EUR</div></div>
+        <div class="stat s2"><span class="stat-ic">&#9989;</span><h3>Completed orders</h3><div class="v" id="sCompleted">0</div></div>
+        <div class="stat s3"><span class="stat-ic">&#9203;</span><h3>Pending requests</h3><div class="v" id="sPending">0</div></div>
+        <div class="stat s4"><span class="stat-ic">&#128717;</span><h3>Active offers</h3><div class="v" id="sOffers">0</div></div>
       </div>
             <div class="dash-grid">
         <div class="panel"><h2>Revenue, last 6 months</h2><canvas id="chart"></canvas></div>
@@ -2730,7 +2766,7 @@ async function openStudio() {
     const [t, st] = await Promise.all([api('/api/studio/ticket', { method: 'POST', body: '{}' }), api('/api/studio/state')]);
     ST.ticket = t.ticket; ST.slug = t.slug; ST.D = Object.assign(emptyD(), st.draft || {}); ST.D.m = Object.assign({ g: {}, p: {} }, ST.D.m); ['f', 'mf', 't', 'im', 'p', 'g', 'v'].forEach(k => { ST.D[k] = ST.D[k] || {}; });
     ST.offers = st.offers || []; ST.fonts = st.fonts || []; ST.layouts = st.layouts || []; ST.layout = st.layout || 'signature';
-    ST.hist = []; ST.fut = []; ST.sel = null; ST.page = 'home'; ST.last = JSON.stringify(ST.D);
+    ST.hist = []; ST.fut = []; ST.sel = null; ST.page = 'home'; ST.last = JSON.stringify(ST.D); try { ST.unpub = JSON.stringify(st.draft || {}) !== JSON.stringify(st.live || {}); } catch (e) { ST.unpub = true; }
   } catch (e) { return notify(e.message, 'Studio'); }
   $('studio').hidden = false; document.body.style.overflow = 'hidden'; document.documentElement.classList.add('stu-open');
   $('stuPage').innerHTML = '<option value="">Home page</option><option value="/profile">Seller profile</option><option value="/favorites">Saved page</option><option value="/messages">Messages page</option>' + ST.offers.map(o => '<option value="/offer/' + o._id + '">Offer: ' + esc(o.title).slice(0, 30) + '</option>').join('');
@@ -2745,7 +2781,7 @@ function stuUpdateBtns() { $('stuUndo').disabled = !ST.hist.length; $('stuRedo')
 function stuCommit(before) {
   // `before` is the JSON of the design before the change (for undo)
   if (before !== undefined && before !== JSON.stringify(ST.D)) { ST.hist.push(before); if (ST.hist.length > 100) ST.hist.shift(); ST.fut = []; }
-  ST.dirty = true; $('stuSave').textContent = 'Unsaved changes'; stuPush(true); stuUpdateBtns();
+  ST.dirty = true; ST.unpub = true; $('stuSave').textContent = 'Unsaved changes'; stuPush(true); stuUpdateBtns();
   clearTimeout(ST.timer); ST.timer = setTimeout(stuFlush, 1300);
 }
 async function stuFlush() {
@@ -2884,7 +2920,7 @@ function stuSiteTab(pane) {
     + '<h5>Fonts</h5><div class="stu-r"><label>Body</label><select onchange="stuSetV(\'font\',this.value)">' + fo('font') + '</select></div><div class="stu-r"><label>Headings</label><select onchange="stuSetV(\'headFont\',this.value)">' + fo('headFont') + '</select></div>'
     + '<div class="stu-r"><label>Text size</label><input type="range" min="0.8" max="1.4" step="0.05" value="' + (v.scale || 1) + '" oninput="stuSetV(\'scale\',Number(this.value))"></div><div class="stu-r"><label>Roundness</label><input type="range" min="0" max="40" value="' + (v.radius === undefined ? 14 : v.radius) + '" oninput="stuSetV(\'radius\',Number(this.value))"></div>'
     + '<h5>Atmosphere</h5><div class="stu-r"><label>Effect</label><select onchange="stuSetV(\'fx\',this.value===\'none\'?null:this.value)">' + ['none', 'grain', 'vignette', 'scanlines', 'grid', 'glow', 'aurora', 'snow', 'confetti', 'stars', 'bubbles'].map(a => '<option' + (v.fx === a ? ' selected' : '') + '>' + a + '</option>').join('') + '</select></div><div class="stu-tg">' + tg('Glow cursor', 'glowCursor', true) + tg('Scroll bar', 'progress', true) + tg('No reveal anim', 'noReveal', true) + '<button class="' + (v.stickyBar === false ? 'on' : '') + '" onclick="stuSetV(\'stickyBar\',' + (v.stickyBar === false ? 'null' : 'false') + ')">Static header</button></div>'
-    + '<h5>Base template</h5><div class="stu-r"><select onchange="ST.layout=this.value;stuCommit();stuLoad($(\'stuPage\').value)">' + ST.layouts.map(l => '<option' + (ST.layout === l ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></div><p style="color:#6f7d94">Your edits stay when you change the template.</p>'
+    + '<h5>Base template</h5><div class="stu-r"><select onchange="ST.layout=this.value;stuCommit();stuLoad($(\'stuPage\').value)">' + ST.layouts.map(l => '<option value="' + l + '"' + (ST.layout === l ? ' selected' : '') + '>' + ({ signature: 'Signature - black & gold', atelier: 'Atelier - sand & terracotta', editorial: 'Editorial - white, black & red', aurora: 'Aurora - pastel light', mono: 'Mono - paper & typewriter', market: 'Market - emerald & orange', arcade: 'Arcade - purple & pink', neon: 'Neon - midnight cyan' }[l] || l) + '</option>').join('') + '</select></div><p style="color:#6f7d94">Your edits stay when you change the template.</p>'
     + '<h5>Danger zone</h5><div class="stu-tg"><button onclick="if(confirm(\'Remove ALL your design changes (a version is kept in History)?\'))stuDo(D=>{Object.assign(D,emptyD())})">Reset everything</button></div>';
 }
 function stuBg() { stuSetV('bgGrad', 'linear-gradient(135deg,' + $('bg1').value + ',' + $('bg2').value + ')'); }
@@ -2892,7 +2928,23 @@ function stuBg() { stuSetV('bgGrad', 'linear-gradient(135deg,' + $('bg1').value 
 // ---- publish / history / download ----
 async function stuPublish() {
   await stuFlush();
-  try { await api('/api/studio/publish', { method: 'POST', body: JSON.stringify({ label: prompt('Name this version (optional)', '') || 'Published' }) }); $('stuSave').textContent = 'Published ' + new Date().toLocaleTimeString(); notify('Published! Your live site now shows this design. The previous version is saved in History.', 'Published'); } catch (e) { notify(e.message, 'Publish'); }
+  try { await api('/api/studio/publish', { method: 'POST', body: JSON.stringify({ label: prompt('Name this version (optional)', '') || 'Published' }) }); ST.unpub = false; $('stuSave').textContent = 'Published ' + new Date().toLocaleTimeString(); notify('Published! Your live site now shows this design. The previous version is saved in History.', 'Published'); } catch (e) { notify(e.message, 'Publish'); }
+}
+
+// ---- Exit: ask whether to save (publish) the design ----
+async function stuExit() {
+  await stuFlush();
+  if (!ST.unpub) return closeStudio();
+  const m = $('stuModal'), body = $('stuModalBody'); m.hidden = false;
+  body.innerHTML = '<h3 style="margin:0 0 6px">Save your design?</h3><p style="color:#8a97ad;margin:0 0 16px;line-height:1.5">You have changes that are not on your live website yet. Publish them before you leave?</p>'
+    + '<div style="display:grid;gap:10px"><button class="stu-b pri" onclick="stuExitPublish()">Yes, publish and exit</button>'
+    + '<button class="stu-b" onclick="$(\'stuModal\').hidden=true;closeStudio()">No, exit (keep as draft)</button>'
+    + '<button class="stu-b" onclick="$(\'stuModal\').hidden=true">Cancel, keep editing</button></div>';
+}
+async function stuExitPublish() {
+  try { await api('/api/studio/publish', { method: 'POST', body: JSON.stringify({ label: 'Published on exit' }) }); ST.unpub = false; notify('Published! Your live site now shows this design.', 'Published'); }
+  catch (e) { return notify(e.message, 'Publish'); }
+  $('stuModal').hidden = true; closeStudio();
 }
 async function stuDownload() {
   await stuFlush();

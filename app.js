@@ -5,7 +5,10 @@ const API_BASE = 'https://goldoffer.onrender.com';
 
 
 // Търсим бутона за плащане в HTML страницата
-const payButton = document.getElementById('pay-button'); // Уверете се, че в HTML бутонът има id="pay-button"
+if (typeof document !== 'undefined') {
+    const payButton = document.getElementById('pay-button');
+}
+
 
 if (payButton) {
     payButton.addEventListener('click', async () => {
