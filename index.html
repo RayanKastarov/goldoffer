@@ -655,8 +655,8 @@
 .go-layout-arcade{background:#0b0b17}.go-layout-arcade i{background:#dbff36;border-radius:2px}.go-layout-arcade i:first-child{background:#252a3c}
 .go-layout-aurora{background:linear-gradient(135deg,#1f3150,#4c4279)}.go-layout-aurora i{background:#83ddcb;border-radius:20px}.go-layout-aurora i:first-child{background:#b9adff}
 .preview[data-layout=atelier] .screen{background:#eee9e0!important;color:#25231f!important}.preview[data-layout=atelier] .screen .top{background:#d6ccba!important;color:#25231f!important}
-.preview[data-layout=arcade] .screen{background:#080910!important;color:#efffbe!important}.preview[data-layout=arcade] .screen .top{background:#111426!important;color:#dbff36!important}
-.preview[data-layout=aurora] .screen{background:#202844!important;color:#e7faff!important}.preview[data-layout=aurora] .screen .top{background:#38466c!important;color:#e7faff!important}
+.preview[data-layout=arcade] .screen{background:linear-gradient(135deg,#090a12,#12131f)!important;color:#efffbe!important}.preview[data-layout=arcade] .screen .top{background:#111426!important;color:#dbff36!important;text-transform:uppercase;letter-spacing:.05em}.preview[data-layout=arcade] .screen .body{display:grid;grid-template-columns:1.2fr .8fr;gap:8px}.preview[data-layout=arcade] .screen .card{border-radius:6px!important;box-shadow:6px 6px 0 rgba(219,255,54,.12)}
+.preview[data-layout=aurora] .screen{background:radial-gradient(circle at 20% 20%,rgba(181,172,255,.25),transparent 36%),radial-gradient(circle at 82% 78%,rgba(120,225,208,.22),transparent 38%),#202844!important;color:#e7faff!important}.preview[data-layout=aurora] .screen .top{background:#38466c!important;color:#e7faff!important;border-radius:18px!important}.preview[data-layout=aurora] .screen .card{border-radius:26px!important}
 
 .go-launch-row{display:flex;align-items:center;gap:11px;margin:12px 0;color:#e9eff6;font-size:13px}.go-launch-row input{width:18px;height:18px;flex:none;accent-color:#ffcd28}.go-lab-result{padding:13px 15px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#e9edf5;margin-top:14px;font-weight:700;font-size:13px}.go-surprise{border-color:#364354!important}
 .go-layout-choices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 20px}
@@ -673,7 +673,7 @@
 .preview[data-layout=editorial] .screen{background:#f1eee6!important;color:#191919!important}.preview[data-layout=editorial] .screen .top{background:#ded9c9!important;color:#191919!important}
 .preview[data-layout=market] .screen{background:#102a33!important;color:#fff!important}.preview[data-layout=market] .screen .top{text-align:center;background:#174455!important}
 .preview[data-layout=market] .screen .body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.preview[data-layout=neon] .screen{background:#0a1020!important;color:#d9f9ff!important}.preview[data-layout=neon] .screen .top{background:#121a33!important;color:#d9f9ff!important}.preview[data-layout=neon] .screen .card{border-color:#44f6ff!important;box-shadow:0 0 0 1px rgba(68,246,255,.35)}
+.preview[data-layout=neon] .screen{background:radial-gradient(circle at 80% 20%,rgba(68,246,255,.14),transparent 35%),radial-gradient(circle at 15% 15%,rgba(155,77,255,.16),transparent 30%),#0a1020!important;color:#d9f9ff!important}.preview[data-layout=neon] .screen .top{background:#121a33!important;color:#d9f9ff!important;text-transform:uppercase;letter-spacing:.04em}.preview[data-layout=neon] .screen .card{border-color:#44f6ff!important;box-shadow:0 0 0 1px rgba(68,246,255,.35),0 0 18px rgba(68,246,255,.12);border-radius:18px!important}
 .preview[data-layout=mono] .screen{background:#0f1318!important;color:#eef2f7!important}.preview[data-layout=mono] .screen .top{background:#171d24!important;color:#eef2f7!important}.preview[data-layout=mono] .screen .card{border-radius:10px!important}
 @media(max-width:920px){.go-layout-choices{grid-template-columns:1fr 1fr 1fr}}
 @media(max-width:650px){.go-layout-choices{grid-template-columns:1fr 1fr}.go-layout-choice:last-child{grid-column:auto}.go-layout-art{height:56px}}
@@ -682,6 +682,30 @@
 .go-quick-list{display:flex;flex-wrap:wrap;gap:8px;padding:9px 13px}.go-quick-list button{background:#212d3f;border:1px solid #3e4b61;border-radius:20px;color:#f2f5fa;cursor:pointer;padding:6px 12px;font-size:12px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.go-quick-list button:hover{border-color:#ffcf31}.go-suite{display:none;margin:36px 0 70px;padding:0 0 24px;color:#e7eaf1}.go-suite-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 18px}.go-suite-head h2{font-size:clamp(26px,3vw,34px);margin:5px 0}.go-suite-head p,.go-suite-card p{color:#a7afbf;font-size:14px;line-height:1.5}.go-suite-kicker{font-size:11px;letter-spacing:.14em;color:#ffcb35;font-weight:800}.go-suite-status{font-size:13px;color:#b7bec9;padding:9px 0}.go-suite-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.go-suite-card{min-width:0;padding:22px;border:1px solid #344052;border-radius:18px;background:linear-gradient(160deg,#161e2c,#111723)}.go-suite-card h3{font-size:18px;margin:0 0 6px}.go-suite-card label{display:block;font-size:13px;color:#d4deea;margin:10px 0}.go-suite-card input:not([type=checkbox]),.go-suite-card select,.go-suite-card textarea{display:block;margin-top:5px;width:100%;background:#0b111c;color:#f5f6fa;border:1px solid #334054;border-radius:9px;padding:11px;font:inherit;max-width:100%}.go-suite-card button,.go-suite-actions a{border:1px solid #5c677a;background:#222e41;color:#f4f7fb;border-radius:9px;cursor:pointer;padding:10px 14px;font:inherit;font-weight:650;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;margin-top:9px}.go-suite-card button:hover,.go-suite-actions a:hover{border-color:#ffd042}.go-suite-card small{display:block;color:#a4adbd;margin:10px 0}.go-suite-switch{display:flex!important;align-items:center;gap:9px}.go-suite-switch input{accent-color:#ffcb27}.go-suite-actions{display:flex;flex-wrap:wrap;gap:8px}.go-suite-list{display:grid;gap:8px;margin-top:14px;max-height:260px;overflow:auto}.go-suite-item{background:#0c121e;border:1px solid #31394a;border-radius:9px;padding:10px;font-size:13px;overflow-wrap:anywhere}.go-suite-item strong{color:#fff}.go-suite-item button{padding:5px 8px;font-size:12px;margin:5px 5px 0 0}.go-suite-accent{color:#ffd54a!important}.go-suite-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.go-suite-metrics>div{background:#151d29;border:1px solid #344052;border-radius:12px;padding:15px;font-size:13px;color:#c4cedd}.go-suite-metrics strong{display:block;font-size:26px;color:#fff}#goQR img{max-width:190px;width:100%;height:auto;padding:9px;background:#fff;border-radius:10px;margin:12px 0}
 @media(max-width:800px){.go-suite-grid{grid-template-columns:1fr}.go-suite-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.go-suite-card{padding:16px}}
 </style>
+
+<style>
+.style-grid{display:grid;gap:14px;margin-top:14px}
+.style-set{display:grid;gap:8px}
+.style-set>label{font-size:.95rem;font-weight:700}
+.style-help{color:var(--muted,#94a3b8);font-size:.84rem;margin-top:-2px}
+.style-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.style-opt{appearance:none;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);color:inherit;border-radius:16px;padding:14px 14px;text-align:left;cursor:pointer;transition:.18s transform,.18s border-color,.18s background,.18s box-shadow;min-height:78px}
+.style-opt b{display:block;font-size:.95rem;margin-bottom:4px}
+.style-opt small{display:block;color:#99a3b3;line-height:1.4}
+.style-opt:hover{transform:translateY(-2px);border-color:rgba(255,204,18,.45)}
+.style-opt.on{border-color:var(--a,#f5b700);background:rgba(255,204,18,.08);box-shadow:0 0 0 1px rgba(255,204,18,.18) inset,0 10px 30px rgba(0,0,0,.18)}
+.preview[data-btn=pill] .screen .top,.preview[data-nav=floating] .pbar{border-radius:20px}
+.preview[data-card=soft] .screen .card{border-radius:22px!important}
+.preview[data-card=outline] .screen .card{background:transparent!important;border-style:dashed!important}
+.preview[data-card=solid] .screen .card{box-shadow:inset 0 0 0 999px rgba(255,255,255,.04)}
+.preview[data-btn=sharp] .screen .card,.preview[data-btn=sharp] .screen .top,.preview[data-btn=sharp] .pbar{border-radius:8px!important}
+.preview[data-btn=glow] .screen .card{box-shadow:0 0 0 1px rgba(255,204,18,.18),0 0 16px rgba(255,204,18,.12)}
+.preview[data-hero=immersive] .screen{padding-top:20px;transform:scale(1.02)}
+.preview[data-hero=compact] .screen .top{padding:12px 14px!important}
+.preview[data-space=airy] .screen .body{gap:16px!important}.preview[data-space=compact] .screen .body{gap:6px!important}
+</style>
+
+<style>.freedom-sections{display:grid;gap:9px}.freedom-section-row{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid rgba(255,255,255,.12);padding:11px 12px;border-radius:12px;background:#141b26}.freedom-section-row label{display:flex;align-items:center;gap:9px;min-width:0;font-size:.9rem}.freedom-section-row input{width:auto;accent-color:#ffcd19}.freedom-section-row button{width:34px;height:34px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);color:#fff;border-radius:9px;cursor:pointer}.freedom-section-row button:disabled{opacity:.28;cursor:default}.preview[data-catalog=list] .screen .body{grid-template-columns:1fr!important}.preview[data-catalog=grid3] .screen .body{grid-template-columns:repeat(3,minmax(0,1fr))!important}.preview[data-backdrop=mesh] .screen{background:radial-gradient(circle at 20% 10%,rgba(255,180,0,.3),transparent 42%),radial-gradient(circle at 85% 75%,rgba(96,80,255,.2),transparent 40%),#0b101b!important}.preview[data-backdrop=grid] .screen{background-image:linear-gradient(#ffffff0a 1px,transparent 1px),linear-gradient(90deg,#ffffff0a 1px,transparent 1px)!important;background-size:25px 25px!important}</style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
 
@@ -1003,18 +1027,98 @@
             <div class="go-layout-choices" id="layoutChoices">
               <button type="button" class="go-layout-choice on" data-layout="signature" onclick="selectLayout('signature')"><span class="go-layout-art go-layout-signature"><i></i><i></i></span><b>Signature</b><small>Cinematic, dark &amp; premium</small></button>
               <button type="button" class="go-layout-choice" data-layout="editorial" onclick="selectLayout('editorial')"><span class="go-layout-art go-layout-editorial"><i></i><i></i></span><b>Editorial</b><small>Light, elegant &amp; spacious</small></button>
-              <button type="button" class="go-layout-choice" data-layout="market" onclick="selectLayout('market')"><span class="go-layout-art go-layout-market"><i></i><i></i></span><b>Modern Market</b><small>Bold, commerce-first &amp; clean</small></button>
-              <button type="button" class="go-layout-choice" data-layout="neon" onclick="selectLayout('neon')"><span class="go-layout-art go-layout-neon"><i></i><i></i></span><b>Neon Grid</b><small>Modern, gamer &amp; high-tech</small></button>
-              <button type="button" class="go-layout-choice" data-layout="mono" onclick="selectLayout('mono')"><span class="go-layout-art go-layout-mono"><i></i><i></i></span><b>Minimal Mono</b><small>Minimal, sharp &amp; business</small></button>
-              <button type="button" class="go-layout-choice" data-layout="atelier" onclick="selectLayout('atelier')"><span class="go-layout-art go-layout-atelier"><i></i><i></i></span><b>Atelier</b><small>Art gallery · warm editorial</small></button>
-              <button type="button" class="go-layout-choice" data-layout="arcade" onclick="selectLayout('arcade')"><span class="go-layout-art go-layout-arcade"><i></i><i></i></span><b>Arcade</b><small>Gaming · electric energy</small></button>
-              <button type="button" class="go-layout-choice" data-layout="aurora" onclick="selectLayout('aurora')"><span class="go-layout-art go-layout-aurora"><i></i><i></i></span><b>Aurora</b><small>Immersive · fluid &amp; luminous</small></button>
+              <button type="button" class="go-layout-choice" data-layout="market" onclick="selectLayout('market')"><span class="go-layout-art go-layout-market"><i></i><i></i></span><b>Modern Market</b><small>Catalog wall · sticky actions · direct shop</small></button>
+              <button type="button" class="go-layout-choice" data-layout="neon" onclick="selectLayout('neon')"><span class="go-layout-art go-layout-neon"><i></i><i></i></span><b>Neon Grid</b><small>Cyberpunk · split hero · glowing UI</small></button>
+              <button type="button" class="go-layout-choice" data-layout="mono" onclick="selectLayout('mono')"><span class="go-layout-art go-layout-mono"><i></i><i></i></span><b>Minimal Mono</b><small>Monochrome · premium restraint · focus</small></button>
+              <button type="button" class="go-layout-choice" data-layout="atelier" onclick="selectLayout('atelier')"><span class="go-layout-art go-layout-atelier"><i></i><i></i></span><b>Atelier</b><small>Gallery style · editorial story · warm</small></button>
+              <button type="button" class="go-layout-choice" data-layout="arcade" onclick="selectLayout('arcade')"><span class="go-layout-art go-layout-arcade"><i></i><i></i></span><b>Arcade</b><small>Retro-console · sharp blocks · arcade</small></button>
+              <button type="button" class="go-layout-choice" data-layout="aurora" onclick="selectLayout('aurora')"><span class="go-layout-art go-layout-aurora"><i></i><i></i></span><b>Aurora</b><small>Glassmorphism · airy story · floating cards</small></button>
             </div>
             <label>Color theme</label>
             <div class="swatches" id="swatches"></div>
             <label>Font style</label>
             <div class="fonts" id="fonts"></div>
-            <div class="note" id="verificationState" style="margin:14px 0"><b>Seller verification</b> · Only approved sellers get a verified badge. <button type="button" class="link-btn" style="width:auto;margin:3px 0 0" onclick="requestSellerVerification()">Request verification</button></div>
+
+            <div class="style-grid">
+              <div class="style-set">
+                <label>Button style</label>
+                <p class="style-help">Change the feeling of actions across the whole link.</p>
+                <div class="style-opts" id="buttonStyleOpts">
+                  <button type="button" class="style-opt" data-group="buttonStyle" data-value="pill" onclick="selectCustomizer('buttonStyle','pill')"><b>Rounded</b><small>Friendly pill buttons</small></button>
+                  <button type="button" class="style-opt" data-group="buttonStyle" data-value="sharp" onclick="selectCustomizer('buttonStyle','sharp')"><b>Sharp</b><small>Clean corners and stronger edges</small></button>
+                  <button type="button" class="style-opt" data-group="buttonStyle" data-value="glow" onclick="selectCustomizer('buttonStyle','glow')"><b>Glow</b><small>More energy and emphasis</small></button>
+                  <button type="button" class="style-opt" data-group="buttonStyle" data-value="soft" onclick="selectCustomizer('buttonStyle','soft')"><b>Soft</b><small>Calm, subtle and elegant</small></button>
+                </div>
+              </div>
+              <div class="style-set">
+                <label>Card style</label>
+                <p class="style-help">Affects offer cards, profile blocks and sections.</p>
+                <div class="style-opts" id="cardStyleOpts">
+                  <button type="button" class="style-opt" data-group="cardStyle" data-value="glass" onclick="selectCustomizer('cardStyle','glass')"><b>Glass</b><small>Transparent and layered</small></button>
+                  <button type="button" class="style-opt" data-group="cardStyle" data-value="soft" onclick="selectCustomizer('cardStyle','soft')"><b>Soft</b><small>Rounder and more relaxed</small></button>
+                  <button type="button" class="style-opt" data-group="cardStyle" data-value="outline" onclick="selectCustomizer('cardStyle','outline')"><b>Outline</b><small>Lighter, framed and airy</small></button>
+                  <button type="button" class="style-opt" data-group="cardStyle" data-value="solid" onclick="selectCustomizer('cardStyle','solid')"><b>Solid</b><small>Full surfaces and stronger blocks</small></button>
+                </div>
+              </div>
+              <div class="style-set">
+                <label>Header style</label>
+                <p class="style-help">Choose how the navigation feels when people open the link.</p>
+                <div class="style-opts" id="navStyleOpts">
+                  <button type="button" class="style-opt" data-group="navStyle" data-value="outline" onclick="selectCustomizer('navStyle','outline')"><b>Outline</b><small>Clear bordered nav items</small></button>
+                  <button type="button" class="style-opt" data-group="navStyle" data-value="floating" onclick="selectCustomizer('navStyle','floating')"><b>Floating</b><small>More premium and lifted</small></button>
+                  <button type="button" class="style-opt" data-group="navStyle" data-value="minimal" onclick="selectCustomizer('navStyle','minimal')"><b>Minimal</b><small>Lighter and cleaner</small></button>
+                  <button type="button" class="style-opt" data-group="navStyle" data-value="glass" onclick="selectCustomizer('navStyle','glass')"><b>Glass</b><small>Blurred, cinematic navigation</small></button>
+                </div>
+              </div>
+              <div class="style-set">
+                <label>Hero mood</label>
+                <p class="style-help">Change how the opening section is arranged and feels.</p>
+                <div class="style-opts" id="heroStyleOpts">
+                  <button type="button" class="style-opt" data-group="heroStyle" data-value="cinematic" onclick="selectCustomizer('heroStyle','cinematic')"><b>Cinematic</b><small>Big statement and atmosphere</small></button>
+                  <button type="button" class="style-opt" data-group="heroStyle" data-value="split" onclick="selectCustomizer('heroStyle','split')"><b>Split</b><small>Text and visual split into columns</small></button>
+                  <button type="button" class="style-opt" data-group="heroStyle" data-value="compact" onclick="selectCustomizer('heroStyle','compact')"><b>Compact</b><small>Shorter intro and faster browsing</small></button>
+                  <button type="button" class="style-opt" data-group="heroStyle" data-value="immersive" onclick="selectCustomizer('heroStyle','immersive')"><b>Immersive</b><small>Bigger scene with more drama</small></button>
+                </div>
+              </div>
+              <div class="style-set">
+                <label>Page spacing</label>
+                <p class="style-help">Let the whole website breathe more or stay denser.</p>
+                <div class="style-opts" id="spacingStyleOpts">
+                  <button type="button" class="style-opt" data-group="spacingStyle" data-value="compact" onclick="selectCustomizer('spacingStyle','compact')"><b>Compact</b><small>More content visible quickly</small></button>
+                  <button type="button" class="style-opt" data-group="spacingStyle" data-value="balanced" onclick="selectCustomizer('spacingStyle','balanced')"><b>Balanced</b><small>Good all-around spacing</small></button>
+                  <button type="button" class="style-opt" data-group="spacingStyle" data-value="airy" onclick="selectCustomizer('spacingStyle','airy')"><b>Airy</b><small>Open, premium and spacious</small></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="style-grid" id="freedomSuite" style="margin-top:22px;padding:20px;border:1px solid rgba(255,215,0,.24);border-radius:22px;background:linear-gradient(145deg,rgba(255,215,0,.055),transparent)">
+ <h3 style="font-size:1.35rem">Freedom Studio — Content & Structure</h3>
+ <p class="note">Edit your own words, move sections, switch the catalog view and control how the published website behaves.</p>
+ <div class="style-set"><label>Hero headline</label><input id="freedomHeadline" maxlength="100" placeholder="Your own headline" oninput="renderPreview()"><p class="style-help">Leave blank to use the business name.</p></div>
+ <div class="style-set"><label>Hero description</label><textarea id="freedomSubtitle" rows="3" maxlength="240" placeholder="Your business promise, in your own words"></textarea></div>
+ <div class="style-set"><label>Primary button text</label><input id="freedomCta" maxlength="60" placeholder="e.g. Let's talk"></div>
+ <div class="style-set"><label>Offers section title</label><input id="freedomOffersTitle" maxlength="80" placeholder="e.g. Our collection"></div>
+ <div class="style-set"><label>Story section headline</label><input id="freedomStoryTitle" maxlength="100" placeholder="e.g. Made with care"></div>
+ <div class="style-set"><label>Catalog presentation</label><div class="style-opts" id="freedomCatalog">
+  <button type="button" class="style-opt" data-freedom-group="catalogStyle" data-value="grid2" onclick="pickFreedom('catalogStyle','grid2')"><b>Classic</b><small>Two-column catalog</small></button>
+  <button type="button" class="style-opt" data-freedom-group="catalogStyle" data-value="grid3" onclick="pickFreedom('catalogStyle','grid3')"><b>Gallery</b><small>Three-column product wall</small></button>
+  <button type="button" class="style-opt" data-freedom-group="catalogStyle" data-value="list" onclick="pickFreedom('catalogStyle','list')"><b>Showcase</b><small>Wide horizontal cards</small></button>
+ </div></div>
+ <div class="style-set"><label>Page atmosphere</label><div class="style-opts">
+  <button type="button" class="style-opt" data-freedom-group="backdropStyle" data-value="default" onclick="pickFreedom('backdropStyle','default')"><b>Original</b><small>Theme background</small></button>
+  <button type="button" class="style-opt" data-freedom-group="backdropStyle" data-value="mesh" onclick="pickFreedom('backdropStyle','mesh')"><b>Glow mesh</b><small>Ambient color pools</small></button>
+  <button type="button" class="style-opt" data-freedom-group="backdropStyle" data-value="clean" onclick="pickFreedom('backdropStyle','clean')"><b>Clean</b><small>Minimal noise</small></button>
+  <button type="button" class="style-opt" data-freedom-group="backdropStyle" data-value="grid" onclick="pickFreedom('backdropStyle','grid')"><b>Grid</b><small>Tech pattern</small></button>
+ </div></div>
+ <div class="style-set"><label>Animation intensity</label><div class="style-opts">
+  <button type="button" class="style-opt" data-freedom-group="motionStyle" data-value="full" onclick="pickFreedom('motionStyle','full')"><b>Full</b><small>Scroll animation</small></button>
+  <button type="button" class="style-opt" data-freedom-group="motionStyle" data-value="subtle" onclick="pickFreedom('motionStyle','subtle')"><b>Subtle</b><small>Less motion</small></button>
+  <button type="button" class="style-opt" data-freedom-group="motionStyle" data-value="none" onclick="pickFreedom('motionStyle','none')"><b>Still</b><small>No extra motion</small></button>
+ </div></div>
+ <div class="style-set"><label>Page sections — order & visibility</label><p class="style-help">Use ↑ ↓ to reorder, and the checkbox to show or hide. Offers cannot be hidden.</p><div id="freedomSections" class="freedom-sections"></div></div>
+ <button type="button" class="btn-ghost" onclick="resetFreedom()">Reset these options</button>
+ </div>
+ <div class="note" id="verificationState" style="margin:14px 0"><b>Seller verification</b> · Only approved sellers get a verified badge. <button type="button" class="link-btn" style="width:auto;margin:3px 0 0" onclick="requestSellerVerification()">Request verification</button></div>
             <button class="btn btn-block" onclick="step2Next()">Continue</button>
             <button class="link-btn" onclick="goStep(1)">Back</button>
           </div>
@@ -1052,7 +1156,7 @@
             <div class="row">
               <button class="btn-ghost" onclick="copyUrl()">Copy link</button>
               <button class="btn-ghost" onclick="goStep(3)">Add or edit offers</button>
-              <button class="btn-ghost" onclick="changeDesign()">Change colors and font</button>
+              <button class="btn-ghost" onclick="changeDesign()">Customize everything</button>
             </div>
             <div class="field" style="margin-top:22px">
               <label>Change the address name</label>
@@ -1427,7 +1531,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
       cards: [['Portrait session', '45 minutes, 15 edited photos.', '80.00', 'Photographer'], ['Wedding day', 'Full-day coverage and gallery.', '650.00', 'Event planner'], ['Brand photos', 'For your site and social media.', '180.00', 'Videographer']] }
   ];
 
-  const S = { photos: {}, token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', layout: 'signature', font: 'sans', mode: 'signup', chart: null };
+  const S = { photos: {}, token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', layout: 'signature', font: 'sans', buttonStyle: 'pill', cardStyle: 'glass', navStyle: 'outline', heroStyle: 'cinematic', spacingStyle: 'balanced', catalogStyle:'grid2', backdropStyle:'default', motionStyle:'full', sectionOrder:['story','discover','highlights','offers','booking','faq','about'], hiddenSections:[], mode: 'signup', chart: null };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
   const money = (n) => Number(n || 0).toFixed(2);
@@ -1761,6 +1865,27 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     document.querySelectorAll('#fonts .fbtn').forEach(b => b.classList.toggle('selected', b.dataset.f === f));
   }
 
+  const CUSTOMIZER_DEFAULTS = { buttonStyle: 'pill', cardStyle: 'glass', navStyle: 'outline', heroStyle: 'cinematic', spacingStyle: 'balanced' };
+  const CUSTOMIZER_ALLOWED = {
+    buttonStyle: ['pill','sharp','glow','soft'],
+    cardStyle: ['glass','soft','outline','solid'],
+    navStyle: ['outline','floating','minimal','glass'],
+    heroStyle: ['cinematic','split','compact','immersive'],
+    spacingStyle: ['compact','balanced','airy']
+  };
+  function selectCustomizer(group, value) {
+    if (!CUSTOMIZER_ALLOWED[group] || !CUSTOMIZER_ALLOWED[group].includes(value)) return;
+    S[group] = value;
+    syncCustomizerUi();
+    renderPreview();
+  }
+  function syncCustomizerUi() {
+    Object.keys(CUSTOMIZER_ALLOWED).forEach(group => {
+      const val = S[group] || CUSTOMIZER_DEFAULTS[group];
+      document.querySelectorAll('[data-group="' + group + '"]').forEach(btn => btn.classList.toggle('on', btn.dataset.value === val));
+    });
+  }
+
   // ---------- Builder: profession picker ----------
   function renderProfs() {
     const q = $('profSearch').value.trim().toLowerCase();
@@ -1953,6 +2078,18 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     if (u.theme) applyTheme(u.theme);
     selectLayout(u.layout || 'signature');
     if (u.font) applyFont(u.font);
+    S.buttonStyle = u.buttonStyle || 'pill';
+    S.cardStyle = u.cardStyle || 'glass';
+    S.navStyle = u.navStyle || 'outline';
+    S.heroStyle = u.heroStyle || 'cinematic';
+    S.spacingStyle = u.spacingStyle || 'balanced';
+    syncCustomizerUi();
+    S.catalogStyle=u.catalogStyle||'grid2';S.backdropStyle=u.backdropStyle||'default';S.motionStyle=u.motionStyle||'full';
+    S.sectionOrder=Array.isArray(u.sectionOrder)&&u.sectionOrder.length?u.sectionOrder.slice():freedomKeys.slice();
+    S.hiddenSections=Array.isArray(u.hiddenSections)?u.hiddenSections.slice():[];
+    $('freedomHeadline').value=u.heroHeadline||'';$('freedomSubtitle').value=u.heroSubtitle||'';$('freedomCta').value=u.primaryCta||'';
+    $('freedomOffersTitle').value=u.offersHeading||'';$('freedomStoryTitle').value=u.storyHeading||'';
+    syncFreedom();
     try { const d = await api('/api/offers'); S.offers = d.offers; } catch (e) {}
     renderPreview(); renderOfferList();
     if (u.published && u.siteUrl) showLive();
@@ -1986,11 +2123,34 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
       $('sellerBio').value = d.bio || ''; notify('Intro suggested from your details. Please review it before publishing.');
     } catch(e){ notify(e.message,'Business intro'); }
   }
+  const freedomKeys=['story','discover','highlights','offers','booking','faq','about'];
+  const freedomLabels={story:'Our story',discover:'Discovery text',highlights:'Featured highlights',offers:'Offers catalog',booking:'Appointments',faq:'FAQ',about:'Find us'};
+  function renderFreedomSections(){
+    const root=$('freedomSections');if(!root)return;
+    root.replaceChildren();
+    const order=[...new Set([...(S.sectionOrder||[]),...freedomKeys])].filter(x=>freedomKeys.includes(x));S.sectionOrder=order;
+    order.forEach((key,index)=>{
+      const row=document.createElement('div');row.className='freedom-section-row';
+      const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=key==='offers'||!(S.hiddenSections||[]).includes(key);check.disabled=key==='offers';
+      check.addEventListener('change',()=>{const hidden=new Set(S.hiddenSections||[]);if(check.checked)hidden.delete(key);else hidden.add(key);S.hiddenSections=[...hidden];});
+      label.append(check,document.createTextNode(freedomLabels[key]));
+      const controls=document.createElement('div');controls.style.display='flex';controls.style.gap='6px';
+      for(const delta of [-1,1]){const b=document.createElement('button');b.type='button';b.textContent=delta<0?'↑':'↓';b.disabled=index+delta<0||index+delta>=order.length;b.setAttribute('aria-label','Move '+freedomLabels[key]+' '+(delta<0?'up':'down'));b.addEventListener('click',()=>{const next=order.slice(),j=index+delta;[next[index],next[j]]=[next[j],next[index]];S.sectionOrder=next;renderFreedomSections()});controls.append(b)}
+      row.append(label,controls);root.append(row);
+    });
+  }
+  function syncFreedom(){
+    document.querySelectorAll('[data-freedom-group]').forEach(b=>b.classList.toggle('on',S[b.dataset.freedomGroup]===b.dataset.value));
+    renderFreedomSections();
+  }
+  function pickFreedom(key,value){const allowed={catalogStyle:['grid2','grid3','list'],backdropStyle:['default','mesh','clean','grid'],motionStyle:['full','subtle','none']};if(!allowed[key]?.includes(value))return;S[key]=value;syncFreedom();renderPreview()}
+  function resetFreedom(){S.catalogStyle='grid2';S.backdropStyle='default';S.motionStyle='full';S.sectionOrder=freedomKeys.slice();S.hiddenSections=[];['freedomHeadline','freedomSubtitle','freedomCta','freedomOffersTitle','freedomStoryTitle'].forEach(k=>{$(k).value=''});syncFreedom();renderPreview()}
+  function freedomPayload(){return {heroHeadline:$('freedomHeadline').value.trim(),heroSubtitle:$('freedomSubtitle').value.trim(),primaryCta:$('freedomCta').value.trim(),offersHeading:$('freedomOffersTitle').value.trim(),storyHeading:$('freedomStoryTitle').value.trim(),catalogStyle:S.catalogStyle,backdropStyle:S.backdropStyle,motionStyle:S.motionStyle,sectionOrder:S.sectionOrder,hiddenSections:S.hiddenSections}}
   async function step2Next() {
     if (!$('siteName').value.trim()) return notify('Please enter a site name.');
     try {
       const d = await api('/api/site', { method: 'PUT', body: JSON.stringify({
-        siteName: $('siteName').value.trim(), sellerBio: $('sellerBio').value.trim(), category: S.category, city: $('city').value.trim(), theme: S.theme, layout: S.layout, font: S.font }) });
+        siteName: $('siteName').value.trim(), sellerBio: $('sellerBio').value.trim(), category: S.category, city: $('city').value.trim(), theme: S.theme, layout: S.layout, font: S.font, buttonStyle: S.buttonStyle, cardStyle: S.cardStyle, navStyle: S.navStyle, heroStyle: S.heroStyle, spacingStyle: S.spacingStyle, ...freedomPayload() }) });
       S.user = d.user;
     } catch (e) { return notify(e.message, 'Error'); }
     if (S.backToLive) { S.backToLive = false; showLive(); notify('Your design was updated. The live site shows it now.'); }
@@ -2179,7 +2339,15 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     $('pvCat').textContent = S.category || 'Business category';
     $('pvUrl').textContent = (S.user && S.user.siteUrl) ? S.user.siteUrl.replace('https://', '') : 'your-site';
     const box = $('pvOffers');
-    document.querySelector('.preview')?.setAttribute('data-layout', S.layout || 'signature');
+    const preview = document.querySelector('.preview');
+    preview?.setAttribute('data-layout', S.layout || 'signature');
+    preview?.setAttribute('data-btn', S.buttonStyle || 'pill');
+    preview?.setAttribute('data-card', S.cardStyle || 'glass');
+    preview?.setAttribute('data-nav', S.navStyle || 'outline');
+    preview?.setAttribute('data-hero', S.heroStyle || 'cinematic');
+    preview?.setAttribute('data-space', S.spacingStyle || 'balanced');
+    preview?.setAttribute('data-catalog',S.catalogStyle||'grid2');preview?.setAttribute('data-backdrop',S.backdropStyle||'default');
+    if($('freedomHeadline')?.value.trim())$('pvName').textContent=$('freedomHeadline').value.trim();
     if (!S.offers.length) { box.innerHTML = '<div class="empty">No offers added yet.<br>Your real offers will appear here.</div>'; return; }
     box.innerHTML = S.offers.map(o =>
       '<div class="p-item">' + (o.imageUrl ? '<img src="' + esc(o.imageUrl) + '" alt="">' : '') +
@@ -2653,7 +2821,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     initMenu();
     frameFns.push(setNavTheme);
     initStage(); initScatter(); initReveal();
-    buildPickers(); renderProfs(); renderMarquee(); renderGallery(); paintPhotos(); loadProfPhotos(); renderAuth(); renderPreview();
+    buildPickers(); syncCustomizerUi(); syncFreedom(); renderProfs(); renderMarquee(); renderGallery(); paintPhotos(); loadProfPhotos(); renderAuth(); renderPreview();
     navigate(location.pathname, false);
     if (S.token) {
       try { const d = await api('/api/auth/me'); S.user = d.user; await afterLogin(); } catch (e) { renderAuth(); }
@@ -2664,5 +2832,8 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
 
   init();
 </script>
+
+<style>body.go-embedded header.nav,body.go-embedded #fab,body.go-embedded .owner-preview,body.go-embedded .nav-end,body.go-embedded .burger{display:none!important}body.go-embedded .view{padding-top:0!important}body.go-embedded #v-messages{max-width:none;padding:0 0 0!important}body.go-embedded .mx{margin:0!important;border:none!important;border-radius:0!important;min-height:100vh}body.go-embedded .mx-sh{padding-top:18px}body.go-embedded .container,body.go-embedded .wrap,body.go-embedded .section{max-width:none!important;width:100%!important}</style>
+<script>(function(){var q=new URLSearchParams(location.search);if(q.get("embedded")==="1"){document.body.classList.add("go-embedded");window.addEventListener("load",function(){try{if(typeof navigate==="function")navigate("/messages",false);document.body.setAttribute("data-page","messages");if(typeof openMessagesPage==="function")openMessagesPage();}catch(e){}})}})();</script>
 </body>
 </html>

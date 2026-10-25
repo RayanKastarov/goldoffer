@@ -106,6 +106,23 @@ const UserSchema = new mongoose.Schema({
   theme: { type: String, default: 'gold' },
   layout: { type: String, enum: ['signature','editorial','market','neon','mono','atelier','arcade','aurora'], default: 'signature' },
   font: { type: String, default: 'sans' },
+  buttonStyle: { type: String, default: 'pill' },
+  cardStyle: { type: String, default: 'glass' },
+  navStyle: { type: String, default: 'outline' },
+  heroStyle: { type: String, default: 'cinematic' },
+  spacingStyle: { type: String, default: 'balanced' },
+
+  heroHeadline: {type:String,default:''},
+  heroSubtitle: {type:String,default:''},
+  primaryCta: {type:String,default:''},
+  offersHeading: {type:String,default:''},
+  storyHeading: {type:String,default:''},
+  catalogStyle: {type:String,enum:['grid2','grid3','list'],default:'grid2'},
+  backdropStyle: {type:String,enum:['default','mesh','clean','grid'],default:'default'},
+  motionStyle: {type:String,enum:['full','subtle','none'],default:'full'},
+  sectionOrder: {type:[String],default:['story','discover','highlights','offers','booking','faq','about']},
+  hiddenSections: {type:[String],default:[]},
+
   published: { type: Boolean, default: false },
   categoryLabel: String,
   phone: String,
@@ -217,10 +234,10 @@ const LAYOUTS = {
   },
   arcade: {
     name:'Arcade', eyebrow:'Next level storefront',
-    storyHeading:'Built for a generation that never plays ordinary.',discoverTitle:'Choose your next upgrade',
-    discoverText:'A kinetic gaming-style storefront with loud typography and grid composition.',
-    tilesText:'Browse releases, gear and experiences in a more energetic layout.',
-    profileText:'Meet the creator behind the setup and get connected.',
+    storyHeading:'Pixel energy, scoreboard structure and retro-console attitude.',discoverTitle:'Jump into the drops',
+    discoverText:'A punchier, block-based storefront inspired by arcades, tournament boards and gaming rooms.',
+    tilesText:'Cards feel more like level select panels, with bold separation and a sharper UI.',
+    profileText:'Meet the seller in a page that feels closer to a gaming setup than a classic shop.',
     fallback:[
       'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1400&q=80',
       'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
@@ -230,10 +247,10 @@ const LAYOUTS = {
   },
   aurora: {
     name:'Aurora', eyebrow:'Fresh perspectives',
-    storyHeading:'An immersive experience with a softer kind of energy.',discoverTitle:'Made to inspire',
-    discoverText:'A luminous, spacious site for modern services and creative brands.',
-    tilesText:'Explore our favorites in a fluid, image-led collection.',
-    profileText:'The story behind the name, told with clarity and warmth.',
+    storyHeading:'Soft gradients, glass panels and a calmer premium atmosphere.',discoverTitle:'A more fluid presentation',
+    discoverText:'A luminous, airy site for creators and services that want elegance without looking generic.',
+    tilesText:'Floating panels, softer motion and a more immersive story-led rhythm.',
+    profileText:'The seller profile feels refined, open and more editorial than commercial.',
     fallback:[
       'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80',
       'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1200&q=80',
@@ -289,11 +306,11 @@ const LAYOUTS = {
   neon: {
     name: 'Neon Grid',
     eyebrow: 'Gamer / tech storefront',
-    storyHeading: 'A futuristic layout with sharper edges, glow and gamer energy.',
-    discoverTitle: 'Power up the storefront',
-    discoverText: 'Ideal for gaming, tech gear and creators who want a stronger personality.',
-    tilesText: 'Sharper cards, more contrast and a glowing interface across the full public link.',
-    profileText: 'The seller profile feels more like a modern gaming hub than a generic profile.',
+    storyHeading: 'Cyberpunk contrast, asymmetry and a more high-tech personality.',
+    discoverTitle: 'Enter the signal',
+    discoverText: 'Ideal for tech, gaming and digital brands that want a more futuristic split-screen identity.',
+    tilesText: 'Offset panels, glowing actions and a bolder high-tech interface across the whole public link.',
+    profileText: 'The seller profile feels like a futuristic creator hub, not just a standard store page.',
     fallback: [
       'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1400&q=80',
       'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
@@ -328,6 +345,12 @@ function sellerName(user) {
 }
 function safeLayout(v) { return LAYOUTS[v] ? v : 'signature'; }
 function layoutPack(v) { return LAYOUTS[safeLayout(v)]; }
+const safePick = (value, allowed, fallback) => allowed.includes(value) ? value : fallback;
+const safeButtonStyle = (v) => safePick(v, ['pill','sharp','glow','soft'], 'pill');
+const safeCardStyle = (v) => safePick(v, ['glass','soft','outline','solid'], 'glass');
+const safeNavStyle = (v) => safePick(v, ['outline','floating','minimal','glass'], 'outline');
+const safeHeroStyle = (v) => safePick(v, ['cinematic','split','compact','immersive'], 'cinematic');
+const safeSpacingStyle = (v) => safePick(v, ['compact','balanced','airy'], 'balanced');
 function initials(v) {
   const parts = String(v || '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
   if (!parts.length) return 'GO';
@@ -487,7 +510,7 @@ const offerLimitFor = (u) => (u.subscriptionStatus === 'active' ? PAID_OFFER_LIM
 const publicUser = (u) => ({
   id: u._id, firstName: u.firstName, lastName: u.lastName, email: u.email,
   subscriptionStatus: u.subscriptionStatus, siteName: u.siteName, sellerBio: u.sellerBio || '', verificationStatus: u.verificationStatus || 'none', slug: u.slug,
-  category: u.category, city: u.city, theme: u.theme, layout: u.layout || 'signature', font: u.font, published: u.published,
+  category: u.category, city: u.city, theme: u.theme, layout: u.layout || 'signature', font: u.font, buttonStyle: u.buttonStyle || 'pill', cardStyle: u.cardStyle || 'glass', navStyle: u.navStyle || 'outline', heroStyle: u.heroStyle || 'cinematic', spacingStyle: u.spacingStyle || 'balanced', heroHeadline:u.heroHeadline||'', heroSubtitle:u.heroSubtitle||'', primaryCta:u.primaryCta||'', offersHeading:u.offersHeading||'', storyHeading:u.storyHeading||'', catalogStyle:u.catalogStyle||'grid2', backdropStyle:u.backdropStyle||'default', motionStyle:u.motionStyle||'full', sectionOrder:u.sectionOrder||[], hiddenSections:u.hiddenSections||[], published: u.published,
   siteUrl: u.slug && u.published ? `${PUBLIC_BASE}/site/${u.slug}` : null,
   offerLimit: offerLimitFor(u),
   categoryLabel: u.categoryLabel, phone: u.phone, address: u.address, hours: u.hours,
@@ -790,6 +813,11 @@ app.put('/api/site', authenticateToken, async (req, res) => {
   try {
     const b = req.body || {};
     const { siteName, category, city, theme, font, publish } = b;
+    const allowedButtonStyle = ['pill','sharp','glow','soft'];
+    const allowedCardStyle = ['glass','soft','outline','solid'];
+    const allowedNavStyle = ['outline','floating','minimal','glass'];
+    const allowedHeroStyle = ['cinematic','split','compact','immersive'];
+    const allowedSpacingStyle = ['compact','balanced','airy'];
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -810,6 +838,25 @@ app.put('/api/site', authenticateToken, async (req, res) => {
     if (Object.keys(THEMES).includes(theme)) user.theme = theme;
     if (['signature','editorial','market','neon','mono','atelier','arcade','aurora'].includes(b.layout)) user.layout = b.layout;
     if (Object.keys(FONTS).includes(font)) user.font = font;
+    if (allowedButtonStyle.includes(b.buttonStyle)) user.buttonStyle = b.buttonStyle;
+    if (allowedCardStyle.includes(b.cardStyle)) user.cardStyle = b.cardStyle;
+    if (allowedNavStyle.includes(b.navStyle)) user.navStyle = b.navStyle;
+    if (allowedHeroStyle.includes(b.heroStyle)) user.heroStyle = b.heroStyle;
+    if (allowedSpacingStyle.includes(b.spacingStyle)) user.spacingStyle = b.spacingStyle;
+
+    for (const key of ['heroHeadline','heroSubtitle','primaryCta','offersHeading','storyHeading']) {
+      if (typeof b[key] === 'string') user[key] = b[key].trim().slice(0,key==='heroSubtitle'?240:100);
+    }
+    if (['grid2','grid3','list'].includes(b.catalogStyle)) user.catalogStyle=b.catalogStyle;
+    if (['default','mesh','clean','grid'].includes(b.backdropStyle)) user.backdropStyle=b.backdropStyle;
+    if (['full','subtle','none'].includes(b.motionStyle)) user.motionStyle=b.motionStyle;
+    const sectionKeys=['story','discover','highlights','offers','booking','faq','about'];
+    if(Array.isArray(b.sectionOrder)) {
+      const proposed=b.sectionOrder.filter(x=>typeof x==='string'&&sectionKeys.includes(x));
+      user.sectionOrder=[...new Set([...proposed,...sectionKeys])];
+    }
+    if(Array.isArray(b.hiddenSections)) user.hiddenSections=[...new Set(b.hiddenSections.filter(x=>typeof x==='string'&&sectionKeys.includes(x)&&x!=='offers'))];
+
     if (!user.slug && user.siteName) user.slug = await uniqueSlug(user.siteName, user._id);
     if (publish === true) {
       if (!user.siteName) return res.status(400).json({ message: 'Please set a site name first.' });
@@ -2412,6 +2459,42 @@ function layoutGlobalCss(layout) {
 `;
 }
 
+
+function customizationCss() {
+  return `.btn-pill .btn,.btn-pill .abtn,.btn-pill .sp-btn,.btn-pill .bar nav a,.btn-pill .cta{border-radius:999px}
+.btn-sharp .btn,.btn-sharp .abtn,.btn-sharp .sp-btn,.btn-sharp .bar nav a,.btn-sharp .cta{border-radius:10px}
+.btn-soft .btn,.btn-soft .abtn,.btn-soft .sp-btn,.btn-soft .bar nav a,.btn-soft .cta{border-radius:18px;box-shadow:none}
+.btn-glow .btn,.btn-glow .abtn.pri,.btn-glow .sp-btn.sp-primary,.btn-glow .cta{box-shadow:0 0 0 1px color-mix(in srgb,var(--a) 28%,transparent),0 0 26px color-mix(in srgb,var(--a) 28%,transparent),0 12px 36px rgba(0,0,0,.25)}
+.card-soft .card,.card-soft .glass,.card-soft .sp-hero,.card-soft .sp-about,.card-soft .sp-review-summary,.card-soft .sp-review-list,.card-soft .detail .main,.card-soft .detail .req,.card-soft .detail .seller,.card-soft .feature-card{border-radius:28px!important}
+.card-outline .card,.card-outline .glass,.card-outline .sp-hero,.card-outline .sp-about,.card-outline .sp-review-summary,.card-outline .sp-review-list,.card-outline .detail .main,.card-outline .detail .req,.card-outline .detail .seller,.card-outline .feature-card{background:transparent!important;box-shadow:none!important;border-style:dashed!important}
+.card-solid .card,.card-solid .glass,.card-solid .sp-hero,.card-solid .sp-about,.card-solid .sp-review-summary,.card-solid .sp-review-list,.card-solid .detail .main,.card-solid .detail .req,.card-solid .detail .seller,.card-solid .feature-card{background:rgba(255,255,255,.06)!important;box-shadow:0 18px 46px rgba(0,0,0,.28)!important}
+.nav-floating .bar{top:14px;left:14px;right:14px;border:1px solid rgba(255,255,255,.1);border-radius:24px}
+.nav-floating .bar nav a{background:rgba(255,255,255,.04)}
+.nav-minimal .bar{background:rgba(5,7,11,.38);border-bottom-color:transparent}
+.nav-minimal .bar nav a{border-color:transparent;background:transparent;padding-inline:10px}
+.nav-glass .bar{background:rgba(255,255,255,.06);box-shadow:0 10px 40px rgba(0,0,0,.22)}
+.hero-split .cine-wrap{grid-template-columns:1.06fr .94fr;gap:44px;align-items:center}.hero-split .cine-copy{text-align:left;margin:0}.hero-split .cine-copy h1{max-width:11ch}.hero-split .cine-sub,.hero-split .cine-meta,.hero-split .actions{justify-content:flex-start}.hero-split .cine-visual{min-height:520px}
+.hero-compact .cine-hero{padding-top:94px;padding-bottom:46px}.hero-compact .cine-copy h1{font-size:clamp(2.6rem,7vw,4.8rem)}.hero-compact .cine-sub{max-width:54ch}.hero-compact .cine-visual{min-height:360px}
+.hero-immersive .cine-hero{padding-top:130px;padding-bottom:110px}.hero-immersive .cine-copy h1{font-size:clamp(3.6rem,9vw,7.6rem)}.hero-immersive .cine-visual{min-height:620px;transform:scale(1.04)}.hero-immersive .main-screen{box-shadow:0 30px 90px rgba(0,0,0,.36)}
+.space-compact .wrap,.space-compact .story-shell,.space-compact main.wrap.top,.space-compact .sp-section{padding-top:44px;padding-bottom:44px}.space-compact .grid,.space-compact .feature-grid{gap:18px}.space-compact .story-canvas{padding:18px}.space-compact .card{padding:12px}
+.space-airy .wrap,.space-airy .story-shell,.space-airy main.wrap.top,.space-airy .sp-section{padding-top:86px;padding-bottom:86px}.space-airy .grid,.space-airy .feature-grid{gap:34px}.space-airy .story-canvas{padding:36px}.space-airy .card{padding:20px}
+.catalog-grid3 #goOfferGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.catalog-list #goOfferGrid{display:grid;grid-template-columns:1fr;max-width:100%}
+.catalog-list #goOfferGrid .card{display:grid;grid-template-columns:minmax(180px,34%) minmax(0,1fr);min-height:200px}
+.catalog-list #goOfferGrid .card .pic{height:100%;min-height:200px}
+.catalog-list #goOfferGrid .card .in{padding:22px 28px}
+.backdrop-mesh{background:radial-gradient(70vw 50vw at 5% 20%,color-mix(in srgb,var(--a) 8%,transparent),transparent),radial-gradient(60vw 70vw at 90% 70%,color-mix(in srgb,var(--b) 7%,transparent),transparent),var(--bg)}
+.backdrop-clean{background:var(--bg)}.backdrop-clean .cine-noise{display:none}
+.backdrop-grid{background-image:linear-gradient(color-mix(in srgb,var(--a) 6%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--a) 6%,transparent) 1px,transparent 1px);background-size:50px 50px;background-color:var(--bg)}
+.motion-none *, .motion-none *::before,.motion-none *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+.motion-none [data-story-canvas],.motion-none [data-cine-stack]{transform:none!important}
+.motion-subtle .rv{transition-duration:.2s!important}.motion-subtle [data-story-canvas]{transform:none!important}
+@media(max-width:900px){.catalog-grid3 #goOfferGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.catalog-grid3 #goOfferGrid,.catalog-list #goOfferGrid{grid-template-columns:1fr}.catalog-list #goOfferGrid .card{grid-template-columns:1fr}.catalog-list #goOfferGrid .card .pic{height:210px}}
+@media(max-width:900px){.hero-split .cine-wrap{grid-template-columns:1fr}.hero-split .cine-copy{text-align:center}.hero-split .cine-copy h1{max-width:none}.hero-split .cine-sub,.hero-split .cine-meta,.hero-split .actions{justify-content:center}.nav-floating .bar{top:8px;left:8px;right:8px}}
+`;
+}
+
 function pageShell(user, { title, desc, body, cls }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
@@ -2423,7 +2506,7 @@ function pageShell(user, { title, desc, body, cls }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style><style>${customizationCss()}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))} btn-${esc(safeButtonStyle(user.buttonStyle))} card-${esc(safeCardStyle(user.cardStyle))} nav-${esc(safeNavStyle(user.navStyle))} hero-${esc(safeHeroStyle(user.heroStyle))} space-${esc(safeSpacingStyle(user.spacingStyle))} catalog-${esc(safePick(user.catalogStyle,['grid2','grid3','list'],'grid2'))} backdrop-${esc(safePick(user.backdropStyle,['default','mesh','clean','grid'],'default'))} motion-${esc(safePick(user.motionStyle,['full','subtle','none'],'full'))}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
 <script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>
@@ -2450,13 +2533,24 @@ ${body}
       var note=document.createElement('div');note.className='go-owner-banner';note.setAttribute('role','status');note.innerHTML='<span>Owner preview — you are viewing your own website.</span><a href="'+prefix+'/messages">Business inbox</a><a href="/dashboard">Dashboard</a>';
       document.body.appendChild(note);
       if(location.pathname===prefix+'/messages'){
-        var wrap=document.querySelector('.mwrap');if(wrap){wrap.style.display='none';}
-        var landing=document.createElement('section');landing.className='go-owner-landing';landing.innerHTML='<h1>Business inbox</h1><p>Reply to your customers directly from your own storefront.</p><iframe title="Your business messages" src="/messages" loading="eager" allow="microphone"></iframe>';
-        document.body.insertBefore(landing,document.querySelector('footer'));
+        note.style.display='none';
+        document.body.classList.add('go-owner-messages-page');
+        var topBar=document.createElement('div');
+        topBar.className='go-owner-topbar';
+        topBar.innerHTML='<div><strong>Business inbox</strong><span>Answer customers directly without leaving your public link.</span></div><div class="go-owner-links"><a href="/messages" target="_blank" rel="noopener">Open full inbox</a><a href="/dashboard">Dashboard</a></div>';
+        var wrap=document.querySelector('.mwrap');
+        if(wrap){
+          var host=document.createElement('section');
+          host.className='go-owner-landing go-owner-landing--messages';
+          host.innerHTML='<iframe title="Your business messages" src="/messages?embedded=1" loading="eager" allow="microphone"></iframe>';
+          wrap.parentNode.insertBefore(topBar, wrap);
+          wrap.parentNode.insertBefore(host, wrap);
+          wrap.remove();
+        }
       }
     }).catch(function(){});
 })();</script>
-<style>.go-owner-banner{position:fixed;z-index:80;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:11px 16px;border-radius:13px;background:rgba(15,21,32,.96);border:1px solid rgba(255,255,255,.15);color:#ecf0f7;box-shadow:0 16px 40px #0008;font:600 13px system-ui}.go-owner-banner a{color:var(--a);text-decoration:none}.go-owner-landing{max-width:650px;min-height:50vh;margin:115px auto 45px;padding:32px 24px;text-align:center}.go-owner-landing h1{font-size:clamp(30px,5vw,52px)}.go-owner-landing p{color:var(--soft);margin:18px 0 25px}.go-owner-landing iframe{display:block;width:100%;height:min(76vh,850px);min-height:540px;border:1px solid var(--line);border-radius:18px;background:#080c13}.go-owner-landing{max-width:1200px;text-align:left}.go-owner-landing a{display:inline-block;border-radius:12px;padding:13px 22px;background:var(--a);color:var(--on);font-weight:700;text-decoration:none}@media(max-width:650px){.go-owner-banner{font-size:11px;gap:8px;padding:10px}}</style>
+<style>.go-owner-banner{position:fixed;z-index:80;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:11px 16px;border-radius:13px;background:rgba(15,21,32,.96);border:1px solid rgba(255,255,255,.15);color:#ecf0f7;box-shadow:0 16px 40px #0008;font:600 13px system-ui}.go-owner-banner a{color:var(--a);text-decoration:none}.go-owner-topbar{width:min(100% - 36px,1240px);margin:108px auto 18px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid var(--line);box-shadow:0 18px 50px rgba(0,0,0,.22)}.go-owner-topbar strong{display:block;font-size:1.05rem}.go-owner-topbar span{display:block;color:var(--soft);font-size:.92rem;margin-top:4px}.go-owner-links{display:flex;gap:10px;flex-wrap:wrap}.go-owner-links a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);text-decoration:none;color:#fff;background:rgba(255,255,255,.03)}.go-owner-links a:first-child{background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);border-color:transparent;font-weight:800}.go-owner-landing{max-width:1200px;min-height:50vh;margin:0 auto 45px;padding:0 18px 34px;text-align:left}.go-owner-landing--messages iframe{display:block;width:100%;height:calc(100vh - 240px);min-height:680px;border:1px solid var(--line);border-radius:24px;background:#080c13;box-shadow:0 24px 80px rgba(0,0,0,.28)}.go-owner-messages-page footer{display:none}@media(max-width:760px){.go-owner-topbar{margin-top:90px;padding:16px;align-items:flex-start;flex-direction:column}.go-owner-links{width:100%}.go-owner-links a{flex:1}.go-owner-landing--messages iframe{height:calc(100vh - 250px);min-height:560px}.go-owner-banner{font-size:11px;gap:8px;padding:10px}}</style>
 </body></html>`;
 }
 
@@ -2570,11 +2664,11 @@ function renderSite(user, offers, sent) {
   <div class="cine-wrap">
     <div class="cine-copy rv in-view" style="--d:80ms">
       <span class="cine-eyebrow">${esc(((layout.eyebrow || user.categoryLabel || user.category || 'GoldOffer site')).toUpperCase())}</span>
-      <h1>${esc(user.siteName)}</h1>
-      <p class="cine-sub">${esc(story)}</p>
+      <h1>${esc(user.heroHeadline || user.siteName)}</h1>
+      <p class="cine-sub">${esc(user.heroSubtitle || story)}</p>
       <div class="cine-meta">${sub ? `<span>${sub}</span>` : ''}${hours ? `<span>${esc(hours)}</span>` : ''}<span>${offers.length} offers live</span></div>
       <div class="actions">
-        <a class="abtn pri" href="/site/${esc(user.slug)}/messages">${MSG_SVG}Message us</a>
+        <a class="abtn pri" href="/site/${esc(user.slug)}/messages">${MSG_SVG}${esc(user.primaryCta || 'Message us')}</a>
         ${phoneRaw ? `<a class="abtn" href="tel:${esc(phoneRaw)}">${PHONE_SVG}Call</a>` : ''}
         ${q ? `<a class="abtn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener">${PIN_SVG}Directions</a>` : ''}
       </div>
@@ -2594,13 +2688,13 @@ function renderSite(user, offers, sent) {
   <div class="hero-fade"></div>
 </section>
 
-<section class="story-shell" data-story-shell>
+<section data-go-section="story" class="story-shell" data-story-shell>
   <div class="story-stick">
     <div class="story-canvas" data-story-canvas>
       <div class="story-media">${renderMedia(heroMediaB, secondOffer ? secondOffer.title : user.siteName, 'story-main')}</div>
       <div class="story-panel">
         <span class="cine-eyebrow">THE STORY BEHIND THE BUSINESS</span>
-        <h2>${esc(layout.storyHeading || (user.siteName + ' — made to stand out.'))}</h2>
+        <h2>${esc(user.storyHeading || layout.storyHeading || (user.siteName + ' — made to stand out.'))}</h2>
         <p>${esc(story)}</p>
         <div class="story-stats"><div><b>${offers.length}</b><span>Offers</span></div><div><b>${esc(user.city || 'Global')}</b><span>Location</span></div><div><b>${phoneRaw ? 'Telephone' : 'Message'}</b><span>Contact</span></div></div>
       </div>
@@ -2608,7 +2702,7 @@ function renderSite(user, offers, sent) {
   </div>
 </section>
 
-<section class="reveal-band wrap">
+<section data-go-section="discover" class="reveal-band wrap">
   <div class="sec-head"><h2>${esc(layout.discoverTitle || ('Discover ' + user.siteName))}</h2><span>${esc(layout.discoverText || 'A closer look at what we offer.')}</span></div>
   <div class="copylines">
     <p class="copyline">${esc(story)}</p>
@@ -2617,7 +2711,7 @@ function renderSite(user, offers, sent) {
   </div>
 </section>
 
-<section class="cine-feature wrap">
+<section data-go-section="highlights" class="cine-feature wrap">
   <div class="feature-grid">
     <div class="feature-card dark rv"><span class="cine-eyebrow">DISCOVER</span><h3>${esc(layout.discoverTitle || 'Discover our latest offers')}</h3><p>${esc(layout.tilesText || 'Find something that suits you. Explore the collection, ask questions and connect directly.')}</p></div>
     <div class="feature-card media rv">${heroTiles ? `<div class="pics three">${heroTiles}</div>` : `<div class="feature-fallback">Publish offers to see your visual layout here.</div>`}</div>
@@ -2625,17 +2719,17 @@ function renderSite(user, offers, sent) {
   </div>
 </section>
 
-<main class="wrap top" id="offers">
-  <div class="sec-head"><h2>Offers</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/profile#reviews" style="color:inherit;text-decoration:underline">Seller reviews</a></span></div>
+<main data-go-section="offers" class="wrap top" id="offers">
+  <div class="sec-head"><h2>${esc(user.offersHeading || 'Offers')}</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/profile#reviews" style="color:inherit;text-decoration:underline">Seller reviews</a></span></div>
   <div class="go-shop-search"><input id="goOfferSearch" type="search" autocomplete="off" aria-label="Search offers" placeholder="Search offers by name or description..."><span id="goFound">${offers.length} offers</span></div>
   ${sent ? '<div class="ok">Thank you. Your request was sent and the business will contact you.</div>' : ''}
   <div class="grid" id="goOfferGrid">${cards}</div><p id="goNoResults" style="display:none;padding:28px 0;color:#707781">No matching offers.</p>
 </main>
 
-<section class="wrap" style="padding-top:42px"><a href="/site/${esc(user.slug)}/profile" style="display:flex;gap:15px;align-items:center;border:1px solid #364151;border-radius:18px;background:#161c25;padding:18px 20px;text-decoration:none"><span class="seller-pill" style="display:grid;place-items:center;width:52px;height:52px;color:inherit;font-size:18px;font-weight:800">${esc(initials(sellerName(user)))}</span><span style="flex:1;min-width:0"><b style="display:block;color:#fff">Meet ${esc(sellerName(user))}</b><small style="color:#b1bdcc">Seller profile · Offers · Reviews</small></span><strong style="color:#ffcb31">View profile →</strong></a></section>
-${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book"><div class="sec-head"><h2>Request an appointment</h2><span>Available when the business enables appointments.</span></div><form class="glass" method="POST" action="/site/${esc(user.slug)}/appointment" style="display:grid;gap:12px;max-width:620px"><input name="customer" placeholder="Your name" required maxlength="80"><input name="contact" placeholder="Your contact details" required maxlength="140"><label style="font-size:13px">Preferred date and time</label><input type="datetime-local" name="startsAt" required><textarea name="note" rows="2" placeholder="What do you need? (optional)" maxlength="500"></textarea><label style="font-size:12px;display:flex;gap:9px;align-items:start"><input type="checkbox" name="consent" value="1" required style="width:auto;margin:3px 0"><span>I agree to be contacted about this booking. <a href="${PUBLIC_BASE}/privacy">Privacy Policy</a></span></label><button class="btn" type="submit">Send booking request</button></form>${sent ? '' : ''}</section>
-` : ''}${user.faqItems && user.faqItems.length ? `<section class="wrap go-faq" id="faq"><div class="sec-head"><h2>Frequently asked questions</h2></div><div style="display:grid;gap:12px">${user.faqItems.map(x=>`<details class="glass" style="padding:18px 22px"><summary style="cursor:pointer;font-weight:700">${esc(x.question)}</summary><p style="padding-top:10px;color:var(--soft)">${esc(x.answer)}</p></details>`).join('')}</div></section>` : ''}
-<section class="wrap findus" id="about" style="padding-top:60px"><div class="sec-head"><h2>Find us</h2></div>${aboutBlock(user)}</section>
+<section data-go-section="seller-link" class="wrap" style="padding-top:42px"><a href="/site/${esc(user.slug)}/profile" style="display:flex;gap:15px;align-items:center;border:1px solid #364151;border-radius:18px;background:#161c25;padding:18px 20px;text-decoration:none"><span class="seller-pill" style="display:grid;place-items:center;width:52px;height:52px;color:inherit;font-size:18px;font-weight:800">${esc(initials(sellerName(user)))}</span><span style="flex:1;min-width:0"><b style="display:block;color:#fff">Meet ${esc(sellerName(user))}</b><small style="color:#b1bdcc">Seller profile · Offers · Reviews</small></span><strong style="color:#ffcb31">View profile →</strong></a></section>
+${user.bookingEnabled ? `<section data-go-section="booking" class="wrap" style="padding-top:35px" id="book"><div class="sec-head"><h2>Request an appointment</h2><span>Available when the business enables appointments.</span></div><form class="glass" method="POST" action="/site/${esc(user.slug)}/appointment" style="display:grid;gap:12px;max-width:620px"><input name="customer" placeholder="Your name" required maxlength="80"><input name="contact" placeholder="Your contact details" required maxlength="140"><label style="font-size:13px">Preferred date and time</label><input type="datetime-local" name="startsAt" required><textarea name="note" rows="2" placeholder="What do you need? (optional)" maxlength="500"></textarea><label style="font-size:12px;display:flex;gap:9px;align-items:start"><input type="checkbox" name="consent" value="1" required style="width:auto;margin:3px 0"><span>I agree to be contacted about this booking. <a href="${PUBLIC_BASE}/privacy">Privacy Policy</a></span></label><button class="btn" type="submit">Send booking request</button></form>${sent ? '' : ''}</section>
+` : ''}${user.faqItems && user.faqItems.length ? `<section data-go-section="faq" class="wrap go-faq" id="faq"><div class="sec-head"><h2>Frequently asked questions</h2></div><div style="display:grid;gap:12px">${user.faqItems.map(x=>`<details class="glass" style="padding:18px 22px"><summary style="cursor:pointer;font-weight:700">${esc(x.question)}</summary><p style="padding-top:10px;color:var(--soft)">${esc(x.answer)}</p></details>`).join('')}</div></section>` : ''}
+<section data-go-section="about" class="wrap findus" id="about" style="padding-top:60px"><div class="sec-head"><h2>Find us</h2></div>${aboutBlock(user)}</section>
 <footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>
 <style>
 .cine-hero{position:relative;overflow:hidden;padding:108px 0 60px;background:radial-gradient(1200px circle at 78% 22%,rgba(255,200,32,.13),transparent 32%),radial-gradient(900px circle at 18% 10%,rgba(255,255,255,.06),transparent 28%),linear-gradient(180deg,#05070b 0%,#070b12 100%)}
@@ -2689,18 +2783,41 @@ ${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book
 .layout-market .cine-visual{width:min(100%,930px);margin:auto;min-height:430px}.layout-market .main-screen{inset:35px 120px 30px 120px;border-radius:26px}
 .layout-market .stack-outline{inset:20px 90px}.layout-market .fc-a{top:12px;left:80px}.layout-market .fc-b{top:80px;right:65px}.layout-market .fc-c{right:100px}
 .layout-market .story-canvas{background:#0a2028}.layout-market .feature-grid{grid-template-columns:1.5fr 1fr}.layout-market .feature-card.dark{grid-column:1/-1;min-height:200px}
+.layout-neon .bar nav a,.layout-neon .abtn,.layout-neon .btn{border-radius:14px;box-shadow:0 0 0 1px rgba(68,246,255,.18),0 0 22px rgba(68,246,255,.08)}
 .layout-neon .cine-hero{background:radial-gradient(900px circle at 80% 20%,rgba(68,246,255,.14),transparent 30%),radial-gradient(900px circle at 18% 12%,rgba(155,77,255,.12),transparent 30%),linear-gradient(180deg,#03040a,#050712)}
-.layout-neon .cine-wrap{grid-template-columns:minmax(0,.95fr) minmax(380px,.95fr)}.layout-neon .cine-copy h1{text-shadow:0 0 20px rgba(68,246,255,.08)}
+.layout-neon .cine-wrap{grid-template-columns:minmax(0,1.08fr) minmax(340px,.92fr);align-items:end;gap:44px}.layout-neon .cine-copy{padding-bottom:32px}.layout-neon .cine-copy h1{text-shadow:0 0 20px rgba(68,246,255,.08);max-width:10ch}
 .layout-neon .stack-outline{border-color:rgba(86,95,255,.35);border-radius:20px}.layout-neon .screen-caption{background:rgba(6,8,17,.82);border-color:rgba(68,246,255,.22)}
-.layout-neon .story-canvas{background:linear-gradient(130deg,#0a1120,#090b16)}.layout-neon .copyline.on{color:#d9f9ff}.layout-neon .feature-grid{grid-template-columns:1.25fr .75fr}.layout-neon .feature-card.media{grid-row:span 2}
+.layout-neon .story-canvas{background:linear-gradient(130deg,#0a1120,#090b16)}.layout-neon .story-media{order:2;min-height:420px}.layout-neon .story-panel{order:1}.layout-neon .copyline.on{color:#d9f9ff}.layout-neon .feature-grid{grid-template-columns:1.35fr .65fr}.layout-neon .feature-card.media{grid-row:span 2}.layout-neon .feature-card.light{align-self:end}.layout-neon .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.layout-arcade .bar nav a,.layout-arcade .abtn,.layout-arcade .btn{border-radius:7px;text-transform:uppercase;letter-spacing:.04em;font-family:'JetBrains Mono',monospace}
+.layout-arcade .cine-hero{background:linear-gradient(145deg,#080910,#10131d)}
+.layout-arcade .cine-wrap{grid-template-columns:1fr 1fr;gap:26px}.layout-arcade .cine-copy h1{max-width:none}.layout-arcade .offer-pills{gap:8px}.layout-arcade .offer-pills a{border-radius:8px;background:#111426}
+.layout-arcade .story-canvas{grid-template-columns:.74fr 1.26fr;background:#12131f;border:1px solid rgba(219,255,54,.18)}.layout-arcade .story-media{order:2}.layout-arcade .story-panel{order:1}
+.layout-arcade .feature-grid{grid-template-columns:.9fr 1.1fr 1fr}.layout-arcade .feature-card.media{grid-column:2/span 2}.layout-arcade .feature-card.dark{min-height:180px}.layout-arcade .feature-card.light{background:#dbff36;color:#131313}.layout-arcade .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.layout-arcade .card{box-shadow:10px 10px 0 rgba(219,255,54,.08)}
+.layout-aurora .bar nav a,.layout-aurora .abtn,.layout-aurora .btn{border-radius:999px}
+.layout-aurora .cine-hero{background:radial-gradient(ellipse at 80% 15%,rgba(120,225,208,.22),transparent 42%),radial-gradient(ellipse at 16% 60%,rgba(181,172,255,.16),transparent 40%),#101524}
+.layout-aurora .cine-wrap{grid-template-columns:1fr;gap:28px}.layout-aurora .cine-copy{text-align:center;max-width:900px;margin:auto}.layout-aurora .cine-copy h1{max-width:none;font-size:clamp(3.4rem,8vw,7rem)}
+.layout-aurora .cine-sub{margin:auto}.layout-aurora .cine-meta,.layout-aurora .offer-pills,.layout-aurora .cine-copy .actions{justify-content:center}
+.layout-aurora .cine-visual{width:min(100%,1020px);margin:auto;min-height:510px}.layout-aurora .main-screen{inset:18px 80px 40px;border-radius:38px}.layout-aurora .stack-outline{border-radius:44px}
+.layout-aurora .story-canvas{background:#202844;border-radius:45px}.layout-aurora .feature-grid{grid-template-columns:1fr 1.6fr 1fr}.layout-aurora .feature-card{border-radius:36px}.layout-aurora .feature-card.media{transform:translateY(-24px)}.layout-aurora .feature-card.light{transform:translateY(18px)}
 .layout-mono .cine-hero{background:linear-gradient(180deg,#07090c,#0a0d11)}.layout-mono .cine-wrap{grid-template-columns:minmax(0,.92fr) minmax(380px,1.08fr)}
 .layout-mono .cine-copy h1{max-width:13ch}.layout-mono .stack-outline{display:none}.layout-mono .main-screen{inset:14px;border-radius:16px}.layout-mono .float-card{border-radius:16px}
 .layout-mono .story-canvas{grid-template-columns:1.1fr .9fr;background:#0d1015}.layout-mono .feature-grid{grid-template-columns:1fr 1fr 1fr}.layout-mono .feature-card{padding:24px;border-radius:18px}.layout-mono .feature-card.light{background:#101317}
-@media(max-width:1080px){.layout-editorial .cine-wrap,.layout-editorial .story-canvas,.layout-editorial .feature-grid,.layout-market .feature-grid,.layout-neon .feature-grid,.layout-mono .feature-grid,.layout-mono .story-canvas{grid-template-columns:1fr}.layout-editorial .feature-card.light,.layout-market .feature-card.dark,.layout-neon .feature-card.media{grid-column:auto;grid-row:auto}}
-@media(max-width:720px){.layout-editorial .cine-hero{padding-top:90px}.layout-editorial .main-screen{inset:24px 10px}.layout-editorial .fc-a{left:0}.layout-market .main-screen{inset:34px 24px}.layout-market .stack-outline{inset:22px 18px}.layout-market .fc-a{left:2px}.layout-market .fc-b{right:2px}.layout-market .fc-c{right:30px}.layout-neon .cine-wrap,.layout-mono .cine-wrap{grid-template-columns:1fr}}
+@media(max-width:1080px){.layout-editorial .cine-wrap,.layout-editorial .story-canvas,.layout-editorial .feature-grid,.layout-market .feature-grid,.layout-neon .feature-grid,.layout-mono .feature-grid,.layout-mono .story-canvas,.layout-arcade .feature-grid,.layout-arcade .story-canvas{grid-template-columns:1fr}.layout-editorial .feature-card.light,.layout-market .feature-card.dark,.layout-neon .feature-card.media,.layout-arcade .feature-card.media{grid-column:auto;grid-row:auto}.layout-neon .grid,.layout-arcade .grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.layout-editorial .cine-hero{padding-top:90px}.layout-editorial .main-screen{inset:24px 10px}.layout-editorial .fc-a{left:0}.layout-market .main-screen{inset:34px 24px}.layout-market .stack-outline{inset:22px 18px}.layout-market .fc-a{left:2px}.layout-market .fc-b{right:2px}.layout-market .fc-c{right:30px}.layout-neon .cine-wrap,.layout-mono .cine-wrap,.layout-arcade .cine-wrap{grid-template-columns:1fr}.layout-neon .grid,.layout-arcade .grid{grid-template-columns:1fr}.layout-aurora .feature-card.media,.layout-aurora .feature-card.light{transform:none}}
 @media(max-width:1080px){.cine-wrap,.story-canvas,.feature-grid{grid-template-columns:1fr}.cine-visual{min-height:430px}.feature-card{min-height:0}.story-shell{height:auto;padding:8px 0 0}.story-stick{position:relative;top:auto;height:auto}.story-canvas{width:min(100% - 32px,1220px)}.story-media{min-height:300px}.feature-grid{display:grid;gap:16px}.copylines{max-width:none}.copyline{max-width:30ch}}
 @media(max-width:720px){.cine-hero{padding-top:92px}.cine-wrap{width:calc(100% - 24px);gap:24px}.cine-copy h1{font-size:clamp(2.7rem,16vw,4.2rem);max-width:12ch}.cine-sub{font-size:.98rem}.cine-visual{min-height:330px}.main-screen{inset:40px 14px 40px}.stack-outline{inset:26px 6px}.float-card{width:84px;height:84px;border-radius:20px}.fc-a{top:8px;left:2px}.fc-b{right:0;top:86px}.fc-c{right:36px;bottom:2px;width:74px;height:74px}.screen-caption{left:22px;right:22px;bottom:8px;padding:10px 12px;border-radius:14px}.story-canvas{width:calc(100% - 24px);border-radius:24px}.story-panel{padding:22px}.story-panel h2{font-size:1.85rem}.story-stats{grid-template-columns:1fr}.copyline{font-size:1.4rem;max-width:100%}.go-shop-search input{width:100%}.feature-card{padding:22px;border-radius:24px}}
 </style>
+<script>(function(){try{
+  var order=${JSON.stringify((Array.isArray(user.sectionOrder)?user.sectionOrder:[]).filter(x=>['story','discover','highlights','offers','booking','faq','about'].includes(x)))};
+  var hidden=${JSON.stringify((Array.isArray(user.hiddenSections)?user.hiddenSections:[]).filter(x=>['story','discover','highlights','booking','faq','about'].includes(x)))};
+  var hero=document.querySelector('.cine-hero'),footer=document.querySelector('footer');
+  if(hero&&footer){var holder=document.createElement('div');holder.id='go-custom-sections';footer.parentNode.insertBefore(holder,footer);
+    var keys=['story','discover','highlights','offers','booking','faq','about'];
+    var rest=keys.filter(function(k){return order.indexOf(k)<0});order=order.concat(rest);
+    order.forEach(function(k){var el=document.querySelector('[data-go-section="'+k+'"]');if(el){if(hidden.indexOf(k)>=0)el.style.display="none";holder.appendChild(el)}});
+    var sellerLink=document.querySelector('[data-go-section="seller-link"]');if(sellerLink)holder.appendChild(sellerLink);
+  }
+}catch(e){console.error('Storefront section layout:',e)}})();</script>
 <script>(function(){var inp=document.getElementById('goOfferSearch'),grid=document.getElementById('goOfferGrid'),count=document.getElementById('goFound'),empty=document.getElementById('goNoResults');if(inp&&grid){var items=[].slice.call(grid.querySelectorAll('.card'));inp.addEventListener('input',function(){var q=inp.value.trim().toLocaleLowerCase(),n=0;items.forEach(function(el){var show=el.textContent.toLocaleLowerCase().includes(q);el.style.display=show?'':'none';if(show)n++;});count.textContent=n+' offers';empty.style.display=n?'none':'block';});}
 var lines=[].slice.call(document.querySelectorAll('.copyline'));if(lines.length&&'IntersectionObserver' in window){var io=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting)entry.target.classList.add('on');})},{threshold:.45});lines.forEach(function(el){io.observe(el)})}else{lines.forEach(function(el){el.classList.add('on')})}
 var shell=document.querySelector('[data-story-shell]'),canvas=document.querySelector('[data-story-canvas]');if(shell&&canvas&&window.matchMedia('(min-width: 801px)').matches&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){var ticking=false;var run=function(){ticking=false;var rect=shell.getBoundingClientRect(),vh=window.innerHeight||1,total=Math.max(1,shell.offsetHeight-vh),p=Math.min(1,Math.max(0,-rect.top/total));var scale=1-p*.12,shift=p*26;canvas.style.transform='translate3d(0,'+shift+'px,0) scale('+scale+')';canvas.style.borderRadius=(34+p*14)+'px';};addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(run)}},{passive:true});run();}
