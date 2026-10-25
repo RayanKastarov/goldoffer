@@ -65,8 +65,8 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
   res.json({ received: true });
 });
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '256kb' }));
+app.use(express.urlencoded({ extended: false, limit: '32kb' }));
 
 // Images are kept in the database (memory storage), so no external service and no disk is needed
 const upload = multer({
@@ -86,9 +86,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     server: 'ok',
     database: states[mongoose.connection.readyState] || 'unknown',
-    mongodbUriSet: !!process.env.MONGODB_URI,
-    jwtSecretSet: !!process.env.JWT_SECRET,
-    emailSet: !!((process.env.BREVO_API_KEY || process.env.RESEND_API_KEY) && process.env.MAIL_FROM)
+    checks: { databaseReady: mongoose.connection.readyState === 1 }
   });
 });
 
@@ -119,6 +117,9 @@ const UserSchema = new mongoose.Schema({
   lang: { type: String, default: 'bg' },
   notifyEmail: String,
   notifyOn: { type: Boolean, default: true },
+  bookingEnabled: {type:Boolean,default:false},
+  announcementText:{type:String,default:''},
+  faqItems:{type:[{question:String,answer:String,_id:false}],default:[]},
   termsAcceptedAt: Date,
   resetTokenHash: String,
   resetExpires: Date,
@@ -904,7 +905,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
   if (!isFinite(a) || a < 0) return res.status(400).json({ message: 'Invalid amount' });
   const order = await Order.create({
     userId: req.user.id, offerTitle: String(offerTitle || '').slice(0, 120),
-    customerName: String(customerName || '').slice(0, 80), amount: a, status: 'Completed'
+    customerName: String(customerName || '').slice(0, 80), amount: a, status: 'Pending'
   });
   res.json({ order });
 });
@@ -1244,16 +1245,58 @@ function runUpload(req, res, next) {
     next();
   });
 }
+
+// Chat downloads use short-lived signed URLs. Only authenticated conversation API
+// responses carry fresh links; storing or forwarding an old link will not grant
+// indefinite access. Treat these as bearer links: recipients can still share them
+// during their validity window. For stronger isolation use an authenticated file proxy.
+const FILE_LINK_TTL_MS = 3 * 60 * 60 * 1000;
+function fileSignature(key, exp) {
+  return crypto.createHmac('sha256', process.env.JWT_SECRET || 'not-configured')
+    .update(String(key) + ':' + String(exp)).digest('hex');
+}
+function signedFileLink(url) {
+  const m = String(url || '').match(/\/api\/file\/([a-f0-9]{32})(?:\?.*)?$/);
+  if (!m) return url;
+  const exp = Date.now() + FILE_LINK_TTL_MS;
+  return String(url).split('?')[0] + '?exp=' + exp + '&sig=' + fileSignature(m[1], exp);
+}
+function signAttachments(obj, level = 0) {
+  if (!obj || typeof obj !== 'object' || level > 8) return;
+  if (Array.isArray(obj)) { obj.forEach(x => signAttachments(x, level + 1)); return; }
+  if (obj.att && typeof obj.att === 'object' && typeof obj.att.url === 'string') {
+    obj.att.url = signedFileLink(obj.att.url);
+  }
+  for (const [k,v] of Object.entries(obj)) if (k !== 'att') signAttachments(v, level + 1);
+}
+app.use((req, res, next) => {
+  if (!(/^\/site\/[^/]+\/chat\//.test(req.path) || /^\/api\/conversations(?:\/|$)/.test(req.path))) return next();
+  const old = res.json.bind(res);
+  res.json = (value) => {
+    if (value && typeof value === 'object') {
+      const serial = JSON.parse(JSON.stringify(value));
+      signAttachments(serial);
+      return old(serial);
+    }
+    return old(value);
+  };
+  next();
+});
+
 app.get('/api/file/:key', async (req, res) => {
   try {
     if (!/^[a-f0-9]{32}$/.test(req.params.key)) return res.status(404).end();
+    const exp=Number(req.query.exp),sig=String(req.query.sig||'');
+    if(!Number.isSafeInteger(exp)||exp<Date.now()||exp>Date.now()+FILE_LINK_TTL_MS||!/^[a-f0-9]{64}$/.test(sig))return res.status(403).end();
+    const a=Buffer.from(sig,'hex'),b=Buffer.from(fileSignature(req.params.key,exp),'hex');
+    if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return res.status(403).end();
     const f = await ChatFile.findOne({ key: req.params.key });
     if (!f) return res.status(404).end();
     const isImg = IMAGE_MIMES.includes(f.contentType);
     res.set({
       'Content-Type': isImg ? f.contentType : 'application/octet-stream',
       'Content-Disposition': `${isImg ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(f.name || 'file')}`,
-      'Cache-Control': 'private, max-age=86400',
+      'Cache-Control': 'private, no-store',
       'X-Content-Type-Options': 'nosniff',
       'Cross-Origin-Resource-Policy': 'cross-origin'
     });
@@ -1367,7 +1410,8 @@ app.get('/api/ice', chatLimiter, async (req, res) => {
       list.push({ urls: process.env.TURN_URL.split(',').map(s => s.trim()).filter(Boolean), username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL });
     }
   } catch (e) { console.error('ICE error', e.message); }
-  res.json({ iceServers: list });
+  res.set("Cache-Control", "no-store");
+  res.json({ iceServers: list, relayConfigured: list.some(x => (Array.isArray(x.urls)?x.urls:[x.urls]).some(u => String(u).startsWith("turn:" ) || String(u).startsWith("turns:"))) });
 });
 
 async function siteBySlug(slug) {
@@ -1375,8 +1419,20 @@ async function siteBySlug(slug) {
   return user && user.published ? user : null;
 }
 
+
+async function rejectOwnerSelfAction(req, res, next) {
+  const bearer = String(req.headers.authorization || '').match(/^Bearer (.+)$/i);
+  if (!bearer) return next();
+  try {
+    const session = jwt.verify(bearer[1], process.env.JWT_SECRET);
+    const owner = await User.findOne({slug:req.params.slug}).select('_id');
+    if (owner && String(owner._id) === String(session.id)) return res.status(403).json({message:'You cannot contact or order from your own storefront.'});
+  } catch (_) {}
+  next();
+}
+
 // Visitor: start a conversation about an offer
-app.post('/site/:slug/chat/start', startLimiter, async (req, res) => {
+app.post('/site/:slug/chat/start', startLimiter, rejectOwnerSelfAction, async (req, res) => {
   try {
     const user = await siteBySlug(req.params.slug);
     if (!user) return res.status(404).json({ message: 'Site not found.' });
@@ -1624,6 +1680,138 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
   await Conversation.deleteOne({ _id: req.params.id, userId: req.user.id });
   res.json({ ok: true });
+});
+
+
+// ── GoldOffer Business Suite: authenticated seller tools + limited visitor interactions ──
+const Visit = mongoose.model('GOVisit', new mongoose.Schema({
+  sellerId: {type:mongoose.Schema.Types.ObjectId,required:true,index:true},
+  kind: {type:String,enum:['view','offer','message','call'],required:true},
+  offerId: mongoose.Schema.Types.ObjectId,
+  visitor: String,
+  createdAt: {type:Date,default:Date.now,expires:7776000}
+}));
+Visit.schema.index({sellerId:1,createdAt:-1});
+const Appointment = mongoose.model('GOAppointment',new mongoose.Schema({
+ sellerId:{type:mongoose.Schema.Types.ObjectId,index:true,required:true}, offerId:mongoose.Schema.Types.ObjectId,
+ customer:{type:String,required:true,maxlength:80}, contact:{type:String,required:true,maxlength:140},
+ startsAt:{type:Date,required:true},note:{type:String,maxlength:500},
+ status:{type:String,enum:['Pending','Confirmed','Cancelled','Completed'],default:'Pending'},
+ createdAt:{type:Date,default:Date.now}
+}));
+Appointment.schema.index({sellerId:1,startsAt:1});
+const ShopSetting = mongoose.model('GOShopSetting',new mongoose.Schema({
+ sellerId:{type:mongoose.Schema.Types.ObjectId,unique:true,required:true},
+ stock: {type:Map,of:Number,default:{}},
+ soldOut:{type:[String],default:[]},
+ slotsEnabled:{type:Boolean,default:false},
+ quickReplies:{type:[String],default:[]},
+ announcementText:{type:String,default:''},
+ faqItems:{type:[{question:String,answer:String,_id:false}],default:[]},
+ customDomain:{type:String,default:''},
+ customDomainStatus:{type:String,default:'not-configured'},
+ updatedAt:{type:Date,default:Date.now}
+}));
+const Reminder = mongoose.model('GOReminder',new mongoose.Schema({
+ sellerId:{type:mongoose.Schema.Types.ObjectId,index:true,required:true},
+ text:{type:String,required:true,maxlength:250},due:{type:Date,default:Date.now},done:{type:Boolean,default:false},createdAt:{type:Date,default:Date.now}
+}));
+const Note = mongoose.model('GONote',new mongoose.Schema({
+ sellerId:{type:mongoose.Schema.Types.ObjectId,index:true,required:true},
+ text:{type:String,required:true,maxlength:1200},createdAt:{type:Date,default:Date.now}
+}));
+const customerId = req => crypto.createHmac('sha256',process.env.JWT_SECRET || 'goldoffer-local-only').update(new Date().toISOString().slice(0,10) + ':' + String(req.ip||'') + ':' + String(req.headers['user-agent']||'')).digest('hex').slice(0,16);
+const suiteLimit = rateLimit({windowMs:60*1000,max:60,standardHeaders:'draft-7',legacyHeaders:false});
+app.post('/api/storefront/:slug/track',suiteLimit,async(req,res)=>{
+ try{
+  const owner=await User.findOne({slug:req.params.slug,published:true}).select('_id');if(!owner)return res.sendStatus(404);
+  const kind=String(req.body?.kind||'view');if(!['view','offer','message','call'].includes(kind))return res.sendStatus(400);
+  const id=req.body?.offerId;
+  if(id&&!mongoose.isValidObjectId(id))return res.sendStatus(400);
+  // Deduplicate by visitor and page/action within a short window; no precise IP stored.
+  const visitor=customerId(req);const since=new Date(Date.now()-10*60*1000);
+  const query={sellerId:owner._id,kind,visitor,createdAt:{$gt:since}};
+  if(id)query.offerId=id;
+  if(!await Visit.exists(query))await Visit.create({sellerId:owner._id,kind,visitor,offerId:id||undefined});
+  res.status(204).end();
+ }catch(e){res.sendStatus(500)}
+});
+app.get('/api/business/overview',authenticateToken,async(req,res)=>{
+ try{
+ const sellerId=req.user.id, since=new Date(Date.now()-30*86400000);
+ const [visits,bookings,notes,reminders,setting,orders,conversations]=await Promise.all([
+ Visit.aggregate([{$match:{sellerId:new mongoose.Types.ObjectId(sellerId),createdAt:{$gte:since}}},{$group:{_id:'$kind',total:{$sum:1}}}]),
+ Appointment.find({sellerId}).sort({startsAt:1}).limit(30).lean(),
+ Note.find({sellerId}).sort({createdAt:-1}).limit(20).lean(),
+ Reminder.find({sellerId}).sort({due:1}).limit(30).lean(),
+ ShopSetting.findOne({sellerId}).lean(),
+ Order.find({userId:sellerId}).sort({createdAt:-1}).limit(50).lean(),
+ Conversation.countDocuments({userId:sellerId,unreadSeller:{$gt:0}})
+ ]);
+ res.set('Cache-Control','no-store').json({visits:Object.fromEntries(visits.map(v=>[v._id,v.total])),bookings,notes,reminders,setting:setting||{},orders,unreadConversations:conversations,turnConfigured:!!process.env.TURN_URL});
+ }catch(e){res.status(500).json({message:'Could not load business data'})}
+});
+app.post('/api/business/appointments',authenticateToken,async(req,res)=>{
+ try{const b=req.body||{};const d=new Date(b.startsAt);if(!Number.isFinite(d.valueOf())||d<Date.now()-86400000||d>Date.now()+366*86400000)return res.status(400).json({message:'Invalid appointment date'});
+ const row=await Appointment.create({sellerId:req.user.id,startsAt:d,customer:String(b.customer||'').trim().slice(0,80)||'Manual booking',contact:String(b.contact||'').slice(0,140)||'Created by owner',note:String(b.note||'').slice(0,500)});res.status(201).json({appointment:row})}catch(e){res.status(500).json({message:'Could not save booking'})}
+});
+app.post('/site/:slug/appointment',publicLimiter,rejectOwnerSelfAction,async(req,res)=>{
+ try{const owner=await User.findOne({slug:req.params.slug,published:true}).select('_id siteName email notifyEmail');if(!owner)return res.sendStatus(404);
+ const b=req.body||{};if(b.consent!=='1')return res.status(400).send('Please accept the privacy notice.');const d=new Date(b.startsAt);const customer=String(b.customer||'').trim().slice(0,80),contact=String(b.contact||'').trim().slice(0,140);
+ if(!customer||contact.length<5||!Number.isFinite(d.valueOf())||d<Date.now()+3600000||d>Date.now()+180*86400000)return res.status(400).send('Check the date and contact details.');
+ const setting=await ShopSetting.findOne({sellerId:owner._id}).lean();if(!setting?.slotsEnabled)return res.status(403).send('Booking is not enabled for this business.');
+ if(mongoose.isValidObjectId(b.offerId)){if(!await Offer.exists({_id:b.offerId,userId:owner._id}))return res.sendStatus(404)}
+ await Appointment.create({sellerId:owner._id,offerId:mongoose.isValidObjectId(b.offerId)?b.offerId:undefined,startsAt:d,customer,contact,note:String(b.note||'').slice(0,500)});
+ if(owner.email)void sendMail({to:owner.notifyEmail||owner.email,subject:'New booking request',text:`${customer} requested ${d.toISOString()}. Contact: ${contact}`});
+ res.redirect(303,`/site/${encodeURIComponent(req.params.slug)}?booking=1`);
+ }catch(e){res.status(500).send('Booking could not be saved')}
+});
+app.patch('/api/business/appointments/:id',authenticateToken,async(req,res)=>{
+ if(!mongoose.isValidObjectId(req.params.id)||!['Pending','Confirmed','Cancelled','Completed'].includes(req.body?.status))return res.sendStatus(400);
+ const row=await Appointment.findOneAndUpdate({_id:req.params.id,sellerId:req.user.id},{$set:{status:req.body.status}},{new:true});return row?res.json({appointment:row}):res.sendStatus(404);
+});
+app.put('/api/business/settings',authenticateToken,async(req,res)=>{
+ const b=req.body||{}, update={updatedAt:new Date()};
+ if(typeof b.slotsEnabled==='boolean')update.slotsEnabled=b.slotsEnabled;
+ if(Array.isArray(b.quickReplies))update.quickReplies=b.quickReplies.slice(0,12).map(x=>String(x).trim().slice(0,180)).filter(Boolean);
+ if(typeof b.customDomain==='string'){
+   const domain=b.customDomain.trim().toLowerCase();if(domain&&!/^(?=.{4,180}$)(?!-)[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(domain))return res.status(400).json({message:'Enter a valid hostname'});
+   update.customDomain=domain;update.customDomainStatus=domain?'pending-dns':'not-configured';
+ }
+ try{const setting=await ShopSetting.findOneAndUpdate({sellerId:req.user.id},{$set:update}, {new:true,upsert:true,setDefaultsOnInsert:true});res.json({setting})}catch(e){res.status(500).json({message:'Could not save settings'})}
+});
+app.get('/api/business/quick-replies',authenticateToken,async(req,res)=>{
+  const cfg=await ShopSetting.findOne({sellerId:req.user.id}).select('quickReplies').lean();
+  res.json({quickReplies:cfg?.quickReplies||[]});
+});
+app.put('/api/business/stock/:id',authenticateToken,async(req,res)=>{
+ try{if(!mongoose.isValidObjectId(req.params.id))return res.sendStatus(400);
+ if(!await Offer.exists({_id:req.params.id,userId:req.user.id}))return res.sendStatus(404);
+ const count=Number(req.body?.quantity);if(!Number.isSafeInteger(count)||count<0||count>1000000)return res.status(400).json({message:'Quantity must be between 0 and 1000000'});
+ const setting=await ShopSetting.findOneAndUpdate({sellerId:req.user.id},{$set:{[`stock.${String(req.params.id)}`]:count,updatedAt:new Date()}},{new:true,upsert:true});res.json({quantity:count,setting:setting._id});
+ }catch(e){res.status(500).json({message:'Could not update stock'})}
+});
+app.post('/api/business/notes',authenticateToken,async(req,res)=>{
+ const text=String(req.body?.text||'').trim().slice(0,1200);if(!text)return res.sendStatus(400);
+ const note=await Note.create({sellerId:req.user.id,text});res.status(201).json({note});
+});
+app.delete('/api/business/notes/:id',authenticateToken,async(req,res)=>{
+ if(!mongoose.isValidObjectId(req.params.id))return res.sendStatus(400);
+ await Note.deleteOne({_id:req.params.id,sellerId:req.user.id});res.json({ok:true});
+});
+app.post('/api/business/reminders',authenticateToken,async(req,res)=>{
+ const text=String(req.body?.text||'').trim().slice(0,250),due=new Date(req.body?.due||Date.now());
+ if(!text||!Number.isFinite(due.valueOf()))return res.sendStatus(400);
+ const reminder=await Reminder.create({sellerId:req.user.id,text,due});res.status(201).json({reminder});
+});
+app.patch('/api/business/reminders/:id',authenticateToken,async(req,res)=>{
+ if(!mongoose.isValidObjectId(req.params.id))return res.sendStatus(400);
+ const row=await Reminder.findOneAndUpdate({_id:req.params.id,sellerId:req.user.id},{$set:{done:!!req.body?.done}},{new:true});return row?res.json({reminder:row}):res.sendStatus(404);
+});
+app.get('/api/business/export',authenticateToken,async(req,res)=>{
+ try{const [offers,orders,appointments]=await Promise.all([Offer.find({userId:req.user.id}).select('title price description createdAt').lean(),Order.find({userId:req.user.id}).select('offerTitle customerName amount status createdAt').lean(),Appointment.find({sellerId:req.user.id}).select('customer contact startsAt status').lean()]);
+ res.set('Content-Disposition','attachment; filename="goldoffer-data.json"');res.set('Cache-Control','no-store');res.json({exportedAt:new Date(),offers,orders,appointments});
+ }catch(e){res.sendStatus(500)}
 });
 
 // ---------- Public customer site: dark luxury design, neon cards, 3D parallax ----------
@@ -2150,8 +2338,39 @@ function pageShell(user, { title, desc, body, cls }) {
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
 <style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
+<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>
+<script>(function(){var form=document.querySelector('#book form');if(form)form.addEventListener('submit',function(){var x=form.querySelector('[name="startsAt"]');if(x){var d=new Date(x.value);if(Number.isFinite(d.getTime())){x.type='hidden';x.value=d.toISOString()}}})})();</script>
 <script>${SITE_JS}</script>
+<script>(function(){
+  var slug = document.body.getAttribute('data-slug');
+  var token = null;
+  try { token = localStorage.getItem('token'); } catch(e) {}
+  if (!slug || !token) return;
+  fetch('/api/auth/me', {headers:{Authorization:'Bearer '+token},cache:'no-store'})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){
+      if (!d || !d.user || d.user.slug!==slug) return;
+      document.body.classList.add('go-site-owner');
+      var prefix='/site/'+encodeURIComponent(slug);
+      document.querySelectorAll('a[href^="'+prefix+'/messages"]').forEach(function(a){a.href='/messages';a.setAttribute('title','Open your business inbox in GoldOffer Studio');a.setAttribute('aria-label','Open business inbox');if(a.textContent.trim())a.textContent='Business inbox';});
+      document.querySelectorAll('a[href^="'+prefix+'/offer/"]').forEach(function(a){a.setAttribute('data-owner-offer','true');});
+      document.querySelectorAll('form[action="'+prefix+'/order"]').forEach(function(f){
+        f.addEventListener('submit',function(e){e.preventDefault();window.location.assign('/dashboard');});
+        f.style.display='none';
+        var wrap=f.closest('.req');if(wrap){var h=wrap.querySelector('h2');if(h)h.textContent='Your own offer';var note=document.createElement('p');note.textContent='You are viewing your own website. Customers can send requests here; manage them in your Dashboard.';note.style.cssText='color:var(--soft);margin:10px 0 18px;line-height:1.6';wrap.appendChild(note);var a=document.createElement('a');a.href='/dashboard';a.className='abtn pri';a.textContent='Open Dashboard';wrap.appendChild(a);}
+      });
+      var note=document.createElement('div');note.className='go-owner-banner';note.setAttribute('role','status');note.innerHTML='<span>Owner preview — you are viewing your own website.</span><a href="/messages">Business inbox</a><a href="/dashboard">Dashboard</a>';
+      document.body.appendChild(note);
+      if(location.pathname===prefix+'/messages'){
+        var wrap=document.querySelector('.mwrap');if(wrap){wrap.style.display='none';}
+        var landing=document.createElement('section');landing.className='go-owner-landing';landing.innerHTML='<h1>Your business inbox</h1><p>Messages from your customers appear in GoldOffer Studio. This storefront Messenger is for visitors, so you do not have to message yourself.</p><a href="/messages">Open business messages</a>';
+        document.body.insertBefore(landing,document.querySelector('footer'));
+      }
+    }).catch(function(){});
+})();</script>
+<style>.go-owner-banner{position:fixed;z-index:80;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:11px 16px;border-radius:13px;background:rgba(15,21,32,.96);border:1px solid rgba(255,255,255,.15);color:#ecf0f7;box-shadow:0 16px 40px #0008;font:600 13px system-ui}.go-owner-banner a{color:var(--a);text-decoration:none}.go-owner-landing{max-width:650px;min-height:50vh;margin:115px auto 45px;padding:32px 24px;text-align:center}.go-owner-landing h1{font-size:clamp(30px,5vw,52px)}.go-owner-landing p{color:var(--soft);margin:18px 0 25px}.go-owner-landing a{display:inline-block;border-radius:12px;padding:13px 22px;background:var(--a);color:var(--on);font-weight:700;text-decoration:none}@media(max-width:650px){.go-owner-banner{font-size:11px;gap:8px;padding:10px}}</style>
 </body></html>`;
 }
 
@@ -2177,9 +2396,11 @@ ${q ? `<div><div class="map"><iframe title="Map" loading="lazy" referrerpolicy="
 
 function offerCard(user, o, i) {
   const g = galleryOf(o);
+  const tracked=user._stockMap&&Object.prototype.hasOwnProperty.call(user._stockMap,String(o._id));
+  const stock=tracked?Number(user._stockMap[String(o._id)]):null;
   return `<a class="card rv" style="--d:${(i % 6) * 70}ms" href="/site/${esc(user.slug)}/offer/${o._id}">
   <div class="pic">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : artPlaceholder(o.title, user.categoryLabel || user.category || user.siteName)}
-    <span class="tag">${eur(o.price)}</span>${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
+    <span class="tag">${eur(o.price)}</span>${stock===0?'<span class="count" style="top:auto;bottom:12px;background:#6b1723">Sold out</span>':''}${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
   <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p><span class="more">View details</span></div>
 </a>`;
 }
@@ -2295,7 +2516,7 @@ function renderSite(user, offers, sent) {
         <span class="cine-eyebrow">THE STORY BEHIND THE BUSINESS</span>
         <h2>${esc(layout.storyHeading || (user.siteName + ' — made to stand out.'))}</h2>
         <p>${esc(story)}</p>
-        <div class="story-stats"><div><b>${offers.length}</b><span>Offers</span></div><div><b>${esc(user.city || 'Global')}</b><span>Location</span></div><div><b>${phoneRaw ? 'Live call' : 'Direct line'}</b><span>Contact</span></div></div>
+        <div class="story-stats"><div><b>${offers.length}</b><span>Offers</span></div><div><b>${esc(user.city || 'Global')}</b><span>Location</span></div><div><b>${phoneRaw ? 'Telephone' : 'Message'}</b><span>Contact</span></div></div>
       </div>
     </div>
   </div>
@@ -2326,6 +2547,8 @@ function renderSite(user, offers, sent) {
 </main>
 
 <section class="wrap" style="padding-top:42px"><a href="/site/${esc(user.slug)}/profile" style="display:flex;gap:15px;align-items:center;border:1px solid #364151;border-radius:18px;background:#161c25;padding:18px 20px;text-decoration:none"><span class="seller-pill" style="display:grid;place-items:center;width:52px;height:52px;color:inherit;font-size:18px;font-weight:800">${esc(initials(sellerName(user)))}</span><span style="flex:1;min-width:0"><b style="display:block;color:#fff">Meet ${esc(sellerName(user))}</b><small style="color:#b1bdcc">Seller profile · Offers · Reviews</small></span><strong style="color:#ffcb31">View profile →</strong></a></section>
+${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book"><div class="sec-head"><h2>Request an appointment</h2><span>Available when the business enables appointments.</span></div><form class="glass" method="POST" action="/site/${esc(user.slug)}/appointment" style="display:grid;gap:12px;max-width:620px"><input name="customer" placeholder="Your name" required maxlength="80"><input name="contact" placeholder="Your contact details" required maxlength="140"><label style="font-size:13px">Preferred date and time</label><input type="datetime-local" name="startsAt" required><textarea name="note" rows="2" placeholder="What do you need? (optional)" maxlength="500"></textarea><label style="font-size:12px;display:flex;gap:9px;align-items:start"><input type="checkbox" name="consent" value="1" required style="width:auto;margin:3px 0"><span>I agree to be contacted about this booking. <a href="${PUBLIC_BASE}/privacy">Privacy Policy</a></span></label><button class="btn" type="submit">Send booking request</button></form>${sent ? '' : ''}</section>
+` : ''}${user.faqItems && user.faqItems.length ? `<section class="wrap go-faq" id="faq"><div class="sec-head"><h2>Frequently asked questions</h2></div><div style="display:grid;gap:12px">${user.faqItems.map(x=>`<details class="glass" style="padding:18px 22px"><summary style="cursor:pointer;font-weight:700">${esc(x.question)}</summary><p style="padding-top:10px;color:var(--soft)">${esc(x.answer)}</p></details>`).join('')}</div></section>` : ''}
 <section class="wrap findus" id="about" style="padding-top:60px"><div class="sec-head"><h2>Find us</h2></div>${aboutBlock(user)}</section>
 <footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>
 <style>
@@ -2380,6 +2603,7 @@ var stack=document.querySelector('[data-cine-stack]');if(stack&&matchMedia('(poi
 
 function renderOfferPage(user, offer, others, sent) {
   const g = galleryOf(offer);
+  const soldOut=!!(user._stockMap&&Object.prototype.hasOwnProperty.call(user._stockMap,String(offer._id))&&Number(user._stockMap[String(offer._id)])===0);
   const thumbs = g.length > 1 ? `<div class="thumbs">${g.map((u, i) => `<button type="button" class="${i === 0 ? 'on' : ''}" aria-label="Photo ${i + 1}"><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('')}</div>` : '';
   const main = g.length
     ? `<div class="main" id="mainPic" data-imgs="${esc(JSON.stringify(g))}"><img id="mainImg" src="${esc(g[0])}" alt="${esc(offer.title)}">${g.length > 1 ? '<button class="nav p" id="prev" aria-label="Previous photo">&#8249;</button><button class="nav n" id="next" aria-label="Next photo">&#8250;</button>' : ''}</div>${thumbs}`
@@ -2394,7 +2618,7 @@ function renderOfferPage(user, offer, others, sent) {
   <div class="gal">${main}</div>
   <div class="info">
     <h1>${esc(offer.title)}</h1>
-    <div class="price">${eur(offer.price)}</div>
+    <div class="price">${eur(offer.price)}</div>${soldOut?'<p role="status" style="color:#ff9292;font-weight:700;margin-bottom:15px">Currently sold out — contact the seller for details.</p>':''}
     <div class="actions">
       <a class="abtn pri" href="/site/${esc(user.slug)}/messages?offer=${offer._id}">${MSG_SVG}Message</a>
       ${phoneRaw ? `<a class="abtn" href="tel:${esc(phoneRaw)}">${PHONE_SVG}<span class="t2">Call</span></a>` : ''}
@@ -2686,7 +2910,7 @@ function messengerClient() {
   function callSupported() { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.RTCPeerConnection); }
   function getIce(cb) {
     if (ICE) return cb();
-    fetch('/api/ice').then(function (r) { return r.json(); }).then(function (d) { ICE = d.iceServers || []; cb(); })
+    fetch('/api/ice').then(function (r) { return r.json(); }).then(function (d) { ICE = d.iceServers || []; if(!d.relayConfigured) toast('Calls may fail across mobile networks until TURN is configured.'); cb(); })
       .catch(function () { ICE = [{ urls: 'stun:stun.l.google.com:19302' }]; cb(); });
   }
   function ringtone(on, mode) {
@@ -2740,7 +2964,7 @@ function messengerClient() {
     pc.ontrack = function (e) { var a = $('remoteAudio'); a.srcObject = e.streams[0]; var p = a.play(); if (p && p.catch) p.catch(function () {}); };
     pc.onconnectionstatechange = function () {
       if (pc.connectionState === 'connected') connected(c);
-      else if (pc.connectionState === 'failed') { toast('Connection failed. Try again.'); if (c.id) signal(c, 'hangup'); closeCall(c); }
+      else if (pc.connectionState === 'failed') { toast('Audio connection failed. Check microphone permissions and configure TURN in Render.'); if (c.id) signal(c, 'hangup'); closeCall(c); }
     };
     return pc;
   }
@@ -2957,14 +3181,14 @@ app.get('/site/:slug', async (req, res) => {
     if (!user || !user.published) return res.status(404).send('Site not found.');
     const offers = await Offer.find({ userId: user._id }).sort({ createdAt: -1 });
     res.setHeader('Content-Security-Policy', SITE_CSP); res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.send(renderSite(user, offers, req.query.sent === '1'));
+    const inv=await ShopSetting.findOne({sellerId:user._id}).select('stock').lean();user._stockMap=inv?.stock?Object.fromEntries(Object.entries(inv.stock)):{};res.send(renderSite(user, offers, req.query.sent === '1'));
   } catch (err) {
     res.status(500).send('Server error');
   }
 });
 
 app.get('/site/:slug/profile', async(req,res)=>{
-  try { const user=await User.findOne({slug:req.params.slug,published:true}); if(!user)return res.status(404).send('Site not found');const offers=await Offer.find({userId:user._id}).sort({createdAt:-1});res.setHeader('Content-Security-Policy',SITE_CSP);res.send(renderSellerProfile(user,offers)); }
+  try { const user=await User.findOne({slug:req.params.slug,published:true}); if(!user)return res.status(404).send('Site not found');const offers=await Offer.find({userId:user._id}).sort({createdAt:-1});res.setHeader('Content-Security-Policy',SITE_CSP);const inv=await ShopSetting.findOne({sellerId:user._id}).select('stock').lean();user._stockMap=inv?.stock?Object.fromEntries(Object.entries(inv.stock)):{};res.send(renderSellerProfile(user,offers)); }
   catch(e){console.error('Seller profile error',e);res.status(500).send('Unable to load seller profile')}
 });
 app.get('/site/:slug/reviews',(req,res)=>res.redirect(302,'/site/'+encodeURIComponent(req.params.slug)+'/profile#reviews'));
@@ -2999,19 +3223,22 @@ app.get('/site/:slug/offer/:id', async (req, res) => {
     if (!offer) return res.status(404).send('Offer not found.');
     const others = await Offer.find({ userId: user._id, _id: { $ne: offer._id } }).sort({ createdAt: -1 }).limit(3);
     res.setHeader('Content-Security-Policy', SITE_CSP); res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.send(renderOfferPage(user, offer, others, req.query.sent === '1'));
+    const inv=await ShopSetting.findOne({sellerId:user._id}).select('stock').lean();user._stockMap=inv?.stock?Object.fromEntries(Object.entries(inv.stock)):{};res.send(renderOfferPage(user, offer, others, req.query.sent === '1'));
   } catch (err) {
     res.status(500).send('Server error');
   }
 });
 
-app.post('/site/:slug/order', publicLimiter, async (req, res) => {
+app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, res) => {
   try {
     if (req.body.consent !== '1') return res.status(400).send('Please accept the privacy notice and go back.');
     const user = await User.findOne({ slug: req.params.slug, published: true });
     if (!user || !mongoose.isValidObjectId(req.body.offerId)) return res.status(404).send('Not found');
     const offer = await Offer.findOne({ _id: req.body.offerId, userId: user._id });
     if (!offer) return res.status(404).send('Offer not found');
+    const inventory = await ShopSetting.findOne({sellerId:user._id}).select('stock').lean();
+    const qty = inventory?.stock?.get ? inventory.stock.get(String(offer._id)) : inventory?.stock?.[String(offer._id)];
+    if (qty === 0) return res.status(409).send('This offer is currently sold out. Please contact the seller.');
     const parsed = parseContacts(req.body);
     if (parsed.error) return res.status(400).send(`${esc(parsed.error)} Please go back and try again.`);
     await Order.create({

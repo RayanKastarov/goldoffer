@@ -669,6 +669,10 @@
 @media(max-width:920px){.go-layout-choices{grid-template-columns:1fr 1fr 1fr}}
 @media(max-width:650px){.go-layout-choices{grid-template-columns:1fr 1fr}.go-layout-choice:last-child{grid-column:auto}.go-layout-art{height:56px}}
 </style>
+<style>
+.go-quick-list{display:flex;flex-wrap:wrap;gap:8px;padding:9px 13px}.go-quick-list button{background:#212d3f;border:1px solid #3e4b61;border-radius:20px;color:#f2f5fa;cursor:pointer;padding:6px 12px;font-size:12px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.go-quick-list button:hover{border-color:#ffcf31}.go-suite{display:none;margin:36px 0 70px;padding:0 0 24px;color:#e7eaf1}.go-suite-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 18px}.go-suite-head h2{font-size:clamp(26px,3vw,34px);margin:5px 0}.go-suite-head p,.go-suite-card p{color:#a7afbf;font-size:14px;line-height:1.5}.go-suite-kicker{font-size:11px;letter-spacing:.14em;color:#ffcb35;font-weight:800}.go-suite-status{font-size:13px;color:#b7bec9;padding:9px 0}.go-suite-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.go-suite-card{min-width:0;padding:22px;border:1px solid #344052;border-radius:18px;background:linear-gradient(160deg,#161e2c,#111723)}.go-suite-card h3{font-size:18px;margin:0 0 6px}.go-suite-card label{display:block;font-size:13px;color:#d4deea;margin:10px 0}.go-suite-card input:not([type=checkbox]),.go-suite-card select,.go-suite-card textarea{display:block;margin-top:5px;width:100%;background:#0b111c;color:#f5f6fa;border:1px solid #334054;border-radius:9px;padding:11px;font:inherit;max-width:100%}.go-suite-card button,.go-suite-actions a{border:1px solid #5c677a;background:#222e41;color:#f4f7fb;border-radius:9px;cursor:pointer;padding:10px 14px;font:inherit;font-weight:650;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;margin-top:9px}.go-suite-card button:hover,.go-suite-actions a:hover{border-color:#ffd042}.go-suite-card small{display:block;color:#a4adbd;margin:10px 0}.go-suite-switch{display:flex!important;align-items:center;gap:9px}.go-suite-switch input{accent-color:#ffcb27}.go-suite-actions{display:flex;flex-wrap:wrap;gap:8px}.go-suite-list{display:grid;gap:8px;margin-top:14px;max-height:260px;overflow:auto}.go-suite-item{background:#0c121e;border:1px solid #31394a;border-radius:9px;padding:10px;font-size:13px;overflow-wrap:anywhere}.go-suite-item strong{color:#fff}.go-suite-item button{padding:5px 8px;font-size:12px;margin:5px 5px 0 0}.go-suite-accent{color:#ffd54a!important}.go-suite-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.go-suite-metrics>div{background:#151d29;border:1px solid #344052;border-radius:12px;padding:15px;font-size:13px;color:#c4cedd}.go-suite-metrics strong{display:block;font-size:26px;color:#fff}#goQR img{max-width:190px;width:100%;height:auto;padding:9px;background:#fff;border-radius:10px;margin:12px 0}
+@media(max-width:800px){.go-suite-grid{grid-template-columns:1fr}.go-suite-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.go-suite-card{padding:16px}}
+</style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
 
@@ -1178,7 +1182,7 @@
           </div>
           <div class="mx-offer" id="convOffer"></div>
           <div class="mx-body" id="convMsgs"></div>
-          <div class="mx-hint" id="convHint"></div>
+          <div class="mx-hint" id="convHint"></div><div class="go-quick-list" id="goQuickList"></div>
           <form id="convForm" class="conv-form" onsubmit="sendReply(event)">
             <input type="file" id="convFile" multiple hidden>
             <button type="button" class="mx-btn mx-ico" id="convAttach" aria-label="Attach a photo or file" onclick="$('convFile').click()"><svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
@@ -1229,6 +1233,23 @@
           <table><thead><tr><th>Offer</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody id="orderRows"></tbody></table>
         </div>
       </div>
+      <section class="go-suite" id="businessSuite">
+        <div class="go-suite-head"><div><span class="go-suite-kicker">BUSINESS COMMAND CENTER</span><h2>Business Hub</h2><p>Keep your storefront, appointments, inventory and workflow in one place.</p></div><button type="button" class="btn-ghost" onclick="loadBusinessSuite()">Refresh</button></div>
+        <div id="goSuiteStatus" role="status" class="go-suite-status">Open the dashboard to load your business tools.</div>
+        <div class="go-suite-metrics" id="goSuiteMetrics"></div>
+        <div class="go-suite-grid">
+          <div class="go-suite-card"><h3>Stock &amp; availability</h3><p>Set remaining stock for an offer. Zero means sold out.</p><label>Offer<select id="goStockOffer"></select></label><label>Quantity<input type="number" id="goStockQty" min="0" max="1000000" value="0"></label><button type="button" onclick="goSaveStock()">Save inventory</button><small id="goStockInfo"></small></div>
+          <div class="go-suite-card"><h3>Bookings</h3><p>Accept appointment requests through your published site.</p><label class="go-suite-switch"><input id="goBookingsOn" type="checkbox" onchange="goSaveBusinessSettings()"> Enable public booking requests</label><div class="go-suite-list" id="goBookingList"></div></div>
+          <div class="go-suite-card"><h3>Business messages</h3><p>Your visitor messages are in the dedicated inbox.</p><div class="go-suite-actions"><a href="/messages" data-link>Open inbox</a><a href="/reviews" data-link>Customer feedback</a></div><p id="goUnreadMsg" class="go-suite-accent"></p><label>Quick replies (one per line)<textarea id="goQuickReplies" rows="4" maxlength="2200" placeholder="Thanks for reaching out!
+I'll get back to you shortly."></textarea></label><button type="button" onclick="goSaveBusinessSettings()">Save replies</button></div>
+          <div class="go-suite-card"><h3>Share your storefront</h3><p>Get your public link and a scannable QR code.</p><input id="goShareLink" type="text" readonly aria-label="Your public storefront link"><div class="go-suite-actions"><button type="button" onclick="goCopyLink()">Copy link</button><button type="button" onclick="goGetQr()">Show QR code</button></div><div id="goQR"></div><small>QR uses an external image provider when requested.</small></div>
+          <div class="go-suite-card"><h3>Domain connection</h3><p>Register a requested custom domain for future domain routing. DNS, TLS and host verification require separate infrastructure before it can go live.</p><label>Domain<input id="goCustomDomain" type="text" placeholder="shop.example.com"></label><button type="button" onclick="goSaveBusinessSettings()">Save request</button><small id="goDomainStatus"></small></div>
+          <div class="go-suite-card"><h3>Personal tasks</h3><p>Quick reminders for running your business.</p><input id="goTaskText" maxlength="250" placeholder="Follow up with a customer"><input id="goTaskDate" type="datetime-local"><button type="button" onclick="goAddTask()">Add reminder</button><div id="goTaskList" class="go-suite-list"></div></div>
+          <div class="go-suite-card"><h3>Private notes</h3><p>Notes only you can read in your account.</p><textarea id="goNoteText" rows="3" maxlength="1200" placeholder="A useful idea or customer note..."></textarea><button type="button" onclick="goAddNote()">Save note</button><div id="goNoteList" class="go-suite-list"></div></div>
+          <div class="go-suite-card"><h3>Announcement &amp; FAQ</h3><p>Keep your customers informed right from the storefront.</p><label>Announcement<input id="goAnnouncement" maxlength="160" placeholder="New services available this week"></label><label>Questions &amp; answers (one pair per line: Question | Answer)<textarea id="goFAQ" rows="5" placeholder="Do you ship? | Yes, within the city."></textarea></label><button type="button" onclick="goSaveBusinessSettings()">Publish information</button></div>
+          <div class="go-suite-card"><h3>Account data &amp; readiness</h3><p>Keep a personal export of your core business records.</p><button type="button" onclick="goExportData()">Export my data (JSON)</button><p id="goCallReadiness"></p><small>Phone calls across mobile networks often require configured TURN servers. This indicator is not an audio connection test.</small></div>
+        </div>
+      </section>
     </div>
   </div>
 </main>
@@ -1447,7 +1468,7 @@
     currentPage = name;
     window.scrollTo(0, 0);
     document.querySelectorAll('.menu a.ml').forEach(a => a.classList.toggle('active', a.getAttribute('href') === finalPath));
-    if (name === 'dashboard') loadDashboard();
+    if (name === 'dashboard') {loadDashboard();loadBusinessSuite();}
     if (name === 'analytics') loadAnalytics();
     if (name === 'messages') openMessagesPage();
     if (name === 'reviews') loadMyReviews();
@@ -1908,7 +1929,7 @@
     try { const d = await api('/api/offers'); S.offers = d.offers; } catch (e) {}
     renderPreview(); renderOfferList();
     if (u.published && u.siteUrl) showLive();
-    if (currentPage === 'dashboard') loadDashboard();
+    if (currentPage === 'dashboard') {loadDashboard();loadBusinessSuite();}
   }
 
   // ---------- Builder steps ----------
@@ -2145,7 +2166,7 @@
     $('sRevenue').textContent = '0.00 EUR'; $('sCompleted').textContent = '0'; $('sPending').textContent = '0'; $('sOffers').textContent = '0';
     $('orderRows').innerHTML = '';
     if (S.chart) { S.chart.destroy(); S.chart = null; }
-    if (currentPage === 'dashboard') loadDashboard();
+    if (currentPage === 'dashboard') {loadDashboard();loadBusinessSuite();}
     if (currentPage === 'messages') openMessagesPage();
   }
   async function loadDashboard() {
@@ -2209,11 +2230,13 @@
       renderConvList();
     } catch (e) { /* silent: the next poll will try again */ }
   }
+  async function loadQuickReplies(){try{const d=await api('/api/business/quick-replies');const box=$('goQuickList');if(!box)return;box.textContent='';(d.quickReplies||[]).forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.onclick=()=>{$('convText').value=t;growReply();$('convText').focus()};box.append(b)})}catch(e){}}
   async function openMessagesPage() {
     $('msgGate').style.display = S.user ? 'none' : 'block';
     $('mx').style.display = S.user ? '' : 'none';
     if (!S.user) return;
     await loadInbox();
+    await loadQuickReplies();
     if (!S.openConv || !(S.convs || []).some(c => c.id === S.openConv)) { S.openConv = null; showConvList(); if ((S.convs || []).length && matchMedia('(min-width:861px)').matches) openConv(S.convs[0].id); }
     else openConv(S.openConv, true);
   }
@@ -2528,6 +2551,53 @@
   // ---------- Language of the legal pages (the Privacy Policy and Terms exist in Bulgarian and English) ----------
   function setLegalLang(l) { try { localStorage.setItem('lang', l); } catch (e) {} document.body.dataset.lang = l; }
   (function () { let l = 'bg'; try { l = localStorage.getItem('lang') || 'bg'; } catch (e) {} document.body.dataset.lang = l === 'en' ? 'en' : 'bg'; })();
+
+
+  // Business Hub: authenticated operations backed by MongoDB.
+  let goSuiteData=null;
+  function goSuiteSay(v){const el=$('goSuiteStatus');if(el)el.textContent=String(v||'');}
+  function goDate(v){try{return new Date(v).toLocaleString()}catch(e){return ''}}
+  async function loadBusinessSuite(){
+    if(!$('businessSuite'))return;
+    if(!S.user){$('businessSuite').style.display='none';return;}
+    $('businessSuite').style.display='block';
+    goSuiteSay('Loading business tools...');
+    try{
+      const [data,offers]=await Promise.all([api('/api/business/overview'),api('/api/offers')]);
+      goSuiteData=data;
+      const v=data.visits||{};
+      $('goSuiteMetrics').innerHTML=[['Storefront views',v.view||0],['Offer views',v.offer||0],['Pending bookings',(data.bookings||[]).filter(x=>x.status==='Pending').length],['Unread conversations',data.unreadConversations||0]].map(x=>'<div>'+esc(x[0])+'<strong>'+esc(x[1])+'</strong></div>').join('');
+      const all=Array.isArray(offers.offers)?offers.offers:[];
+      $('goStockOffer').innerHTML=all.map(x=>'<option value="'+esc(x._id)+'">'+esc(x.title)+'</option>').join('')||'<option value="">No offers yet</option>';
+      $('goBookingsOn').checked=!!data.setting?.slotsEnabled;
+      $('goQuickReplies').value=(data.setting?.quickReplies||[]).join('\n');
+      $('goCustomDomain').value=data.setting?.customDomain||'';
+      $('goAnnouncement').value=data.setting?.announcementText||'';
+      $('goFAQ').value=(data.setting?.faqItems||[]).map(x=>x.question+' | '+x.answer).join('\n');
+      $('goDomainStatus').textContent=data.setting?.customDomainStatus||'No domain configured';
+      $('goUnreadMsg').textContent=(data.unreadConversations||0)+' conversations awaiting a reply';
+      $('goCallReadiness').textContent=data.turnConfigured?'TURN configured (test audio on two real networks).':'TURN not configured — WebRTC calls may fail over mobile data.';
+      const rawSlug=S.user.slug||'';
+      $('goShareLink').value=rawSlug?location.origin+'/site/'+encodeURIComponent(rawSlug):'Publish your website to receive a link';
+      const quantities=data.setting?.stock||{};
+      $('goStockOffer').onchange=function(){$('goStockQty').value=quantities[this.value]??0;$('goStockInfo').textContent='Inventory is managed separately from orders.'};
+      $('goStockOffer').onchange();
+      $('goBookingList').innerHTML=(data.bookings||[]).map(b=>'<div class="go-suite-item"><strong>'+esc(b.customer)+'</strong> · '+esc(goDate(b.startsAt))+'<div>'+esc(b.contact)+' · '+esc(b.status)+'</div>'+(b.status==='Pending'?'<button data-id="'+esc(b._id)+'" data-status="Confirmed" onclick="goUpdateBooking(this.dataset.id,this.dataset.status)">Confirm</button><button data-id="'+esc(b._id)+'" data-status="Cancelled" onclick="goUpdateBooking(this.dataset.id,this.dataset.status)">Decline</button>':b.status==='Confirmed'?'<button data-id="'+esc(b._id)+'" data-status="Completed" onclick="goUpdateBooking(this.dataset.id,this.dataset.status)">Complete</button>':'')+'</div>').join('')||'<p>No appointments yet.</p>';
+      $('goTaskList').innerHTML=(data.reminders||[]).map(t=>'<div class="go-suite-item">'+(t.done?'✓ ':'')+esc(t.text)+'<small>'+esc(goDate(t.due))+'</small>'+(t.done?'':'<button data-id="'+esc(t._id)+'" onclick="goFinishTask(this.dataset.id)">Done</button>')+'</div>').join('')||'<p>No reminders yet.</p>';
+      $('goNoteList').innerHTML=(data.notes||[]).map(n=>'<div class="go-suite-item">'+esc(n.text)+'<button data-id="'+esc(n._id)+'" onclick="goDeleteNote(this.dataset.id)">Delete</button></div>').join('')||'<p>No notes saved.</p>';
+      goSuiteSay('Business tools are ready. Visit counts cover up to 90 days.');
+    }catch(e){goSuiteSay('Could not load business tools: '+e.message)}
+  }
+  async function goSaveStock(){try{const id=$('goStockOffer').value;if(!id)return;await api('/api/business/stock/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify({quantity:Number($('goStockQty').value)})});goSuiteSay('Inventory saved.');await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
+  async function goSaveBusinessSettings(){try{await api('/api/business/settings',{method:'PUT',body:JSON.stringify({slotsEnabled:$('goBookingsOn').checked,quickReplies:$('goQuickReplies').value.split('\n').map(x=>x.trim()).filter(Boolean),customDomain:$('goCustomDomain').value.trim(),announcementText:$('goAnnouncement').value.trim(),faqItems:$('goFAQ').value.split('\n').filter(x=>x.includes('|')).map(x=>({question:x.split('|')[0].trim(),answer:x.split('|').slice(1).join('|').trim()}))})});await loadBusinessSuite();goSuiteSay('Business settings saved. Domain activation requires DNS and HTTPS setup.')}catch(e){goSuiteSay(e.message)}}
+  async function goUpdateBooking(id,status){try{await api('/api/business/appointments/'+id,{method:'PATCH',body:JSON.stringify({status})});await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
+  async function goAddTask(){try{const text=$('goTaskText').value.trim();if(!text)return;await api('/api/business/reminders',{method:'POST',body:JSON.stringify({text,due:$('goTaskDate').value||new Date().toISOString()})});$('goTaskText').value='';await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
+  async function goFinishTask(id){try{await api('/api/business/reminders/'+id,{method:'PATCH',body:JSON.stringify({done:true})});await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
+  async function goAddNote(){try{const text=$('goNoteText').value.trim();if(!text)return;await api('/api/business/notes',{method:'POST',body:JSON.stringify({text})});$('goNoteText').value='';await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
+  async function goDeleteNote(id){try{await api('/api/business/notes/'+id,{method:'DELETE'});await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
+  async function goCopyLink(){const v=$('goShareLink').value;try{await navigator.clipboard.writeText(v);goSuiteSay('Link copied.')}catch(e){goSuiteSay('Select and copy the link manually.')}}
+  function goGetQr(){const u=$('goShareLink').value;if(!u.startsWith('http'))return goSuiteSay('Publish your website first.');const im=new Image();im.src='https://api.qrserver.com/v1/create-qr-code/?size=260x260&data='+encodeURIComponent(u);im.alt='QR code for your storefront';const wrap=$('goQR');wrap.textContent='';wrap.append(im)}
+  async function goExportData(){try{const r=await fetch('/api/business/export',{headers:{Authorization:'Bearer '+S.token}});if(!r.ok)throw Error('Export failed');const blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='goldoffer-export.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){goSuiteSay(e.message)}}
 
   // ---------- Start ----------
   async function init() {
