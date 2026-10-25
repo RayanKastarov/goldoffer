@@ -104,7 +104,7 @@ const UserSchema = new mongoose.Schema({
   category: String,
   city: String,
   theme: { type: String, default: 'gold' },
-  layout: { type: String, enum: ['signature','editorial','market','neon','mono'], default: 'signature' },
+  layout: { type: String, enum: ['signature','editorial','market','neon','mono','atelier','arcade','aurora'], default: 'signature' },
   font: { type: String, default: 'sans' },
   published: { type: Boolean, default: false },
   categoryLabel: String,
@@ -146,6 +146,7 @@ const OfferSchema = new mongoose.Schema({
 const OrderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   offerTitle: String,
+  offerId: {type:mongoose.Schema.Types.ObjectId,ref:'Offer'},
   customerName: String,
   customerContact: String,
   contacts: [{ type: { type: String }, value: String, _id: false }],
@@ -200,6 +201,46 @@ const FONTS = {
   geo: { css: "'Montserrat', sans-serif", gf: 'Montserrat:wght@400;600;800' }
 };
 const LAYOUTS = {
+
+  atelier: {
+    name:'Atelier', eyebrow:'The art of the everyday',
+    storyHeading:'Thoughtful details. Beautifully presented.',discoverTitle:'The curated selection',
+    discoverText:'An editorial gallery for considered products and personal service.',
+    tilesText:'Discover the pieces, the craft and the person behind the brand.',
+    profileText:'Learn about our vision and the work that defines this business.',
+    fallback:[
+      'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1452860606245-08befc0ff44b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80'
+    ]
+  },
+  arcade: {
+    name:'Arcade', eyebrow:'Next level storefront',
+    storyHeading:'Built for a generation that never plays ordinary.',discoverTitle:'Choose your next upgrade',
+    discoverText:'A kinetic gaming-style storefront with loud typography and grid composition.',
+    tilesText:'Browse releases, gear and experiences in a more energetic layout.',
+    profileText:'Meet the creator behind the setup and get connected.',
+    fallback:[
+      'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80'
+    ]
+  },
+  aurora: {
+    name:'Aurora', eyebrow:'Fresh perspectives',
+    storyHeading:'An immersive experience with a softer kind of energy.',discoverTitle:'Made to inspire',
+    discoverText:'A luminous, spacious site for modern services and creative brands.',
+    tilesText:'Explore our favorites in a fluid, image-led collection.',
+    profileText:'The story behind the name, told with clarity and warmth.',
+    fallback:[
+      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1200&q=80'
+    ]
+  },
   signature: {
     name: 'Signature',
     eyebrow: 'Signature storefront',
@@ -767,7 +808,7 @@ app.put('/api/site', authenticateToken, async (req, res) => {
     if (b.notifyEmail !== undefined) user.notifyEmail = isEmail(b.notifyEmail) ? String(b.notifyEmail).trim() : '';
     if (typeof b.notifyOn === 'boolean') user.notifyOn = b.notifyOn;
     if (Object.keys(THEMES).includes(theme)) user.theme = theme;
-    if (['signature','editorial','market','neon','mono'].includes(b.layout)) user.layout = b.layout;
+    if (['signature','editorial','market','neon','mono','atelier','arcade','aurora'].includes(b.layout)) user.layout = b.layout;
     if (Object.keys(FONTS).includes(font)) user.font = font;
     if (!user.slug && user.siteName) user.slug = await uniqueSlug(user.siteName, user._id);
     if (publish === true) {
@@ -894,9 +935,26 @@ app.patch('/api/orders/:id', authenticateToken, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid id' });
   const status = req.body && req.body.status;
   if (!['Pending', 'Completed', 'Cancelled'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
-  const order = await Order.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { status }, { new: true });
-  if (!order) return res.status(404).json({ message: 'Order not found' });
-  res.json({ order });
+  try {
+    const old = await Order.findOne({_id:req.params.id,userId:req.user.id});
+    if(!old)return res.status(404).json({message:'Order not found'});
+    if(old.status===status)return res.json({order:old});
+    // Only a completed, offer-linked order consumes one item. Do not decrement on a request.
+    if(status==='Completed'&&old.status!=='Completed'&&old.offerId){
+      const key='stock.'+String(old.offerId);
+      const setting=await ShopSetting.findOne({sellerId:req.user.id}).lean();
+      if(setting&&setting.stock&&setting.stock[key.slice(6)]!==undefined){
+        const reserved=await ShopSetting.findOneAndUpdate({sellerId:req.user.id,[key]:{$gt:0}},{$inc:{[key]:-1}});
+        if(!reserved)return res.status(409).json({message:'Not enough stock to complete this order.'});
+      }
+    }
+    // Completed order cannot be silently reversed in stock accounting.
+    if(old.status==='Completed'&&status!=='Completed'&&old.offerId){
+      const key='stock.'+String(old.offerId);
+      await ShopSetting.updateOne({sellerId:req.user.id,[key]:{$exists:true}},{$inc:{[key]:1}});
+    }
+    old.status=status;await old.save();res.json({order:old});
+  }catch(e){res.status(500).json({message:'Could not change order status'})}
 });
 
 app.post('/api/orders', authenticateToken, async (req, res) => {
@@ -1145,6 +1203,7 @@ const ConversationSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, index: true },
   offerId: mongoose.Schema.Types.ObjectId,
   offerTitle: String,
+  offerId: {type:mongoose.Schema.Types.ObjectId,ref:'Offer'},
   customerName: String,
   customerEmail: String,          // optional, only used to say "you have a reply"
   tokenHash: String,              // the visitor proves who they are with a secret kept in their browser
@@ -1699,7 +1758,7 @@ const Appointment = mongoose.model('GOAppointment',new mongoose.Schema({
  status:{type:String,enum:['Pending','Confirmed','Cancelled','Completed'],default:'Pending'},
  createdAt:{type:Date,default:Date.now}
 }));
-Appointment.schema.index({sellerId:1,startsAt:1});
+Appointment.schema.index({sellerId:1,startsAt:1},{unique:true,partialFilterExpression:{status:{$in:['Pending','Confirmed']}}});
 const ShopSetting = mongoose.model('GOShopSetting',new mongoose.Schema({
  sellerId:{type:mongoose.Schema.Types.ObjectId,unique:true,required:true},
  stock: {type:Map,of:Number,default:{}},
@@ -1759,16 +1818,17 @@ app.post('/site/:slug/appointment',publicLimiter,rejectOwnerSelfAction,async(req
  try{const owner=await User.findOne({slug:req.params.slug,published:true}).select('_id siteName email notifyEmail');if(!owner)return res.sendStatus(404);
  const b=req.body||{};if(b.consent!=='1')return res.status(400).send('Please accept the privacy notice.');const d=new Date(b.startsAt);const customer=String(b.customer||'').trim().slice(0,80),contact=String(b.contact||'').trim().slice(0,140);
  if(!customer||contact.length<5||!Number.isFinite(d.valueOf())||d<Date.now()+3600000||d>Date.now()+180*86400000)return res.status(400).send('Check the date and contact details.');
+ if(await Appointment.exists({sellerId:owner._id,startsAt:d,status:{$in:['Pending','Confirmed']}}))return res.status(409).send('This slot has already been requested. Please pick another time.');
  const setting=await ShopSetting.findOne({sellerId:owner._id}).lean();if(!setting?.slotsEnabled)return res.status(403).send('Booking is not enabled for this business.');
  if(mongoose.isValidObjectId(b.offerId)){if(!await Offer.exists({_id:b.offerId,userId:owner._id}))return res.sendStatus(404)}
  await Appointment.create({sellerId:owner._id,offerId:mongoose.isValidObjectId(b.offerId)?b.offerId:undefined,startsAt:d,customer,contact,note:String(b.note||'').slice(0,500)});
  if(owner.email)void sendMail({to:owner.notifyEmail||owner.email,subject:'New booking request',text:`${customer} requested ${d.toISOString()}. Contact: ${contact}`});
  res.redirect(303,`/site/${encodeURIComponent(req.params.slug)}?booking=1`);
- }catch(e){res.status(500).send('Booking could not be saved')}
+ }catch(e){if(e.code===11000)return res.status(409).send('This slot is already taken. Please choose another time.');res.status(500).send('Booking could not be saved')}
 });
 app.patch('/api/business/appointments/:id',authenticateToken,async(req,res)=>{
  if(!mongoose.isValidObjectId(req.params.id)||!['Pending','Confirmed','Cancelled','Completed'].includes(req.body?.status))return res.sendStatus(400);
- const row=await Appointment.findOneAndUpdate({_id:req.params.id,sellerId:req.user.id},{$set:{status:req.body.status}},{new:true});return row?res.json({appointment:row}):res.sendStatus(404);
+ try{const row=await Appointment.findOneAndUpdate({_id:req.params.id,sellerId:req.user.id},{$set:{status:req.body.status}},{new:true});return row?res.json({appointment:row}):res.sendStatus(404);}catch(e){if(e.code===11000)return res.status(409).json({message:'The requested time is no longer available.'});return res.sendStatus(500)}
 });
 app.put('/api/business/settings',authenticateToken,async(req,res)=>{
  const b=req.body||{}, update={updatedAt:new Date()};
@@ -2277,6 +2337,32 @@ const SITE_JS = `(function(){
 
 function layoutGlobalCss(layout) {
   return `
+.layout-atelier{--bg:#eee9e0;--panel:#fffdf9;--line:rgba(40,37,32,.14);--mute:#66635f;--soft:#504b43;color:#252321}
+.layout-atelier .bar{background:rgba(238,233,224,.88);color:#212020;border-bottom:1px solid #d8d1c6}
+.layout-atelier .bar nav a{color:#212020;border-color:#d8d1c6}
+.layout-atelier .card,.layout-atelier .glass,.layout-atelier .sp-hero,.layout-atelier .sp-about,.layout-atelier .sp-review-summary,.layout-atelier .sp-review-list,.layout-atelier .mwrap .mside,.layout-atelier .mwrap .mmain,.layout-atelier .detail .req{background:#fffdf9;color:#242321;box-shadow:0 14px 38px rgba(42,31,12,.065);border-radius:4px}
+.layout-atelier .sp-intro h1,.layout-atelier .sp-about h3,.layout-atelier .in h3,.layout-atelier .info h1{color:#262321;font-family:Georgia,serif}
+.layout-atelier .in p,.layout-atelier .sp-about p,.layout-atelier .sp-subtle{color:#68615a}
+.layout-atelier .tag,.layout-atelier .price,.layout-atelier .sp-proof span{box-shadow:none;background:#f1ebe2;color:#262321;border:1px solid #d9d0c4}
+.layout-atelier .sp-btn.sp-primary,.layout-atelier .btn,.layout-atelier .abtn.pri{background:#262321;color:#fff;box-shadow:none}
+.layout-atelier .sp-tabs{background:#eee9e0;border-bottom-color:#d8d1c6}
+.layout-atelier .sp-tabs a,.layout-atelier .crumb{color:#58524c}
+.layout-atelier .sp-avatar,.layout-atelier .seller .sav{background:#d9c7a8;color:#352d23}
+.layout-atelier .ph-art{background:#dfd4c1;color:#262321}
+.layout-atelier .ph-art-bg{background:linear-gradient(135deg,rgba(255,255,255,.55),transparent)}
+.layout-arcade{--a:#dbff36;--b:#56efff;--on:#10110c;--bg:#090a12;--panel:#141425;--line:rgba(219,255,54,.28);--mute:#acb0c8;--soft:#e5ecfa}
+.layout-arcade .bar{background:#090a12;border-bottom:2px solid #dbff36}
+.layout-arcade .card,.layout-arcade .glass,.layout-arcade .sp-hero,.layout-arcade .sp-about,.layout-arcade .sp-review-summary,.layout-arcade .sp-review-list,.layout-arcade .mwrap .mside,.layout-arcade .mwrap .mmain,.layout-arcade .detail .main,.layout-arcade .detail .req{border-radius:7px;background:#141425;box-shadow:8px 8px 0 rgba(219,255,54,.08);border:1px solid rgba(219,255,54,.25)}
+.layout-arcade .card::before{opacity:1;background:linear-gradient(130deg,#dbff36,transparent 50%,#56efff)}
+.layout-arcade .sp-avatar,.layout-arcade .seller .sav{background:#dbff36;color:#10110c;border-radius:5px}
+.layout-arcade .sp-btn,.layout-arcade .abtn,.layout-arcade .btn{border-radius:6px}
+.layout-arcade .ph-art-bg{background:repeating-linear-gradient(0deg,rgba(219,255,54,.08) 0 1px,transparent 1px 28px),linear-gradient(135deg,#111627,#080a11)}
+.layout-aurora{--a:#78e1d0;--b:#b5acff;--on:#0f2630;--bg:#101524;--panel:#172034;--line:rgba(177,203,255,.17);--mute:#b4c1d5;--soft:#e0e8fb}
+.layout-aurora .bar{background:rgba(19,27,48,.72);border-bottom:1px solid rgba(186,192,255,.17)}
+.layout-aurora .card,.layout-aurora .glass,.layout-aurora .sp-hero,.layout-aurora .sp-about,.layout-aurora .sp-review-summary,.layout-aurora .sp-review-list,.layout-aurora .mwrap .mside,.layout-aurora .mwrap .mmain,.layout-aurora .detail .main,.layout-aurora .detail .req{border-radius:30px;background:linear-gradient(135deg,#202844,#131f34);box-shadow:0 24px 65px rgba(0,0,0,.24)}
+.layout-aurora .sp-avatar,.layout-aurora .seller .sav{background:linear-gradient(135deg,#78e1d0,#b5acff);color:#131c27;border-radius:25px}
+.layout-aurora .ph-art-bg{background:radial-gradient(circle at 35% 18%,rgba(120,225,208,.35),transparent 42%),radial-gradient(circle at 85% 85%,rgba(181,172,255,.4),transparent 45%),linear-gradient(145deg,#151e31,#0c1220)}
+
 .ph-art{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;padding:18px;background:linear-gradient(160deg,#121721,#0b1017 60%,rgba(255,255,255,.02));color:#fff;isolation:isolate;font-size:inherit}
 .ph-art small{position:relative;z-index:2;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:8px}
 .ph-art strong{position:relative;z-index:2;font-size:clamp(1.2rem,2vw,1.8rem);line-height:1.1;max-width:12ch}
@@ -2354,23 +2440,23 @@ ${body}
       if (!d || !d.user || d.user.slug!==slug) return;
       document.body.classList.add('go-site-owner');
       var prefix='/site/'+encodeURIComponent(slug);
-      document.querySelectorAll('a[href^="'+prefix+'/messages"]').forEach(function(a){a.href='/messages';a.setAttribute('title','Open your business inbox in GoldOffer Studio');a.setAttribute('aria-label','Open business inbox');if(a.textContent.trim())a.textContent='Business inbox';});
+      document.querySelectorAll('a[href^="'+prefix+'/messages"]').forEach(function(a){a.setAttribute('title','Open your business inbox here');a.setAttribute('aria-label','Business inbox');if(a.textContent.trim())a.textContent='Business inbox';});
       document.querySelectorAll('a[href^="'+prefix+'/offer/"]').forEach(function(a){a.setAttribute('data-owner-offer','true');});
       document.querySelectorAll('form[action="'+prefix+'/order"]').forEach(function(f){
         f.addEventListener('submit',function(e){e.preventDefault();window.location.assign('/dashboard');});
         f.style.display='none';
         var wrap=f.closest('.req');if(wrap){var h=wrap.querySelector('h2');if(h)h.textContent='Your own offer';var note=document.createElement('p');note.textContent='You are viewing your own website. Customers can send requests here; manage them in your Dashboard.';note.style.cssText='color:var(--soft);margin:10px 0 18px;line-height:1.6';wrap.appendChild(note);var a=document.createElement('a');a.href='/dashboard';a.className='abtn pri';a.textContent='Open Dashboard';wrap.appendChild(a);}
       });
-      var note=document.createElement('div');note.className='go-owner-banner';note.setAttribute('role','status');note.innerHTML='<span>Owner preview — you are viewing your own website.</span><a href="/messages">Business inbox</a><a href="/dashboard">Dashboard</a>';
+      var note=document.createElement('div');note.className='go-owner-banner';note.setAttribute('role','status');note.innerHTML='<span>Owner preview — you are viewing your own website.</span><a href="'+prefix+'/messages">Business inbox</a><a href="/dashboard">Dashboard</a>';
       document.body.appendChild(note);
       if(location.pathname===prefix+'/messages'){
         var wrap=document.querySelector('.mwrap');if(wrap){wrap.style.display='none';}
-        var landing=document.createElement('section');landing.className='go-owner-landing';landing.innerHTML='<h1>Your business inbox</h1><p>Messages from your customers appear in GoldOffer Studio. This storefront Messenger is for visitors, so you do not have to message yourself.</p><a href="/messages">Open business messages</a>';
+        var landing=document.createElement('section');landing.className='go-owner-landing';landing.innerHTML='<h1>Business inbox</h1><p>Reply to your customers directly from your own storefront.</p><iframe title="Your business messages" src="/messages" loading="eager" allow="microphone"></iframe>';
         document.body.insertBefore(landing,document.querySelector('footer'));
       }
     }).catch(function(){});
 })();</script>
-<style>.go-owner-banner{position:fixed;z-index:80;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:11px 16px;border-radius:13px;background:rgba(15,21,32,.96);border:1px solid rgba(255,255,255,.15);color:#ecf0f7;box-shadow:0 16px 40px #0008;font:600 13px system-ui}.go-owner-banner a{color:var(--a);text-decoration:none}.go-owner-landing{max-width:650px;min-height:50vh;margin:115px auto 45px;padding:32px 24px;text-align:center}.go-owner-landing h1{font-size:clamp(30px,5vw,52px)}.go-owner-landing p{color:var(--soft);margin:18px 0 25px}.go-owner-landing a{display:inline-block;border-radius:12px;padding:13px 22px;background:var(--a);color:var(--on);font-weight:700;text-decoration:none}@media(max-width:650px){.go-owner-banner{font-size:11px;gap:8px;padding:10px}}</style>
+<style>.go-owner-banner{position:fixed;z-index:80;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:11px 16px;border-radius:13px;background:rgba(15,21,32,.96);border:1px solid rgba(255,255,255,.15);color:#ecf0f7;box-shadow:0 16px 40px #0008;font:600 13px system-ui}.go-owner-banner a{color:var(--a);text-decoration:none}.go-owner-landing{max-width:650px;min-height:50vh;margin:115px auto 45px;padding:32px 24px;text-align:center}.go-owner-landing h1{font-size:clamp(30px,5vw,52px)}.go-owner-landing p{color:var(--soft);margin:18px 0 25px}.go-owner-landing iframe{display:block;width:100%;height:min(76vh,850px);min-height:540px;border:1px solid var(--line);border-radius:18px;background:#080c13}.go-owner-landing{max-width:1200px;text-align:left}.go-owner-landing a{display:inline-block;border-radius:12px;padding:13px 22px;background:var(--a);color:var(--on);font-weight:700;text-decoration:none}@media(max-width:650px){.go-owner-banner{font-size:11px;gap:8px;padding:10px}}</style>
 </body></html>`;
 }
 
@@ -2562,6 +2648,27 @@ ${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book
 .cine-feature{padding-top:20px;padding-bottom:20px}.feature-grid{display:grid;grid-template-columns:1.05fr 1.2fr 1.05fr;gap:18px}.feature-card{border-radius:30px;padding:28px;min-height:300px;border:1px solid rgba(255,255,255,.1)}.feature-card.dark{background:linear-gradient(150deg,#131a23,#0c1118)}.feature-card.light{background:linear-gradient(155deg,#f1efe8,#ddd7cb);color:#111}.feature-card.media{padding:18px;background:linear-gradient(180deg,#f3f2ef,#dadad7)}.feature-card h3{font-size:clamp(1.5rem,2.4vw,2.35rem);line-height:1.08;margin:12px 0 14px}.feature-card p{line-height:1.72;color:inherit;opacity:.82}.feature-link{display:inline-block;margin-top:18px;font-weight:700;color:inherit;text-decoration:none}.feature-fallback{min-height:100%;display:grid;place-items:center;text-align:center;color:#2c3440}.feature-card.media .pics{height:100%}.feature-card.media .tile{min-height:100%}
 .go-shop-search{display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap;margin:18px 0 24px}.go-shop-search input{width:min(100%,430px);border-radius:14px;padding:13px 17px;background:#fff;color:#15191f;border:1px solid #dce0e4;font:inherit;box-shadow:0 3px 18px rgba(0,0,0,.035)}.go-shop-search input:focus{outline:2px solid #f7c42f}.go-shop-search span{font-size:13px;color:#707781}
 /* Three true templates, independent from theme color and font settings. */
+
+.layout-atelier .cine-hero{background:#eee9e0;color:#23221f}.layout-atelier .cine-wrap{grid-template-columns:.75fr 1.25fr;gap:78px}
+.layout-atelier .cine-copy h1{font-family:Georgia,serif;font-weight:400;font-size:clamp(3.2rem,6vw,6rem);color:#25231f;line-height:1.02}
+.layout-atelier .cine-sub{color:#54514c}.layout-atelier .cine-eyebrow{color:#8d7159}.layout-atelier .cine-meta span,.layout-atelier .offer-pills a{background:#fffaf2;border-color:#d8d0c5;color:#35312c}
+.layout-atelier .hero-fade{background:linear-gradient(180deg,transparent 65%,#eee9e0)}.layout-atelier .stack-outline{display:none}.layout-atelier .main-screen{inset:0;border-radius:3px}.layout-atelier .float-card{border-radius:2px}
+.layout-atelier .story-shell{height:auto;padding:20px 0 60px}.layout-atelier .story-stick{position:relative;top:auto;height:auto}.layout-atelier .story-canvas{transform:none!important;background:#fffdf9;grid-template-columns:.85fr 1.15fr;border-radius:3px;box-shadow:none}
+.layout-atelier .story-panel h2,.layout-atelier .story-panel p,.layout-atelier .story-stats b{color:#292521}.layout-atelier .story-stats div{background:#f3eee7}
+.layout-atelier .reveal-band,.layout-atelier .feature-card.dark{color:#292521}.layout-atelier .copyline.on{color:#292521}.layout-atelier .feature-grid{grid-template-columns:1.5fr 1fr}.layout-atelier .feature-card.media{grid-row:span 2}.layout-atelier .feature-card.light{background:#d8cdbc}
+.layout-arcade .cine-hero{background:repeating-linear-gradient(90deg,rgba(219,255,54,.05) 0 1px,transparent 1px 90px),linear-gradient(140deg,#080910,#111426)}
+.layout-arcade .cine-wrap{grid-template-columns:1fr 1fr}.layout-arcade .cine-copy h1{font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:-.09em;font-size:clamp(3rem,6.5vw,6rem)}
+.layout-arcade .main-screen{inset:25px 0 40px 35px;border-radius:6px}.layout-arcade .float-card{border-radius:5px}.layout-arcade .stack-outline{border-color:#dbff36;border-radius:3px}
+.layout-arcade .story-canvas{grid-template-columns:1fr 1fr;border-radius:6px;background:#141425}.layout-arcade .feature-grid{grid-template-columns:.8fr 1.5fr}.layout-arcade .feature-card.light{grid-column:1/-1;min-height:180px;background:#dbff36;color:#141414}
+.layout-arcade .feature-card{border-radius:6px}.layout-arcade .copyline.on{text-shadow:0 0 16px rgba(219,255,54,.4);color:#efffbe}
+.layout-aurora .cine-hero{background:radial-gradient(ellipse at 80% 15%,rgba(120,225,208,.22),transparent 42%),radial-gradient(ellipse at 16% 60%,rgba(181,172,255,.16),transparent 40%),#101524}
+.layout-aurora .cine-wrap{grid-template-columns:1fr;gap:28px}.layout-aurora .cine-copy{text-align:center;max-width:900px;margin:auto}.layout-aurora .cine-copy h1{max-width:none;font-size:clamp(3.4rem,8vw,7rem)}
+.layout-aurora .cine-sub{margin:auto}.layout-aurora .cine-meta,.layout-aurora .offer-pills,.layout-aurora .cine-copy .actions{justify-content:center}
+.layout-aurora .cine-visual{width:min(100%,1020px);margin:auto;min-height:510px}.layout-aurora .main-screen{inset:18px 80px 40px;border-radius:38px}.layout-aurora .stack-outline{border-radius:44px}
+.layout-aurora .story-canvas{background:#202844;border-radius:45px}.layout-aurora .feature-grid{grid-template-columns:1fr 1.6fr 1fr}.layout-aurora .feature-card{border-radius:36px}
+@media(max-width:1080px){.layout-atelier .cine-wrap,.layout-arcade .cine-wrap,.layout-atelier .story-canvas,.layout-arcade .story-canvas,.layout-atelier .feature-grid,.layout-arcade .feature-grid,.layout-aurora .feature-grid{grid-template-columns:1fr}.layout-atelier .feature-card.media,.layout-arcade .feature-card.light{grid-row:auto;grid-column:auto}.layout-atelier .story-canvas{transform:none!important}}
+@media(max-width:720px){.layout-atelier .cine-wrap,.layout-arcade .cine-wrap{gap:20px}.layout-atelier .main-screen{inset:30px 14px}.layout-arcade .main-screen{inset:35px 14px}.layout-aurora .cine-visual{min-height:340px}.layout-aurora .main-screen{inset:35px 18px}.layout-aurora .cine-hero{padding-top:100px}}
+
 .layout-editorial .cine-hero{background:#ece9e2;color:#15171c;padding-top:120px}
 .layout-editorial .cine-wrap{grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);gap:64px}
 .layout-editorial .cine-copy h1,.layout-editorial .cine-copy .cine-sub{color:#17191e}
@@ -3119,7 +3226,7 @@ const SITE_CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data: https:",
-  "frame-src https://www.google.com",
+  "frame-src 'self' https://www.google.com",
   "form-action 'self'",
   "base-uri 'self'"
 ].join('; ');
@@ -3242,7 +3349,7 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
     const parsed = parseContacts(req.body);
     if (parsed.error) return res.status(400).send(`${esc(parsed.error)} Please go back and try again.`);
     await Order.create({
-      userId: user._id, offerTitle: offer.title, amount: offer.price,
+      userId: user._id, offerId: offer._id, offerTitle: offer.title, amount: offer.price,
       customerName: String(req.body.customerName || '').slice(0, 80),
       customerContact: parsed.text.slice(0, 400),
       contacts: parsed.contacts,
@@ -3303,7 +3410,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset'];
+const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');

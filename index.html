@@ -650,7 +650,16 @@
 @media(prefers-reduced-motion:reduce){.go-setting-grid a{transition:none!important}.rv{opacity:1!important;transform:none!important}}
 
 /* Site layout picker and real-time mini-preview */
-.go-layout-choices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:12px 0 20px}
+
+.go-layout-atelier{background:#efe7da}.go-layout-atelier i{background:#c4af93;border-radius:1px}.go-layout-atelier i:first-child{background:#fffaf4}
+.go-layout-arcade{background:#0b0b17}.go-layout-arcade i{background:#dbff36;border-radius:2px}.go-layout-arcade i:first-child{background:#252a3c}
+.go-layout-aurora{background:linear-gradient(135deg,#1f3150,#4c4279)}.go-layout-aurora i{background:#83ddcb;border-radius:20px}.go-layout-aurora i:first-child{background:#b9adff}
+.preview[data-layout=atelier] .screen{background:#eee9e0!important;color:#25231f!important}.preview[data-layout=atelier] .screen .top{background:#d6ccba!important;color:#25231f!important}
+.preview[data-layout=arcade] .screen{background:#080910!important;color:#efffbe!important}.preview[data-layout=arcade] .screen .top{background:#111426!important;color:#dbff36!important}
+.preview[data-layout=aurora] .screen{background:#202844!important;color:#e7faff!important}.preview[data-layout=aurora] .screen .top{background:#38466c!important;color:#e7faff!important}
+
+.go-launch-row{display:flex;align-items:center;gap:11px;margin:12px 0;color:#e9eff6;font-size:13px}.go-launch-row input{width:18px;height:18px;flex:none;accent-color:#ffcd28}.go-lab-result{padding:13px 15px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#e9edf5;margin-top:14px;font-weight:700;font-size:13px}.go-surprise{border-color:#364354!important}
+.go-layout-choices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 20px}
 .go-layout-choice{background:#141b26;color:#edf0f5;border:1px solid #384050;border-radius:16px;padding:10px;cursor:pointer;text-align:left;min-width:0;display:flex;flex-direction:column;gap:5px}
 .go-layout-choice.on{border-color:#ffcf2c;box-shadow:0 0 0 2px #ffcf2c26}
 .go-layout-choice b{font-size:13px}.go-layout-choice small{font-size:11px;color:#aeb9c9;line-height:1.3}
@@ -997,6 +1006,9 @@
               <button type="button" class="go-layout-choice" data-layout="market" onclick="selectLayout('market')"><span class="go-layout-art go-layout-market"><i></i><i></i></span><b>Modern Market</b><small>Bold, commerce-first &amp; clean</small></button>
               <button type="button" class="go-layout-choice" data-layout="neon" onclick="selectLayout('neon')"><span class="go-layout-art go-layout-neon"><i></i><i></i></span><b>Neon Grid</b><small>Modern, gamer &amp; high-tech</small></button>
               <button type="button" class="go-layout-choice" data-layout="mono" onclick="selectLayout('mono')"><span class="go-layout-art go-layout-mono"><i></i><i></i></span><b>Minimal Mono</b><small>Minimal, sharp &amp; business</small></button>
+              <button type="button" class="go-layout-choice" data-layout="atelier" onclick="selectLayout('atelier')"><span class="go-layout-art go-layout-atelier"><i></i><i></i></span><b>Atelier</b><small>Art gallery · warm editorial</small></button>
+              <button type="button" class="go-layout-choice" data-layout="arcade" onclick="selectLayout('arcade')"><span class="go-layout-art go-layout-arcade"><i></i><i></i></span><b>Arcade</b><small>Gaming · electric energy</small></button>
+              <button type="button" class="go-layout-choice" data-layout="aurora" onclick="selectLayout('aurora')"><span class="go-layout-art go-layout-aurora"><i></i><i></i></span><b>Aurora</b><small>Immersive · fluid &amp; luminous</small></button>
             </div>
             <label>Color theme</label>
             <div class="swatches" id="swatches"></div>
@@ -1212,13 +1224,43 @@
 </div></main>
 <!-- =================== STUDIO SETTINGS =================== -->
 <main class="view" id="v-settings"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Settings</h1><p>Choose where to manage each part of your site.</p></div></div>
-  <div class="go-setting-grid"><a href="/build" data-link><strong>Website appearance →</strong><span>Brand, theme, business details and publishing</span></a><a href="/messages" data-link><strong>Messages →</strong><span>Talk to visitors in a dedicated inbox</span></a><a href="/reviews" data-link><strong>Customer reviews →</strong><span>View visitor feedback on your store</span></a><a href="/analytics" data-link><strong>Analytics →</strong><span>Completed orders, revenue and offers</span></a></div>
+  <div class="go-setting-grid"><a href="/build" data-link><strong>Website appearance →</strong><span>Brand, theme, business details and publishing</span></a><a href="/messages" data-link><strong>Messages →</strong><span>Talk to visitors in a dedicated inbox</span></a><a href="/reviews" data-link><strong>Customer reviews →</strong><span>View visitor feedback on your store</span></a><a href="/business" data-link><strong>Business Hub →</strong><span>Appointments, stock, notes, shop tools</span></a><a href="/analytics" data-link><strong>Analytics →</strong><span>Completed orders, revenue and offers</span></a></div>
   <div class="panel go-admin"><h2>Verification administration</h2><p>Only the administrator configured with ADMIN_EMAIL in Render can access pending applications.</p><button type="button" class="btn-ghost" onclick="loadVerificationRequests()">Check pending requests</button><div id="adminVerificationList" aria-live="polite"></div></div>
 </div></main>
+<!-- =================== BUSINESS HUB =================== -->
+<main class="view" id="v-business"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Business Hub</h1><p>Tools to run your business, separate from your dashboard overview.</p></div><a href="/dashboard" data-link class="btn-ghost">Overview</a></div>      <section class="go-suite" id="businessSuite">
+        <div class="go-suite-head"><div><span class="go-suite-kicker">BUSINESS COMMAND CENTER</span><h2>Business Hub</h2><p>Keep your storefront, appointments, inventory and workflow in one place.</p></div><button type="button" class="btn-ghost" onclick="loadBusinessSuite()">Refresh</button></div>
+        <div id="goSuiteStatus" role="status" class="go-suite-status">Open the dashboard to load your business tools.</div>
+        <div class="go-suite-metrics" id="goSuiteMetrics"></div>
+        <div class="go-suite-grid">
+          <div class="go-suite-card"><h3>Stock &amp; availability</h3><p>Set remaining stock for an offer. Zero means sold out.</p><label>Offer<select id="goStockOffer"></select></label><label>Quantity<input type="number" id="goStockQty" min="0" max="1000000" value="0"></label><button type="button" onclick="goSaveStock()">Save inventory</button><small id="goStockInfo"></small></div>
+          <div class="go-suite-card"><h3>Bookings</h3><p>Accept appointment requests through your published site.</p><label class="go-suite-switch"><input id="goBookingsOn" type="checkbox" onchange="goSaveBusinessSettings()"> Enable public booking requests</label><div class="go-suite-list" id="goBookingList"></div></div>
+          <div class="go-suite-card"><h3>Business messages</h3><p>Your visitor messages are in the dedicated inbox.</p><div class="go-suite-actions"><a href="/messages" data-link>Open inbox</a><a href="/reviews" data-link>Customer feedback</a></div><p id="goUnreadMsg" class="go-suite-accent"></p><label>Quick replies (one per line)<textarea id="goQuickReplies" rows="4" maxlength="2200" placeholder="Thanks for reaching out!
+I'll get back to you shortly."></textarea></label><button type="button" onclick="goSaveBusinessSettings()">Save replies</button></div>
+          <div class="go-suite-card"><h3>Share your storefront</h3><p>Get your public link and a scannable QR code.</p><input id="goShareLink" type="text" readonly aria-label="Your public storefront link"><div class="go-suite-actions"><button type="button" onclick="goCopyLink()">Copy link</button><button type="button" onclick="goGetQr()">Show QR code</button></div><div id="goQR"></div><small>QR uses an external image provider when requested.</small></div>
+          <div class="go-suite-card"><h3>Domain connection</h3><p>Register a requested custom domain for future domain routing. DNS, TLS and host verification require separate infrastructure before it can go live.</p><label>Domain<input id="goCustomDomain" type="text" placeholder="shop.example.com"></label><button type="button" onclick="goSaveBusinessSettings()">Save request</button><small id="goDomainStatus"></small></div>
+          <div class="go-suite-card"><h3>Personal tasks</h3><p>Quick reminders for running your business.</p><input id="goTaskText" maxlength="250" placeholder="Follow up with a customer"><input id="goTaskDate" type="datetime-local"><button type="button" onclick="goAddTask()">Add reminder</button><div id="goTaskList" class="go-suite-list"></div></div>
+          <div class="go-suite-card"><h3>Private notes</h3><p>Notes only you can read in your account.</p><textarea id="goNoteText" rows="3" maxlength="1200" placeholder="A useful idea or customer note..."></textarea><button type="button" onclick="goAddNote()">Save note</button><div id="goNoteList" class="go-suite-list"></div></div>
+          <div class="go-suite-card"><h3>Announcement &amp; FAQ</h3><p>Keep your customers informed right from the storefront.</p><label>Announcement<input id="goAnnouncement" maxlength="160" placeholder="New services available this week"></label><label>Questions &amp; answers (one pair per line: Question | Answer)<textarea id="goFAQ" rows="5" placeholder="Do you ship? | Yes, within the city."></textarea></label><button type="button" onclick="goSaveBusinessSettings()">Publish information</button></div>
+
+<div class="go-suite-card go-surprise"><h3>Profit &amp; pricing lab</h3><p>Calculate your margin before publishing an offer. Results update instantly.</p>
+<label>Cost per item (EUR)<input id="goCostLab" type="number" min="0" step="0.01" value="20" oninput="goRecalcLab()"></label>
+<label>Selling price (EUR)<input id="goPriceLab" type="number" min="0" step="0.01" value="45" oninput="goRecalcLab()"></label>
+<label>Extra cost (EUR)<input id="goExtraLab" type="number" min="0" step="0.01" value="5" oninput="goRecalcLab()"></label>
+<div id="goLabResult" class="go-lab-result" aria-live="polite">Profit: €20.00 · Margin: 44.4%</div></div>
+<div class="go-suite-card go-surprise"><h3>Campaign link creator</h3><p>Give every channel a distinct shareable link without changing your public site.</p>
+<label>Campaign name<input id="goCampaignName" maxlength="40" placeholder="Autumn launch" oninput="goBuildCampaign()"></label>
+<label>Channel<select id="goCampaignChannel" onchange="goBuildCampaign()"><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="flyer">Printed flyer</option><option value="email">Email</option></select></label>
+<input id="goCampaignResult" readonly aria-label="Generated campaign URL"><button type="button" onclick="goCopyCampaign()">Copy campaign link</button></div>
+<div class="go-suite-card go-surprise"><h3>Store launch checklist</h3><p>Track your own launch preparation on this device. Your progress is remembered in the browser.</p>
+<div id="goLaunchChecklist"></div><button type="button" onclick="goResetChecklist()">Reset checklist</button></div>
+          <div class="go-suite-card"><h3>Account data &amp; readiness</h3><p>Keep a personal export of your core business records.</p><button type="button" onclick="goExportData()">Export my data (JSON)</button><p id="goCallReadiness"></p><small>Phone calls across mobile networks often require configured TURN servers. This indicator is not an audio connection test.</small></div>
+        </div>
+      </section></div></main>
 <!-- =================== DASHBOARD =================== -->
 <main class="view" id="v-dashboard">
   <div class="dash" data-nav="dark">
-    <h1>Overview</h1><div class="go-tools"><a href="/analytics" data-link>Analytics</a><a href="/settings" data-link>Settings</a><a href="/reviews" data-link>★ Customer reviews</a><a href="/messages" data-link>Messages</a><a href="/build" data-link>Edit website</a></div>
+    <h1>Overview</h1><div class="go-tools"><a href="/analytics" data-link>Analytics</a><a href="/business" data-link>Business Hub</a><a href="/settings" data-link>Settings</a><a href="/reviews" data-link>★ Customer reviews</a><a href="/messages" data-link>Messages</a><a href="/build" data-link>Edit website</a></div>
     <div id="dashGate" class="panel" style="display:none">Please sign up or log in to see your dashboard.</div>
     <div id="dashBody">
       <div class="stats">
@@ -1233,23 +1275,7 @@
           <table><thead><tr><th>Offer</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody id="orderRows"></tbody></table>
         </div>
       </div>
-      <section class="go-suite" id="businessSuite">
-        <div class="go-suite-head"><div><span class="go-suite-kicker">BUSINESS COMMAND CENTER</span><h2>Business Hub</h2><p>Keep your storefront, appointments, inventory and workflow in one place.</p></div><button type="button" class="btn-ghost" onclick="loadBusinessSuite()">Refresh</button></div>
-        <div id="goSuiteStatus" role="status" class="go-suite-status">Open the dashboard to load your business tools.</div>
-        <div class="go-suite-metrics" id="goSuiteMetrics"></div>
-        <div class="go-suite-grid">
-          <div class="go-suite-card"><h3>Stock &amp; availability</h3><p>Set remaining stock for an offer. Zero means sold out.</p><label>Offer<select id="goStockOffer"></select></label><label>Quantity<input type="number" id="goStockQty" min="0" max="1000000" value="0"></label><button type="button" onclick="goSaveStock()">Save inventory</button><small id="goStockInfo"></small></div>
-          <div class="go-suite-card"><h3>Bookings</h3><p>Accept appointment requests through your published site.</p><label class="go-suite-switch"><input id="goBookingsOn" type="checkbox" onchange="goSaveBusinessSettings()"> Enable public booking requests</label><div class="go-suite-list" id="goBookingList"></div></div>
-          <div class="go-suite-card"><h3>Business messages</h3><p>Your visitor messages are in the dedicated inbox.</p><div class="go-suite-actions"><a href="/messages" data-link>Open inbox</a><a href="/reviews" data-link>Customer feedback</a></div><p id="goUnreadMsg" class="go-suite-accent"></p><label>Quick replies (one per line)<textarea id="goQuickReplies" rows="4" maxlength="2200" placeholder="Thanks for reaching out!
-I'll get back to you shortly."></textarea></label><button type="button" onclick="goSaveBusinessSettings()">Save replies</button></div>
-          <div class="go-suite-card"><h3>Share your storefront</h3><p>Get your public link and a scannable QR code.</p><input id="goShareLink" type="text" readonly aria-label="Your public storefront link"><div class="go-suite-actions"><button type="button" onclick="goCopyLink()">Copy link</button><button type="button" onclick="goGetQr()">Show QR code</button></div><div id="goQR"></div><small>QR uses an external image provider when requested.</small></div>
-          <div class="go-suite-card"><h3>Domain connection</h3><p>Register a requested custom domain for future domain routing. DNS, TLS and host verification require separate infrastructure before it can go live.</p><label>Domain<input id="goCustomDomain" type="text" placeholder="shop.example.com"></label><button type="button" onclick="goSaveBusinessSettings()">Save request</button><small id="goDomainStatus"></small></div>
-          <div class="go-suite-card"><h3>Personal tasks</h3><p>Quick reminders for running your business.</p><input id="goTaskText" maxlength="250" placeholder="Follow up with a customer"><input id="goTaskDate" type="datetime-local"><button type="button" onclick="goAddTask()">Add reminder</button><div id="goTaskList" class="go-suite-list"></div></div>
-          <div class="go-suite-card"><h3>Private notes</h3><p>Notes only you can read in your account.</p><textarea id="goNoteText" rows="3" maxlength="1200" placeholder="A useful idea or customer note..."></textarea><button type="button" onclick="goAddNote()">Save note</button><div id="goNoteList" class="go-suite-list"></div></div>
-          <div class="go-suite-card"><h3>Announcement &amp; FAQ</h3><p>Keep your customers informed right from the storefront.</p><label>Announcement<input id="goAnnouncement" maxlength="160" placeholder="New services available this week"></label><label>Questions &amp; answers (one pair per line: Question | Answer)<textarea id="goFAQ" rows="5" placeholder="Do you ship? | Yes, within the city."></textarea></label><button type="button" onclick="goSaveBusinessSettings()">Publish information</button></div>
-          <div class="go-suite-card"><h3>Account data &amp; readiness</h3><p>Keep a personal export of your core business records.</p><button type="button" onclick="goExportData()">Export my data (JSON)</button><p id="goCallReadiness"></p><small>Phone calls across mobile networks often require configured TURN servers. This indicator is not an audio connection test.</small></div>
-        </div>
-      </section>
+
     </div>
   </div>
 </main>
@@ -1447,9 +1473,9 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   }
 
   // ---------- Router: every route is its own page ----------
-  const ROUTES = { '/analytics':'analytics', '/settings':'settings', '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/messages': 'messages', '/reviews': 'reviews', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset' };
+  const ROUTES = { '/business':'business', '/analytics':'analytics', '/settings':'settings', '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/messages': 'messages', '/reviews': 'reviews', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset' };
   const TITLES = {
-    analytics: 'Analytics - GoldOffer Studio', settings: 'Settings - GoldOffer Studio', privacy: 'Privacy Policy - GoldOffer Studio', terms: 'Terms of use - GoldOffer Studio', reset: 'New password - GoldOffer Studio',
+    business: 'Business Hub - GoldOffer Studio', analytics: 'Analytics - GoldOffer Studio', settings: 'Settings - GoldOffer Studio', privacy: 'Privacy Policy - GoldOffer Studio', terms: 'Terms of use - GoldOffer Studio', reset: 'New password - GoldOffer Studio',
     home: 'GoldOffer Studio - Websites for local businesses', how: 'How it works - GoldOffer Studio', features: 'Features - GoldOffer Studio',
     professions: 'Professions - GoldOffer Studio', pricing: 'Pricing - GoldOffer Studio', about: 'About - GoldOffer Studio',
     contact: 'Contact - GoldOffer Studio', build: 'Website builder - GoldOffer Studio', dashboard: 'Dashboard - GoldOffer Studio', messages: 'Messages - GoldOffer Studio', reviews: 'Customer reviews - GoldOffer Studio'
@@ -1468,7 +1494,8 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     currentPage = name;
     window.scrollTo(0, 0);
     document.querySelectorAll('.menu a.ml').forEach(a => a.classList.toggle('active', a.getAttribute('href') === finalPath));
-    if (name === 'dashboard') {loadDashboard();loadBusinessSuite();}
+    if (name === 'dashboard') loadDashboard();
+    if (name === 'business') loadBusinessSuite();
     if (name === 'analytics') loadAnalytics();
     if (name === 'messages') openMessagesPage();
     if (name === 'reviews') loadMyReviews();
@@ -1929,7 +1956,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     try { const d = await api('/api/offers'); S.offers = d.offers; } catch (e) {}
     renderPreview(); renderOfferList();
     if (u.published && u.siteUrl) showLive();
-    if (currentPage === 'dashboard') {loadDashboard();loadBusinessSuite();}
+    if (currentPage === 'dashboard') loadDashboard(); if (currentPage === 'business') loadBusinessSuite();
   }
 
   // ---------- Builder steps ----------
@@ -2118,8 +2145,30 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   }
 
   // ---------- Preview (real data only) ----------
+
+  // Surprise tools: local, deterministic utilities (no simulated server data).
+  function goRecalcLab(){
+    const cost=Math.max(0,Number(document.getElementById('goCostLab')?.value)||0),price=Math.max(0,Number(document.getElementById('goPriceLab')?.value)||0),extra=Math.max(0,Number(document.getElementById('goExtraLab')?.value)||0);
+    const profit=price-cost-extra,margin=price>0?profit/price*100:0;
+    const output=document.getElementById('goLabResult');if(output)output.textContent='Profit: €'+profit.toFixed(2)+' · Margin: '+margin.toFixed(1)+'% · Break-even: €'+(cost+extra).toFixed(2);
+  }
+  function goBuildCampaign(){
+    const name=document.getElementById('goCampaignName')?.value.trim()||'storefront';
+    const channel=document.getElementById('goCampaignChannel')?.value||'instagram';
+    const slug=S.user?.slug;if(!slug)return;
+    const base=(S.user?.siteUrl||location.origin+'/site/'+encodeURIComponent(slug));
+    try{const url=new URL(base,location.origin);url.searchParams.set('utm_source',channel);url.searchParams.set('utm_medium','social');url.searchParams.set('utm_campaign',name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'storefront');document.getElementById('goCampaignResult').value=url.toString();}catch(e){}
+  }
+  function goCopyCampaign(){const el=document.getElementById('goCampaignResult');if(el?.value)navigator.clipboard?.writeText(el.value).then(()=>notify('Campaign link copied')).catch(()=>notify('Copy was blocked. Select the link to copy.'));else notify('Publish your site to generate a campaign link.');}
+  const launchChecks=['Publish the storefront','Add at least three offers','Upload real product photos','Test a customer message','Share the storefront link','Review contact information'];
+  function goLaunchKey(){return 'goldoffer:launch:'+(S.user?._id||S.user?.id||'browser');}
+  function goRenderChecklist(){const holder=document.getElementById('goLaunchChecklist');if(!holder)return;let checked=[];try{checked=JSON.parse(localStorage.getItem(goLaunchKey())||'[]')}catch(e){}holder.textContent='';launchChecks.forEach((label,index)=>{const row=document.createElement('label');row.className='go-launch-row';const input=document.createElement('input');input.type='checkbox';input.checked=checked.includes(index);input.addEventListener('change',()=>{const next=launchChecks.map((_,i)=>i).filter(i=>i===index?input.checked:checked.includes(i));localStorage.setItem(goLaunchKey(),JSON.stringify(next));goRenderChecklist();});row.append(input,document.createTextNode(label));holder.appendChild(row)});const count=document.createElement('p');count.className='go-lab-result';count.textContent=checked.length+' / '+launchChecks.length+' completed';holder.appendChild(count);}
+  function goResetChecklist(){localStorage.removeItem(goLaunchKey());goRenderChecklist();}
+  document.addEventListener('click',event=>{if(event.target.closest('a[href="/business"]')){setTimeout(()=>{goRecalcLab();goBuildCampaign();goRenderChecklist()},60)}});
+  window.goRecalcLab=goRecalcLab;window.goBuildCampaign=goBuildCampaign;window.goCopyCampaign=goCopyCampaign;window.goResetChecklist=goResetChecklist;
+
   function selectLayout(layout) {
-    if (!['signature','editorial','market','neon','mono'].includes(layout)) return;
+    if (!['signature','editorial','market','neon','mono','atelier','arcade','aurora'].includes(layout)) return;
     S.layout = layout;
     document.querySelectorAll('.go-layout-choice').forEach(b=>{const on=b.dataset.layout===layout;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});
     renderPreview();
@@ -2166,7 +2215,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     $('sRevenue').textContent = '0.00 EUR'; $('sCompleted').textContent = '0'; $('sPending').textContent = '0'; $('sOffers').textContent = '0';
     $('orderRows').innerHTML = '';
     if (S.chart) { S.chart.destroy(); S.chart = null; }
-    if (currentPage === 'dashboard') {loadDashboard();loadBusinessSuite();}
+    if (currentPage === 'dashboard') loadDashboard(); if (currentPage === 'business') loadBusinessSuite();
     if (currentPage === 'messages') openMessagesPage();
   }
   async function loadDashboard() {
@@ -2580,7 +2629,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
       const rawSlug=S.user.slug||'';
       $('goShareLink').value=rawSlug?location.origin+'/site/'+encodeURIComponent(rawSlug):'Publish your website to receive a link';
       const quantities=data.setting?.stock||{};
-      $('goStockOffer').onchange=function(){$('goStockQty').value=quantities[this.value]??0;$('goStockInfo').textContent='Inventory is managed separately from orders.'};
+      $('goStockOffer').onchange=function(){$('goStockQty').value=quantities[this.value]??0;$('goStockInfo').textContent='Inventory decreases when a linked order is completed.'};
       $('goStockOffer').onchange();
       $('goBookingList').innerHTML=(data.bookings||[]).map(b=>'<div class="go-suite-item"><strong>'+esc(b.customer)+'</strong> · '+esc(goDate(b.startsAt))+'<div>'+esc(b.contact)+' · '+esc(b.status)+'</div>'+(b.status==='Pending'?'<button data-id="'+esc(b._id)+'" data-status="Confirmed" onclick="goUpdateBooking(this.dataset.id,this.dataset.status)">Confirm</button><button data-id="'+esc(b._id)+'" data-status="Cancelled" onclick="goUpdateBooking(this.dataset.id,this.dataset.status)">Decline</button>':b.status==='Confirmed'?'<button data-id="'+esc(b._id)+'" data-status="Completed" onclick="goUpdateBooking(this.dataset.id,this.dataset.status)">Complete</button>':'')+'</div>').join('')||'<p>No appointments yet.</p>';
       $('goTaskList').innerHTML=(data.reminders||[]).map(t=>'<div class="go-suite-item">'+(t.done?'✓ ':'')+esc(t.text)+'<small>'+esc(goDate(t.due))+'</small>'+(t.done?'':'<button data-id="'+esc(t._id)+'" onclick="goFinishTask(this.dataset.id)">Done</button>')+'</div>').join('')||'<p>No reminders yet.</p>';
