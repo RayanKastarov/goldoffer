@@ -55,9 +55,11 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
       const userId = s.client_reference_id;
       if (userId) {
         await User.findByIdAndUpdate(userId, { subscriptionStatus: 'active', stripeCustomerId: s.customer });
+        await User.updateMany({ ownerId: userId }, { subscriptionStatus: 'active' });
       }
     } else if (event.type === 'customer.subscription.deleted') {
-      await User.findOneAndUpdate({ stripeCustomerId: event.data.object.customer }, { subscriptionStatus: 'canceled' });
+      const own = await User.findOneAndUpdate({ stripeCustomerId: event.data.object.customer }, { subscriptionStatus: 'canceled' });
+      if (own) await User.updateMany({ ownerId: own._id }, { subscriptionStatus: 'canceled' });
     }
   } catch (e) {
     console.error('Webhook handling error', e);
@@ -123,6 +125,9 @@ const UserSchema = new mongoose.Schema({
   designDraft:{type:mongoose.Schema.Types.Mixed},
   faqItems:{type:[{question:String,answer:String,_id:false}],default:[]},
   termsAcceptedAt: Date,
+  siteLang: { type: String, maxlength: 24, default: 'en' }, // language of the public website (the link)
+  ownerId: { type: mongoose.Schema.Types.ObjectId, index: true }, // set for extra websites created under a main account
+  aiGenerated: { type: Boolean, default: false },
   resetTokenHash: String,
   resetExpires: Date,
   emailVerified: { type: Boolean, default: true }, // old accounts count as verified; new sign-ups are saved with false
@@ -495,7 +500,8 @@ const publicUser = (u) => ({
   offerLimit: offerLimitFor(u),
   categoryLabel: u.categoryLabel, phone: u.phone, address: u.address, hours: u.hours,
   facebook: u.facebook, instagram: u.instagram, logoUrl: u.logoUrl,
-  lang: u.lang || 'bg', notifyEmail: u.notifyEmail, notifyOn: u.notifyOn !== false
+  lang: u.lang || 'bg', notifyEmail: u.notifyEmail, notifyOn: u.notifyOn !== false,
+  siteLang: u.siteLang || 'en', ownerId: u.ownerId || null, aiGenerated: !!u.aiGenerated
 });
 if (!process.env.JWT_SECRET) console.error('WARNING: JWT_SECRET is not set. Login and registration will fail.');
 const signToken = (u) => jwt.sign({ id: u._id, email: u.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -808,6 +814,7 @@ app.put('/api/site', authenticateToken, async (req, res) => {
     if (b.instagram !== undefined) user.instagram = cleanSocial(b.instagram, 'instagram.com');
     if (b.logoUrl !== undefined) user.logoUrl = /^https:\/\//.test(b.logoUrl || '') ? b.logoUrl : '';
     if (b.lang === 'bg' || b.lang === 'en') user.lang = b.lang;
+    if (typeof b.siteLang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(b.siteLang)) user.siteLang = b.siteLang;
     if (b.notifyEmail !== undefined) user.notifyEmail = isEmail(b.notifyEmail) ? String(b.notifyEmail).trim() : '';
     if (typeof b.notifyOn === 'boolean') user.notifyOn = b.notifyOn;
     if (Object.keys(THEMES).includes(theme)) user.theme = theme;
@@ -2165,7 +2172,7 @@ function goStudioClient(GDtxt) {
   var parentWin = window.parent; var selEl = null; var box, hov;
   var STATE = ['in-view', 'on', 'active', 'open', 'show', 'visible', 'rv', 'is-active', 'is-open'];
   function post(m) { m.go = 1; parentWin.postMessage(m, '*'); }
-  var st = document.createElement('style'); st.textContent = '.go-st-box{position:absolute;z-index:2147483600;pointer-events:none;outline:2px solid #5b8cff;box-shadow:0 0 0 1px #fff8 inset}.go-st-h{position:absolute;right:-7px;bottom:-7px;width:13px;height:13px;border-radius:3px;background:#5b8cff;border:2px solid #fff;pointer-events:auto;cursor:nwse-resize}.go-st-hov{position:absolute;z-index:2147483500;pointer-events:none;outline:1px dashed #5b8cffaa}.go-st-tag{position:absolute;left:-2px;top:-22px;background:#5b8cff;color:#fff;font:600 11px system-ui;padding:2px 7px;border-radius:5px;white-space:nowrap}html.go-st *{cursor:default!important;animation-play-state:running}html.go-st [contenteditable=true]{cursor:text!important;outline:2px solid #ffcf00!important}';
+  var st = document.createElement('style'); st.textContent = '.go-st-box{touch-action:none}html.go-st .go-fi{touch-action:none;-webkit-user-select:none;user-select:none}html.go-st{-webkit-touch-callout:none}@media(pointer:coarse){.go-st-h{width:30px!important;height:30px!important;right:-15px!important;bottom:-15px!important}}.go-st-box{position:absolute;z-index:2147483600;pointer-events:none;outline:2px solid #5b8cff;box-shadow:0 0 0 1px #fff8 inset}.go-st-h{position:absolute;right:-7px;bottom:-7px;width:13px;height:13px;border-radius:3px;background:#5b8cff;border:2px solid #fff;pointer-events:auto;cursor:nwse-resize}.go-st-hov{position:absolute;z-index:2147483500;pointer-events:none;outline:1px dashed #5b8cffaa}.go-st-tag{position:absolute;left:-2px;top:-22px;background:#5b8cff;color:#fff;font:600 11px system-ui;padding:2px 7px;border-radius:5px;white-space:nowrap}html.go-st *{cursor:default!important;animation-play-state:running}html.go-st [contenteditable=true]{cursor:text!important;outline:2px solid #ffcf00!important}';
   document.head.appendChild(st); document.documentElement.classList.add('go-st');
   box = document.createElement('div'); box.className = 'go-st-box'; box.style.display = 'none'; box.innerHTML = '<span class="go-st-tag"></span><i class="go-st-h"></i>'; document.body.appendChild(box);
   hov = document.createElement('div'); hov.className = 'go-st-hov'; hov.style.display = 'none'; document.body.appendChild(hov);
@@ -2192,19 +2199,22 @@ function goStudioClient(GDtxt) {
     if (fr) { var it = ((GDc._D && GDc._D.f && GDc._D.f[page]) || []).filter(function (x) { return x.id === o.free; })[0]; o.freeItem = it || null; }
     return o;
   }
-  function select(el) { if (!el || el === document.body || el === document.documentElement) { selEl = null; box.style.display = 'none'; post({ t: 'select', sel: null }); return; } selEl = el; var i = info(el); place(box, el, i.label); post(i); }
+  function select(el) { if (selEl && selEl.style) selEl.style.removeProperty('touch-action'); if (!el || el === document.body || el === document.documentElement) { selEl = null; box.style.display = 'none'; post({ t: 'select', sel: null }); return; } selEl = el; try { el.style.setProperty('touch-action', 'none'); } catch (e0) {} var i = info(el); place(box, el, i.label); post(i); }
   document.addEventListener('mousemove', function (e) { var el = e.target; if (el.closest && el.closest('.go-st-box')) return; if (el === document.body || el === document.documentElement || el === selEl) { hov.style.display = 'none'; return; } place(hov, el); }, true);
   document.addEventListener('click', function (e) { if (e.target.classList && e.target.classList.contains('go-st-h')) return; e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; select(e.target.closest('.go-fi') || e.target); }, true);
   document.addEventListener('submit', function (e) { e.preventDefault(); }, true);
-  var drag = null;
+  var drag = null, lastFree = null;
   document.addEventListener('pointerdown', function (e) {
     if (e.button !== 0) return; var el = e.target;
-    if (el.classList && el.classList.contains('go-st-h')) { if (!selEl) return; var r0 = selEl.getBoundingClientRect(); drag = { mode: 'size', x: e.clientX, y: e.clientY, w: r0.width, h: r0.height }; e.preventDefault(); return; }
+    if (el.classList && el.classList.contains('go-st-h')) { if (!selEl) return; var r0 = selEl.getBoundingClientRect(); drag = { mode: 'size', x: e.clientX, y: e.clientY, w: r0.width, h: r0.height, id: e.pointerId, tgt: el }; try { el.setPointerCapture(e.pointerId); } catch (e2) {} e.preventDefault(); return; }
     if (el.isContentEditable) return;
     var t = el.closest('.go-fi') || el; if (t === document.body || t === document.documentElement) return;
+    var wasSel = (t === selEl);
     if (t !== selEl) select(t);
+    if (e.pointerType === 'touch' && !wasSel && !(t.classList && t.classList.contains('go-fi'))) return; // first tap only selects, so the page can still scroll
     var fr = selEl && selEl.closest('.go-fi'); var cs = getComputedStyle(selEl);
-    drag = { mode: 'move', x: e.clientX, y: e.clientY, dx: 0, dy: 0, free: fr, l: fr ? fr.offsetLeft : 0, t: fr ? fr.offsetTop : 0, moved: false, base: cs.translate };
+    drag = { mode: 'move', x: e.clientX, y: e.clientY, dx: 0, dy: 0, free: fr, l: fr ? fr.offsetLeft : 0, t: fr ? fr.offsetTop : 0, moved: false, base: cs.translate, id: e.pointerId, tgt: el };
+    try { if (el.setPointerCapture) el.setPointerCapture(e.pointerId); } catch (e1) {}
   }, true);
   document.addEventListener('pointermove', function (e) {
     if (!drag || !selEl) return; var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
@@ -2212,18 +2222,21 @@ function goStudioClient(GDtxt) {
     else { selEl.style.setProperty('width', Math.max(10, drag.w + dx) + 'px', 'important'); selEl.style.setProperty('height', Math.max(10, drag.h + dy) + 'px', 'important'); }
     place(box, selEl);
   }, true);
-  document.addEventListener('pointerup', function () {
-    if (!drag || !selEl) { drag = null; return; } var d = drag; drag = null;
+  var lastTap = 0;
+  function endDrag(ev) {
+    if (!drag || !selEl) { drag = null; return; } var d = drag; drag = null; try { if (d.tgt && d.tgt.releasePointerCapture) d.tgt.releasePointerCapture(d.id); } catch (e3) {}
+    if (ev && ev.type === 'pointerup' && ev.pointerType === 'touch' && d.mode === 'move' && !d.moved) { var now = Date.now(); if (now - lastTap < 380) { lastTap = 0; try { d.tgt.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true })); } catch (e4) {} return; } lastTap = now; }
     if (d.mode === 'move' && d.moved) {
       if (d.free) { var W = document.documentElement.clientWidth; post({ t: 'free', id: d.free.id.replace('gf-', ''), x: Math.round((d.free.offsetLeft / W) * 1000) / 10, y: Math.round(d.free.offsetTop) }); }
-      else { selEl.style.removeProperty('translate'); post({ t: 'move', sel: selOf(selEl), dx: Math.round(d.dx), dy: Math.round(d.dy) }); }
+      else { post({ t: 'move', sel: selOf(selEl), dx: Math.round(d.dx), dy: Math.round(d.dy) }); }
     } else if (d.mode === 'size') {
       var r = selEl.getBoundingClientRect(), fr = selEl.closest('.go-fi');
-      selEl.style.removeProperty('width'); selEl.style.removeProperty('height');
       if (fr) post({ t: 'free', id: fr.id.replace('gf-', ''), w: Math.round((r.width / document.documentElement.clientWidth) * 1000) / 10, h: Math.round(r.height) });
       else post({ t: 'size', sel: selOf(selEl), w: Math.round(r.width), h: Math.round(r.height) });
     }
-  }, true);
+  }
+  document.addEventListener('pointerup', endDrag, true);
+  document.addEventListener('pointercancel', endDrag, true);
   document.addEventListener('dblclick', function (e) {
     var el = e.target.closest('.go-fi') || e.target; if (el.children.length) { var kid = [].filter.call(el.children, function (c) { return c.children.length === 0 && c.textContent.trim(); })[0]; if (kid && e.target === kid) el = kid; else return; }
     if (/^(IMG|VIDEO|INPUT|IFRAME|TEXTAREA|SELECT)$/.test(el.tagName)) return;
@@ -2239,7 +2252,9 @@ function goStudioClient(GDtxt) {
     if (e.source !== parentWin) return; var m = e.data; if (!m || m.go !== 1) return;
     if (m.t === 'design') {
       GDc._D = m.d; var s = document.getElementById('go-design-css'); if (s) s.textContent = GDc.css(m.d, page);
-      var f = document.getElementById('go-free'); if (f) f.outerHTML = GDc.freeHtml(m.d, page);
+      var f = document.getElementById('go-free');
+      if (f) { var nh = GDc.freeHtml(m.d, page); if (nh !== lastFree) { var sid = selEl && selEl.closest && selEl.closest('.go-fi') ? selEl.closest('.go-fi').id : null; f.outerHTML = nh; lastFree = nh; if (sid) { var ne = document.getElementById(sid); if (ne) selEl = ne; } } else { [].forEach.call(f.querySelectorAll('.go-fi'), function (x) { x.style.removeProperty('left'); x.style.removeProperty('top'); x.style.removeProperty('width'); x.style.removeProperty('height'); }); } }
+      if (!drag && selEl && selEl.style && !(selEl.closest && selEl.closest('.go-fi'))) { selEl.style.removeProperty('translate'); selEl.style.removeProperty('width'); selEl.style.removeProperty('height'); }
       GDc.fontLinks(m.d).forEach(function (g) { var id = 'gf-font-' + g.replace(/\W/g, ''); if (!document.getElementById(id)) { var l = document.createElement('link'); l.id = id; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=' + g + '&display=swap'; document.head.appendChild(l); } });
       var tm = (m.d.t || {})[page] || {};
       Object.keys(origText).forEach(function (sel) { if (!(sel in tm)) { try { var n = document.querySelector(sel); if (n) n.textContent = origText[sel]; } catch (er) {} delete origText[sel]; } });
@@ -3204,7 +3219,7 @@ function pageShell(user, { title, desc, body, cls, page }) {
   const D = user._gd !== undefined ? user._gd : user.design; const studio = !!user._studio;
   const dFonts = GD.fontLinks(D).map(g => `<link href="https://fonts.googleapis.com/css2?family=${g}&display=swap" rel="stylesheet">`).join('');
   return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<html lang="${esc(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(user.siteLang || '') ? user.siteLang : 'en')}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#05070b">
@@ -3220,6 +3235,7 @@ ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p
 <script>(function(){var d=document.getElementById('bkDate');if(!d)return;var slug=document.body.getAttribute('data-slug'),box=document.getElementById('bkSlots'),hid=document.getElementById('bkStart'),off=document.getElementById('bkOffer');var t=new Date();d.min=t.toISOString().slice(0,10);function load(){hid.value='';if(!d.value)return;box.textContent='Loading...';fetch('/site/'+encodeURIComponent(slug)+'/slots?date='+d.value+(off&&off.value?'&offerId='+off.value:''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){box.textContent='';if(!j.slots||!j.slots.length){box.textContent='No free times on this day. Try another day.';return}j.slots.forEach(function(s){var b=document.createElement('button');b.type='button';b.textContent=s.time;b.style.cssText='padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font-weight:700;cursor:pointer';b.onclick=function(){hid.value=s.iso;[].forEach.call(box.children,function(x){x.style.background='transparent';x.style.color='inherit'});b.style.background='var(--a)';b.style.color='var(--on)'};box.appendChild(b)})}).catch(function(){box.textContent='Could not load times.'})}d.addEventListener('change',load);if(off)off.addEventListener('change',load);var f=d.form;if(f)f.addEventListener('submit',function(e){if(!hid.value){e.preventDefault();box.textContent='Please pick a time first.'}})})();</script>
 <script>(function(){var form=document.querySelector('#book form');if(form)form.addEventListener('submit',function(){var x=form.querySelector('[name="startsAt"]');if(x){var d=new Date(x.value);if(Number.isFinite(d.getTime())){x.type='hidden';x.value=d.toISOString()}}})})();</script>
 <script>${SITE_JS}</script>
+${user.siteLang === 'bg' && !user._studio ? `<script>${SITE_I18N_JS}</script>` : ''}
 ${studio ? '' : `<script>(function(){
   var slug = document.body.getAttribute('data-slug');
   var token = null;
@@ -3499,7 +3515,8 @@ ${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book
 var lines=[].slice.call(document.querySelectorAll('.copyline'));if(lines.length&&'IntersectionObserver' in window){var io=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting)entry.target.classList.add('on');})},{threshold:.45});lines.forEach(function(el){io.observe(el)})}else{lines.forEach(function(el){el.classList.add('on')})}
 var shell=document.querySelector('[data-story-shell]'),canvas=document.querySelector('[data-story-canvas]');if(shell&&canvas&&window.matchMedia('(min-width: 801px)').matches&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){var ticking=false;var run=function(){ticking=false;var rect=shell.getBoundingClientRect(),vh=window.innerHeight||1,total=Math.max(1,shell.offsetHeight-vh),p=Math.min(1,Math.max(0,-rect.top/total));var scale=1-p*.12,shift=p*26;canvas.style.transform='translate3d(0,'+shift+'px,0) scale('+scale+')';canvas.style.borderRadius=(34+p*14)+'px';};addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(run)}},{passive:true});run();}
 var stack=document.querySelector('[data-cine-stack]');if(stack&&matchMedia('(pointer:fine)').matches&&!matchMedia('(prefers-reduced-motion: reduce)').matches){stack.addEventListener('pointermove',function(e){var r=stack.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;stack.style.transform='rotateY('+(x*7)+'deg) rotateX('+(-y*5)+'deg)'});stack.addEventListener('pointerleave',function(){stack.style.transform=''})}})()</script>`;
-  return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body, page: 'home' });
+  const extraHtml = `<style>.go-steps{width:min(100% - 28px,1100px);margin:50px auto;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.go-steps div{padding:22px;border-radius:20px;background:color-mix(in srgb,var(--a) 8%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 22%,transparent)}.go-steps b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);margin-bottom:10px}.go-steps h3{margin:0 0 6px;font-size:1.05rem}.go-steps p{margin:0;opacity:.75;font-size:.92rem}.go-stick{display:none}@media(max-width:720px){.go-steps{grid-template-columns:1fr}.go-stick{display:flex;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:80;gap:8px}.go-stick a{flex:1;text-align:center;padding:13px;border-radius:999px;font-weight:800;text-decoration:none;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);box-shadow:0 8px 24px #0006}.go-stick a.sec{background:var(--panel);color:inherit;border:1px solid var(--line)}body{padding-bottom:80px}}</style><section class="go-steps"><div><b>1</b><h3>Choose</h3><p>Browse the offers and pick what fits you.</p></div><div><b>2</b><h3>Request</h3><p>Send a short request or book a time.</p></div><div><b>3</b><h3>Get it done</h3><p>We reply fast and take care of the rest.</p></div></section><nav class="go-stick">${phoneRaw ? `<a class="sec" href="tel:${esc(phoneRaw)}">Call</a>` : ''}${user.bookingEnabled ? '<a href="#book">Request an appointment</a>' : ''}</nav>`;
+  return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body: user._studio ? body : body + extraHtml, page: 'home' });
 }
 
 function renderOfferPage(user, offer, others, sent) {
@@ -4205,10 +4222,160 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
   }
 });
 
+// ---------- Public-site language (Bulgarian translation of the fixed texts) ----------
+const SITE_BG = {
+  'Available when the business enables appointments.':'Достъпно, когато бизнесът включи резервации.','Choose a day to see free times.':'Избери ден, за да видиш свободните часове.',
+  'Contact':'Контакти','DISCOVER':'ОТКРИЙ','Explore our work, and get in touch when you find something you like.':'Разгледай работата ни и се свържи, когато откриеш нещо, което харесваш.',
+  'Find us':'Намери ни','Frequently asked questions':'Често задавани въпроси','I agree to be contacted about this booking.':'Съгласен съм да се свържете с мен за тази резервация.',
+  'Location':'Локация','No matching offers.':'Няма съвпадащи оферти.','No offers yet. Please check back soon.':'Все още няма оферти. Заповядай отново скоро.','Offers':'Оферти',
+  'Pick a day':'Избери ден','Privacy Policy':'Политика за поверителност','Request an appointment':'Заяви час','SELLER PROFILE':'ПРОФИЛ НА ПРОДАВАЧА','Seller reviews':'Отзиви за продавача',
+  'Send booking request':'Изпрати заявка за час','THE STORY BEHIND THE BUSINESS':'ИСТОРИЯТА ЗАД БИЗНЕСА','About':'За нас','All offers':'Всички оферти','Call':'Обади се',
+  'How can we reach you?':'Как да се свържем с теб?','Loading...':'Зареждане...','Message':'Съобщение','Messages':'Съобщения','Request this offer':'Заяви тази оферта','Request':'Заяви',
+  'Saved':'Запазени','Seller profile':'Профил на продавача','Send request':'Изпрати заявка','Share':'Сподели','Your favorites':'Любимите ти','Built with':'Създадено с',
+  'Hours':'Работно време','Price':'Цена','Reviews':'Отзиви','Send':'Изпрати','Home':'Начало','Favorites':'Любими','Track your request':'Следи заявката си','Back':'Назад',
+  'Your name':'Твоето име','Your contact details':'Твоите данни за контакт','What do you need? (optional)':'От какво имаш нужда? (по избор)','Search offers by name or description...':'Търси оферти по име или описание...',
+  'Your message':'Твоето съобщение','Write a message...':'Напиши съобщение...','View offer':'Виж офертата','Learn more':'Научи повече','Book now':'Запази час','Get in touch':'Свържи се',
+  'Thoughtful details. Beautifully presented.':'Внимание към детайла. Красиво представено.','The curated selection':'Подбраната селекция','Next level storefront':'Магазин от ново ниво','The art of the everyday':'Изкуството на ежедневието',
+  'Free times':'Свободни часове','No free times on this day. Try another day.':'Няма свободни часове този ден. Опитай друг.','Could not load times.':'Не успяхме да заредим часовете.','Please pick a time first.':'Първо избери час.',
+  'Published':'Публикуван','Share this page':'Сподели страницата','Contact us':'Свържи се с нас','Our story':'Нашата история','Gallery':'Галерия','Name':'Име','Phone':'Телефон','Email':'Имейл',
+  'Choose':'Избери','Browse the offers and pick what fits you.':'Разгледай офертите и избери подходящата за теб.','Send a short request or book a time.':'Изпрати кратка заявка или запази час.','Get it done':'Готово','We reply fast and take care of the rest.':'Отговаряме бързо и се грижим за останалото.','Thank you!':'Благодарим!','Your request was sent.':'Заявката ти е изпратена.','Visitor test mode — you can write and order like a customer.':'Режим на посетител — можеш да пишеш и поръчваш като клиент.','Back to owner mode':'Обратно към режим на собственик'
+};
+const SITE_BG_PAT = [
+  ['^Messages - (.+)$','Съобщения - $1'],['^Favorites - (.+)$','Любими - $1'],['^(.+) — Seller profile$','$1 — Профил на продавача'],
+  ['^(\\d+) offers?$','$1 оферти'],['^(\\d+) reviews?$','$1 отзива'],['^From (.+)$','От $1']
+];
+function goI18nClient(DICT, PAT) {
+  var map = {}; Object.keys(DICT).forEach(function (k) { map[k.toLowerCase()] = DICT[k]; });
+  var pats = PAT.map(function (p) { return [new RegExp(p[0], 'i'), p[1]]; });
+  function tr(s) {
+    var t = s.replace(/\s+/g, ' ').trim(); if (!t || t.length > 200) return null;
+    var m = map[t.toLowerCase()]; if (m) return s.replace(t, m);
+    for (var i = 0; i < pats.length; i++) if (pats[i][0].test(t)) return s.replace(t, t.replace(pats[i][0], pats[i][1]));
+    return null;
+  }
+  function node(n) {
+    if (n.nodeType === 3) { var p = n.parentNode; if (p && /^(SCRIPT|STYLE|TEXTAREA|CODE)$/.test(p.nodeName)) return; if (p && p.closest && p.closest('[data-notr],#go-free')) return; var r = tr(n.nodeValue); if (r !== null && r !== n.nodeValue) n.nodeValue = r; return; }
+    if (n.nodeType !== 1) return;
+    if (/^(SCRIPT|STYLE)$/.test(n.nodeName) || (n.closest && n.closest('[data-notr]'))) return;
+    ['placeholder', 'title', 'aria-label', 'alt'].forEach(function (a) { if (n.hasAttribute && n.hasAttribute(a)) { var v = n.getAttribute(a), r = tr(v); if (r !== null && r !== v) n.setAttribute(a, r); } });
+    for (var c = n.firstChild; c; c = c.nextSibling) node(c);
+  }
+  var busy = false;
+  function run() { busy = true; try { node(document.body); document.title = tr(document.title) || document.title; } catch (e) {} busy = false; }
+  run();
+  try { new MutationObserver(function (ms) { if (busy) return; busy = true; try { ms.forEach(function (m) { m.addedNodes.forEach(node); if (m.type === 'characterData') node(m.target); }); } catch (e) {} busy = false; }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) {}
+}
+const SITE_I18N_JS = `(${goI18nClient.toString()})(${JSON.stringify(SITE_BG)},${JSON.stringify(SITE_BG_PAT)});`;
+
+// ---------- Several websites under one account + AI site generator ----------
+const aiSiteLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 12, message: { message: 'Too many generations. Try again later.' } });
+const familyOf = async (userId) => {
+  const me = await User.findById(userId);
+  if (!me) return null;
+  return me.ownerId ? await User.findById(me.ownerId) : me;
+};
+const SITE_CAP = (root) => (root.subscriptionStatus === 'active' ? 20 : 5);
+const cleanStr = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').trim().slice(0, n);
+function extractJson(text) {
+  const t = String(text || '');
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
+}
+
+app.get('/api/my-sites', authenticateToken, async (req, res) => {
+  try {
+    const root = await familyOf(req.user.id);
+    if (!root) return res.status(404).json({ message: 'Account not found.' });
+    const subs = await User.find({ ownerId: root._id }).sort({ _id: 1 });
+    const all = [root, ...subs];
+    res.json({
+      currentId: String(req.user.id), rootId: String(root._id), cap: SITE_CAP(root), aiReady: !!process.env.OPENROUTER_API_KEY,
+      sites: all.map(u => ({ id: String(u._id), siteName: u.siteName || 'Untitled', slug: u.slug, published: !!u.published, aiGenerated: !!u.aiGenerated, isMain: String(u._id) === String(root._id), siteUrl: u.slug ? `${PUBLIC_BASE}/site/${u.slug}` : null }))
+    });
+  } catch (e) { res.status(500).json({ message: 'Could not load your sites.' }); }
+});
+
+app.post('/api/my-sites/:id/token', authenticateToken, async (req, res) => {
+  try {
+    const root = await familyOf(req.user.id);
+    const target = await User.findById(req.params.id);
+    if (!root || !target || (String(target._id) !== String(root._id) && String(target.ownerId) !== String(root._id))) return res.status(403).json({ message: 'Not allowed.' });
+    res.json({ token: signToken(target), user: publicUser(target) });
+  } catch (e) { res.status(500).json({ message: 'Could not switch site.' }); }
+});
+
+app.delete('/api/my-sites/:id', authenticateToken, async (req, res) => {
+  try {
+    const root = await familyOf(req.user.id);
+    const target = await User.findById(req.params.id);
+    if (!root || !target || !target.ownerId || String(target.ownerId) !== String(root._id)) return res.status(403).json({ message: 'Only extra sites can be deleted.' });
+    await Offer.deleteMany({ userId: target._id });
+    await User.deleteOne({ _id: target._id });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: 'Could not delete the site.' }); }
+});
+
+app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
+  try {
+    const key = process.env.OPENROUTER_API_KEY;
+    if (!key) return res.status(503).json({ message: 'AI is not set up yet. Add OPENROUTER_API_KEY on the server.' });
+    const root = await familyOf(req.user.id);
+    if (!root) return res.status(404).json({ message: 'Account not found.' });
+    const count = await User.countDocuments({ ownerId: root._id });
+    if (count + 1 >= SITE_CAP(root)) return res.status(400).json({ message: 'You reached the website limit for your plan.' });
+    const name = cleanStr(req.body.name, 60), desc = cleanStr(req.body.description, 1500);
+    const lang = (typeof req.body.lang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(req.body.lang)) ? req.body.lang : 'en';
+    const languageName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(lang) || lang; } catch (e) { return lang; } })();
+    if (!name || desc.length < 10) return res.status(400).json({ message: 'Give a name and describe the business (at least a sentence).' });
+    const sys = `You create small-business websites. Reply with ONE JSON object only, no markdown. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), theme (one of ${Object.keys(THEMES).join(', ')}), layout (one of ${Object.keys(LAYOUTS).join(', ')}), font (one of ${Object.keys(FONTS).join(', ')}), offers (array of 3-6 objects {title, price (number, 0 if unknown), description}), faq (array of 3 objects {question, answer}). Write all user-facing texts in ${languageName} (language code ${lang}). Use only facts the owner gave; do not invent addresses, phone numbers or reviews. Prices only if the owner mentioned them, otherwise 0.`;
+    const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+      messages: [{ role: 'system', content: sys }, { role: 'user', content: `Business name: ${name}\nDescription: ${desc}` }],
+      temperature: 0.7
+    }, { headers: { Authorization: 'Bearer ' + key }, timeout: 60000 });
+    const j = extractJson(r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message && r.data.choices[0].message.content);
+    if (!j) return res.status(502).json({ message: 'AI answered in an unexpected way. Please try again.' });
+    const email = `site-${root._id}-${Date.now().toString(36)}@sites.goldoffer.local`;
+    const pick = (v, obj, d) => (Object.keys(obj).includes(v) ? v : d);
+    const sub = new User({
+      firstName: root.firstName, lastName: root.lastName, email, password: root.password,
+      subscriptionStatus: root.subscriptionStatus, ownerId: root._id, aiGenerated: true, emailVerified: true,
+      siteName: name, sellerBio: cleanStr(j.bio, 650), category: cleanStr(j.category, 80), city: cleanStr(j.city, 80),
+      theme: pick(j.theme, THEMES, 'gold'), layout: pick(j.layout, LAYOUTS, 'signature'), font: pick(j.font, FONTS, 'sans'),
+      announcementText: cleanStr(j.announcement, 200), lang: root.lang || 'bg', siteLang: lang, published: true,
+      notifyEmail: root.notifyEmail || root.email,
+      faqItems: (Array.isArray(j.faq) ? j.faq : []).slice(0, 6).map(f => ({ question: cleanStr(f && f.question, 160), answer: cleanStr(f && f.answer, 500) })).filter(f => f.question && f.answer)
+    });
+    sub.slug = await uniqueSlug(req.body.slug || name, sub._id);
+    await sub.save();
+    const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
+    for (let i = 0; i < offers.length; i++) {
+      const o = offers[i] || {};
+      if (!cleanStr(o.title, 120)) continue;
+      await Offer.create({ userId: sub._id, title: cleanStr(o.title, 120), price: Math.max(0, Number(o.price) || 0), description: cleanStr(o.description, 400), order: i });
+    }
+    res.json({ site: { id: String(sub._id), slug: sub.slug, siteName: sub.siteName, siteUrl: `${PUBLIC_BASE}/site/${sub.slug}` }, token: signToken(sub), user: publicUser(sub) });
+  } catch (e) {
+    console.error('AI generate error', e.response ? JSON.stringify(e.response.data) : e.message);
+    if (e.response) {
+      const status = e.response.status;
+      if (status === 401 || status === 403) return res.status(502).json({ message: 'AI provider rejected the API key. Check OPENROUTER_API_KEY on Render.' });
+      if (status === 402) return res.status(502).json({ message: 'AI provider account has insufficient credits. Check OpenRouter billing.' });
+      if (status === 429) return res.status(503).json({ message: 'AI provider rate limit reached. Please try again later.' });
+      return res.status(502).json({ message: 'AI provider returned HTTP ' + status + '. Check OPENROUTER_MODEL and Render logs.' });
+    }
+    if (e.code === 'ECONNABORTED') return res.status(504).json({ message: 'AI provider timed out. Please retry.' });
+    if (e.code === 'ENOTFOUND' || e.code === 'ECONNRESET') return res.status(503).json({ message: 'Could not reach AI provider. Check connectivity and retry.' });
+    res.status(500).json({ message: 'Could not finish website generation. Check the Render server logs for the cause.' });
+  }
+});
+
 // ---------- Stripe checkout ----------
 app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    let user = await User.findById(req.user.id);
+    if (user && user.ownerId) user = await User.findById(user.ownerId);
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
@@ -4232,7 +4399,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases'];
+const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases', '/ai-sites'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
