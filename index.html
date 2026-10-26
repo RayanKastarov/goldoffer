@@ -749,9 +749,47 @@
 #step-4 .live-actions .btn-ghost{transition:transform .2s,border-color .2s,box-shadow .2s;font-weight:600}
 #step-4 .live-actions .btn-ghost:hover{transform:translateY(-3px);border-color:#ffd042;box-shadow:0 10px 24px rgba(255,208,66,.15)}
 @media(max-width:560px){#step-4 .live-hero{flex-direction:column;align-items:flex-start}}
+@media(max-width:700px){
+.dash,.go-workspace{padding-left:12px!important;padding-right:12px!important}
+.dash h1{font-size:2rem!important}
+.dash .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+.dash .stat{padding:16px 14px!important;border-radius:16px!important}
+.dash .stat .v{font-size:1.55rem!important;word-break:break-word}
+.dash .stat h3{font-size:.8rem!important}
+.dash-grid>*,.dash .panel{min-width:0}
+.dash .panel{padding:16px!important;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dash table{font-size:.8rem;min-width:420px}
+.dash canvas,.dash svg{max-width:100%}
+.go-tools{gap:8px!important}.go-tools a{padding:9px 12px!important;font-size:12.5px!important}
+#step-4 .url-box{font-size:.9rem;word-break:break-all}
+#step-4 .live-actions{flex-direction:column}#step-4 .live-actions .btn-ghost{width:100%}
+}
+</style>
+
+<style id="goPatch">
+.stu-more{margin:8px 0;border:1px solid #ffffff22;border-radius:10px;padding:2px 10px}.stu-more>summary{cursor:pointer;padding:9px 0;font-weight:700;font-size:13px;opacity:.85;list-style:none}.stu-more[open]>summary{border-bottom:1px solid #ffffff18;margin-bottom:6px}
+.mtab{display:none}
+.go-admin select,.lang-row select{background:#0d121b;color:inherit;border:1px solid #ffffff30;border-radius:10px;padding:10px 12px;font:inherit}
+.lang-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0}.lang-row label{min-width:150px;font-weight:700}
+.site-card{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px;border:1px solid #ffffff22;border-radius:14px;margin:8px 0}.site-card.cur{border-color:#ffcf00}.site-card .acts{display:flex;gap:8px;flex-wrap:wrap}
+.ai-form{display:grid;gap:10px;max-width:640px}.ai-form input,.ai-form textarea,.ai-form select{background:#0d121b;color:inherit;border:1px solid #ffffff30;border-radius:10px;padding:12px;font:inherit;width:100%;box-sizing:border-box}
+@media(max-width:760px){
+  html,body{overflow-x:hidden;max-width:100vw}
+  body.logged{padding-bottom:calc(66px + env(safe-area-inset-bottom))}
+  .hide-m{display:none!important}
+  .go-workspace,.view .panel{max-width:100%;box-sizing:border-box}.go-workspace{padding-left:12px!important;padding-right:12px!important}
+  .go-workhead h1{font-size:1.6rem!important}
+  .go-setting-grid{grid-template-columns:1fr!important}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+  .view img,.view video{max-width:100%;height:auto}
+  .view [style*="grid-template-columns"]{grid-template-columns:1fr!important}
+  body.logged .mtab{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:900;background:#0b0e14ee;backdrop-filter:blur(12px);border-top:1px solid #ffffff22;padding:6px 4px calc(6px + env(safe-area-inset-bottom));justify-content:space-around}
+  .mtab a{flex:1;text-align:center;color:#cfd3dc;text-decoration:none;font-size:11px;font-weight:700;padding:6px 2px;border-radius:10px;display:flex;flex-direction:column;gap:2px;align-items:center}.mtab a i{font-style:normal;font-size:18px}.mtab a.on{color:#ffcf00;background:#ffffff12}
+}
 </style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
+<nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/ai-sites" data-link data-t="aisites"><i>✨</i>AI sites</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
 
 <header class="nav" id="nav">
   <div class="nav-in">
@@ -1299,9 +1337,22 @@
   <div class="panel"><h2>Revenue over time</h2><canvas id="analyticsChart" aria-label="Revenue chart"></canvas></div>
   <p class="go-footnote">Visitor views and conversion rates require separately instrumented analytics; none are invented.</p>
 </div></main>
+<!-- =================== AI SITES =================== -->
+<main class="view" id="v-aisites"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">AI WEBSITE GENERATOR</span><h1>My websites</h1><p>Describe a business and AI builds a new website with its own link.</p></div></div>
+  <div class="panel"><h2>Create a new website</h2>
+    <div class="ai-form"><input id="aiName" maxlength="60" placeholder="Website name (e.g. Sunny Barber)"><textarea id="aiDesc" rows="5" maxlength="1500" placeholder="Describe the business: what you do, services, prices, city, style you like..."></textarea>
+    <select id="aiLang"><option value="en">Website language: English</option><option value="bg">Език на сайта: Български</option></select>
+    <button class="btn" id="aiGo" onclick="generateSite()">Generate website</button><div id="aiMsg" aria-live="polite" style="opacity:.8"></div></div></div>
+  <div class="panel"><h2>Your websites</h2><div id="sitesList">Loading...</div></div>
+</div></main>
+
 <!-- =================== STUDIO SETTINGS =================== -->
 <main class="view" id="v-settings"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Settings</h1><p>Choose where to manage each part of your site.</p></div></div>
   <div class="go-setting-grid"><a href="/build" data-link><strong>Website appearance →</strong><span>Brand, theme, business details and publishing</span></a><a href="/messages" data-link><strong>Messages →</strong><span>Talk to visitors in a dedicated inbox</span></a><a href="/reviews" data-link><strong>Customer reviews →</strong><span>View visitor feedback on your store</span></a><a href="/business" data-link><strong>Business Hub →</strong><span>Appointments, stock, notes, shop tools</span></a><a href="/analytics" data-link><strong>Analytics →</strong><span>Completed orders, revenue and offers</span></a><a href="/studio" data-link><strong>Design Studio →</strong><span>Drag, recolor and rewrite your whole site</span></a><a href="/orders" data-link><strong>Order Center →</strong><span>Accept, process, complete, tracking links</span></a><a href="/calendar" data-link><strong>Booking Calendar →</strong><span>Working hours, breaks, free slots</span></a><a href="/customers" data-link><strong>Customers →</strong><span>Mini CRM, notes, export, erase</span></a><a href="/system" data-link><strong>System Health →</strong><span>Database, messenger, uploads, calls</span></a><a href="/releases" data-link><strong>Release Center →</strong><span>Version, features and recent changes</span></a></div>
+  <div class="panel" id="langPanel"><h2>Languages</h2><p>Choose the language of this panel and, separately, the language of your public website link.</p>
+    <div class="lang-row"><label for="langPanelSel">Panel language</label><select id="langPanelSel" onchange="setPanelLang(this.value)"><option value="en">English</option><option value="bg">Български</option></select></div>
+    <div class="lang-row"><label for="langSite">Website (link) language</label><select id="langSite" onchange="setSiteLang(this.value)"><option value="en">English</option><option value="bg">Български</option></select></div></div>
+  <div class="panel"><h2>AI website generator</h2><p>Describe a business and AI creates a brand new website link you can edit like this one.</p><a class="btn" href="/ai-sites" data-link>Open AI sites</a></div>
   <div class="panel go-admin"><h2>Verification administration</h2><p>Only the administrator configured with ADMIN_EMAIL in Render can access pending applications.</p><button type="button" class="btn-ghost" onclick="loadVerificationRequests()">Check pending requests</button><div id="adminVerificationList" aria-live="polite"></div></div>
 </div></main>
 <!-- =================== BUSINESS HUB =================== -->
@@ -1424,6 +1475,76 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   </div>
 </div>
 
+<script>
+/* ===== Languages, multi-site, AI generator ===== */
+const PANEL_DICT = {
+ 'Dashboard':'Табло','Studio':'Студио','Design Studio':'Дизайн студио','Messages':'Съобщения','Settings':'Настройки','Log in':'Вход','Sign up':'Регистрация','Get started':'Започни','Log out':'Изход','Logout':'Изход',
+ 'Home':'Начало','Features':'Функции','Pricing':'Цени','About':'За нас','Contact':'Контакти','Reviews':'Отзиви','Customers':'Клиенти','Orders':'Поръчки','Order Center':'Център за поръчки','Analytics':'Анализи',
+ 'Booking Calendar':'Календар за резервации','System Health':'Състояние на системата','Business Hub':'Бизнес център','Save':'Запази','Cancel':'Отказ','Delete':'Изтрий','Edit':'Редактирай','Add':'Добави','Publish':'Публикувай',
+ 'Settings ':'Настройки','YOUR WORKSPACE':'ТВОЕТО ПРОСТРАНСТВО','Choose where to manage each part of your site.':'Избери къде да управляваш всяка част от сайта си.',
+ 'Website appearance →':'Външен вид на сайта →','Brand, theme, business details and publishing':'Марка, тема, данни за бизнеса и публикуване','Talk to visitors in a dedicated inbox':'Говори с посетителите в отделна пощенска кутия',
+ 'Customer reviews →':'Отзиви от клиенти →','View visitor feedback on your store':'Виж мненията на посетителите','Business Hub →':'Бизнес център →','Appointments, stock, notes, shop tools':'Резервации, наличности, бележки, инструменти',
+ 'Analytics →':'Анализи →','Completed orders, revenue and offers':'Завършени поръчки, приходи и оферти','Design Studio →':'Дизайн студио →','Drag, recolor and rewrite your whole site':'Мести, преоцветявай и пренапиши целия сайт',
+ 'Order Center →':'Център за поръчки →','Accept, process, complete, tracking links':'Приеми, обработи, завърши, линкове за проследяване','Booking Calendar →':'Календар за резервации →','Working hours, breaks, free slots':'Работно време, почивки, свободни часове',
+ 'Customers →':'Клиенти →','Mini CRM, notes, export, erase':'Мини CRM, бележки, експорт, изтриване','System Health →':'Състояние на системата →','Database, messenger, uploads, calls':'База данни, чат, качвания, обаждания',
+ 'Languages':'Езици','Panel language':'Език на панела','Website (link) language':'Език на сайта (линка)','Choose the language of this panel and, separately, the language of your public website link.':'Избери езика на този панел и поотделно езика на публичния ти сайт.',
+ 'AI website generator':'AI генератор на сайтове','Describe a business and AI creates a brand new website link you can edit like this one.':'Опиши бизнес и AI създава изцяло нов сайт с нов линк, който редактираш като този.','Open AI sites':'Отвори AI сайтове',
+ 'AI WEBSITE GENERATOR':'AI ГЕНЕРАТОР НА САЙТОВЕ','My websites':'Моите сайтове','Describe a business and AI builds a new website with its own link.':'Опиши бизнес и AI изгражда нов сайт със собствен линк.','Create a new website':'Създай нов сайт',
+ 'Generate website':'Генерирай сайт','Your websites':'Твоите сайтове','AI sites':'AI сайтове','Loading...':'Зареждане...','Open':'Отвори','Edit design':'Редактирай дизайна','Switch to this site':'Премини към сайта','Current':'Текущ','Main site':'Основен сайт',
+ 'More options':'Още опции','More text options':'Още опции за текст','More box options':'Още опции за кутията','Text':'Текст','Color':'Цвят','Font':'Шрифт','Box':'Кутия','Fill':'Фон','Corners':'Ъгли','Shadow':'Сянка','Opacity':'Прозрачност','Width':'Ширина','Height':'Височина','Actions':'Действия','Hide':'Скрий','Show':'Покажи','Duplicate':'Дублирай','Colors':'Цветове','Accent':'Акцент','Background':'Фон','Panels':'Панели',
+ 'Verification administration':'Администрация на верификации','Check pending requests':'Провери чакащите заявки','Website builder':'Конструктор на сайт','Offers':'Оферти','Add offer':'Добави оферта','Title':'Заглавие','Price':'Цена','Description':'Описание'
+};
+const PANEL_PAT = [['^Website language: (.+)$','Език на сайта: $1']];
+let PANEL_LANG = 'en';
+try { PANEL_LANG = localStorage.getItem('panelLang') === 'bg' ? 'bg' : 'en'; } catch (e) {}
+(function () {
+  const map = {}; Object.keys(PANEL_DICT).forEach(k => map[k.toLowerCase()] = PANEL_DICT[k]);
+  const pats = PANEL_PAT.map(p => [new RegExp(p[0], 'i'), p[1]]);
+  const orig = new WeakMap(); let busy = false;
+  function tr(t) { const k = t.replace(/\s+/g, ' ').trim(); if (!k || k.length > 200) return null; const m = map[k.toLowerCase()]; if (m) return t.replace(k, m); for (const p of pats) if (p[0].test(k)) return t.replace(k, k.replace(p[0], p[1])); return null; }
+  function node(n) {
+    if (n.nodeType === 3) { const p = n.parentNode; if (!p || /^(SCRIPT|STYLE|TEXTAREA|CODE)$/.test(p.nodeName) || (p.closest && p.closest('[data-notr],iframe'))) return;
+      if (PANEL_LANG === 'bg') { const cur = n.nodeValue; if (orig.has(n) && orig.get(n).bg === cur) return; const r = tr(cur); if (r !== null && r !== cur) { orig.set(n, { en: cur, bg: r }); n.nodeValue = r; } }
+      else if (orig.has(n)) { const o = orig.get(n); if (n.nodeValue === o.bg) n.nodeValue = o.en; orig.delete(n); }
+      return; }
+    if (n.nodeType !== 1 || /^(SCRIPT|STYLE|IFRAME)$/.test(n.nodeName) || (n.closest && n.closest('[data-notr]'))) return;
+    if (n.hasAttribute && n.hasAttribute('placeholder') && PANEL_LANG === 'bg') { const v = n.getAttribute('placeholder'), r = tr(v); if (r !== null && r !== v) n.setAttribute('placeholder', r); }
+    for (let c = n.firstChild; c; c = c.nextSibling) node(c);
+  }
+  window.panelTranslate = function () { busy = true; try { node(document.body); } catch (e) {} busy = false; };
+  new MutationObserver(ms => { if (busy) return; busy = true; try { ms.forEach(m => { m.addedNodes.forEach(node); if (m.type === 'characterData') node(m.target); }); } catch (e) {} busy = false; }).observe(document.body, { childList: true, subtree: true, characterData: true });
+  window.addEventListener('DOMContentLoaded', () => { if (PANEL_LANG === 'bg') panelTranslate(); });
+})();
+function setPanelLang(l) { PANEL_LANG = l === 'bg' ? 'bg' : 'en'; try { localStorage.setItem('panelLang', PANEL_LANG); } catch (e) {} document.documentElement.lang = PANEL_LANG; panelTranslate(); }
+async function setSiteLang(l) { try { const d = await api('/api/site', { method: 'PUT', body: JSON.stringify({ siteLang: l }) }); S.user = d.user; notify(l === 'bg' ? 'Езикът на сайта е променен.' : 'Website language saved.'); } catch (e) { notify(e.message, 'Error'); } }
+function initLangUi() { const a = $('langPanelSel'), b = $('langSite'); if (a) a.value = PANEL_LANG; if (b && S.user) b.value = S.user.siteLang || 'en'; }
+async function loadSites() {
+  const box = $('sitesList'); if (!box) return;
+  try { const d = await api('/api/my-sites'); S.sitesInfo = d;
+    box.innerHTML = d.sites.map(x => '<div class="site-card' + (x.id === d.currentId ? ' cur' : '') + '"><div><b>' + esc(x.siteName) + '</b>' + (x.isMain ? ' · <span>Main site</span>' : '') + (x.aiGenerated ? ' · AI' : '') + '<br><small style="opacity:.7">' + esc(x.siteUrl || '—') + '</small></div><div class="acts">' + (x.siteUrl ? '<a class="btn-ghost" target="_blank" rel="noopener" href="' + esc(x.siteUrl) + '">Open</a>' : '') + (x.id === d.currentId ? '<span class="btn-ghost" data-notr>✓ Current</span>' : '<button class="btn-ghost" onclick="switchSite(\'' + x.id + '\')">Switch to this site</button>') + (!x.isMain ? '<button class="btn-ghost" onclick="deleteSite(\'' + x.id + '\')">Delete</button>' : '') + '</div></div>').join('');
+    if (!d.aiReady && $('aiMsg')) $('aiMsg').textContent = 'AI key is not set on the server yet (OPENROUTER_API_KEY).';
+  } catch (e) { box.textContent = e.message; }
+}
+async function generateSite() {
+  const name = $('aiName').value.trim(), desc = $('aiDesc').value.trim(), btn = $('aiGo');
+  if (!name || desc.length < 10) return notify('Add a name and describe the business.');
+  btn.disabled = true; $('aiMsg').textContent = 'Generating… this takes up to a minute.';
+  try {
+    const d = await api('/api/ai/site-generate', { method: 'POST', body: JSON.stringify({ name, description: desc, lang: $('aiLang').value }) });
+    if (!S.mainToken) S.mainToken = S.token;
+    try { sessionStorage.setItem('mainToken', S.mainToken); } catch (e) {}
+    S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user; renderAuth();
+    notify('Created: ' + d.site.siteUrl); navigate('/studio');
+  } catch (e) { $('aiMsg').textContent = e.message; } finally { btn.disabled = false; }
+}
+async function switchSite(id) {
+  try { if (!S.mainToken) { try { S.mainToken = sessionStorage.getItem('mainToken') || (S.user && !S.user.ownerId ? S.token : null); sessionStorage.setItem('mainToken', S.mainToken || ''); } catch (e) {} }
+    const d = await api('/api/my-sites/' + id + '/token', { method: 'POST' });
+    S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user; renderAuth(); notify('Switched to ' + (d.user.siteName || 'site')); loadSites(); } catch (e) { notify(e.message, 'Error'); }
+}
+async function backToMain() { try { const root = S.sitesInfo && S.sitesInfo.rootId; const d = await api('/api/my-sites'); await switchSite(d.rootId); navigate('/ai-sites'); } catch (e) { notify(e.message, 'Error'); } }
+async function deleteSite(id) { if (!confirm('Delete this website and its offers? This cannot be undone.')) return; try { await api('/api/my-sites/' + id, { method: 'DELETE' }); loadSites(); } catch (e) { notify(e.message, 'Error'); } }
+</script>
 <script>
   const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
     ? 'http://localhost:5000'
@@ -1550,9 +1671,9 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   }
 
   // ---------- Router: every route is its own page ----------
-  const ROUTES = { '/business':'business', '/analytics':'analytics', '/settings':'settings', '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/messages': 'messages', '/reviews': 'reviews', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset', '/studio': 'studio', '/customers': 'customers', '/calendar': 'calendar', '/orders': 'orders', '/system': 'system', '/releases': 'releases' };
+  const ROUTES = { '/business':'business', '/analytics':'analytics', '/settings':'settings', '/': 'home', '/how-it-works': 'how', '/features': 'features', '/professions': 'professions', '/pricing': 'pricing', '/about': 'about', '/contact': 'contact', '/build': 'build', '/dashboard': 'dashboard', '/messages': 'messages', '/reviews': 'reviews', '/privacy': 'privacy', '/terms': 'terms', '/reset': 'reset', '/studio': 'studio', '/customers': 'customers', '/calendar': 'calendar', '/orders': 'orders', '/system': 'system', '/releases': 'releases', '/ai-sites': 'aisites' };
   const TITLES = {
-    studio: 'Design Studio - GoldOffer Studio', customers: 'Customers - GoldOffer Studio', calendar: 'Booking Calendar - GoldOffer Studio', orders: 'Order Center - GoldOffer Studio', system: 'System Health - GoldOffer Studio', releases: 'Release Center - GoldOffer Studio',
+    aisites: 'AI websites - GoldOffer Studio', studio: 'Design Studio - GoldOffer Studio', customers: 'Customers - GoldOffer Studio', calendar: 'Booking Calendar - GoldOffer Studio', orders: 'Order Center - GoldOffer Studio', system: 'System Health - GoldOffer Studio', releases: 'Release Center - GoldOffer Studio',
     business: 'Business Hub - GoldOffer Studio', analytics: 'Analytics - GoldOffer Studio', settings: 'Settings - GoldOffer Studio', privacy: 'Privacy Policy - GoldOffer Studio', terms: 'Terms of use - GoldOffer Studio', reset: 'New password - GoldOffer Studio',
     home: 'GoldOffer Studio - Websites for local businesses', how: 'How it works - GoldOffer Studio', features: 'Features - GoldOffer Studio',
     professions: 'Professions - GoldOffer Studio', pricing: 'Pricing - GoldOffer Studio', about: 'About - GoldOffer Studio',
@@ -1576,6 +1697,9 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
     if (name === 'business') loadBusinessSuite();
     if (name === 'analytics') loadAnalytics();
     if (name === 'messages') openMessagesPage();
+    if (name === 'aisites') { if (S.user) loadSites(); else openAuth('login'); }
+    if (name === 'settings') { try { initLangUi(); } catch (e) {} }
+    document.querySelectorAll('#mtab a').forEach(a => a.classList.toggle('on', a.dataset.t === name));
     if (S.user) { if (name === 'orders') loadOrders(); if (name === 'calendar') loadCalendar(); if (name === 'customers') loadCustomers(); if (name === 'system') loadSystem(); if (name === 'releases') loadReleases(); if (name === 'studio') openStudio(); } else if (!S.token && ['orders','calendar','customers','system','releases','studio'].includes(name)) setTimeout(() => openAuth('login'), 50);
     if (name === 'reviews') loadMyReviews();
     if (name === 'reset') prepareReset();
@@ -1877,9 +2001,10 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   // ---------- Auth ----------
   function renderAuth() {
     const a = $('authArea');
+    document.body.classList.toggle('logged', !!S.user);
     if (S.user) {
       const nm = [S.user.firstName, S.user.lastName].filter(Boolean).join(' ');
-      a.innerHTML = '<span class="who" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span>' + bellHtml() + '<a class="btn-ghost" href="/messages" data-link>Messages<span class="badge-msg who-badge" style="display:none"></span></a><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><button class="btn-ghost" onclick="logout()">Log out</button>';
+      a.innerHTML = (S.user.ownerId ? '<button class="btn-ghost" onclick="backToMain()">← Main site</button>' : '') + '<span class="who hide-m" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span>' + bellHtml() + '<a class="btn-ghost hide-m" href="/messages" data-link>Messages<span class="badge-msg who-badge" style="display:none"></span></a><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><button class="btn-ghost" onclick="logout()">Log out</button>';
       setTimeout(() => { if (S.user) { loadInbox(); startBell(); } }, 400);
     } else {
       a.innerHTML = '<button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button><button class="btn" onclick="openAuth(\'signup\')">Get started</button>';
@@ -2894,19 +3019,25 @@ function stuRender() {
     h += '<div class="stu-r"><label>Font</label><select onchange="stuSet(\'font-family\',this.value||null)"><option value="">Default</option>' + ST.fonts.map(f => '<option value="' + f[0] + '"' + (get('font-family') === f[0] ? ' selected' : '') + '>' + f[1] + ' - ' + f[3] + '</option>').join('') + '</select></div>';
     h += nRow('Size (px)', 'font-size', stuNum(get('font-size'), Math.round(cs.size)), 'px', 8, 200);
     h += '<div class="stu-tg"><button class="' + (get('font-weight') === '800' ? 'on' : '') + '" onclick="stuSet(\'font-weight\',' + (get('font-weight') === '800' ? 'null' : '\'800\'') + ')"><b>B</b></button><button class="' + (get('font-style') === 'italic' ? 'on' : '') + '" onclick="stuSet(\'font-style\',' + (get('font-style') === 'italic' ? 'null' : '\'italic\'') + ')"><i>I</i></button><button class="' + (get('text-decoration') === 'underline' ? 'on' : '') + '" onclick="stuSet(\'text-decoration\',' + (get('text-decoration') === 'underline' ? 'null' : '\'underline\'') + ')"><u>U</u></button><button class="' + (get('text-transform') === 'uppercase' ? 'on' : '') + '" onclick="stuSet(\'text-transform\',' + (get('text-transform') === 'uppercase' ? 'null' : '\'uppercase\'') + ')">AA</button>' + ['left', 'center', 'right'].map(a => '<button class="' + (get('text-align') === a ? 'on' : '') + '" onclick="stuSet(\'text-align\',\'' + a + '\')">' + a[0].toUpperCase() + '</button>').join('') + '</div>';
+    h += '<details class="stu-more"><summary>More text options</summary>';
     h += nRow('Letter space', 'letter-spacing', stuNum(get('letter-spacing'), 0), 'px', -5, 40, 0.5) + nRow('Line height', 'line-height', stuNum(get('line-height'), NaN), '', 0.8, 4, 0.1);
     h += '<div class="stu-r"><label>Text glow</label><select onchange="stuSet(\'text-shadow\',this.value||null)"><option value="">None</option><option value="0 2px 12px rgba(0,0,0,.6)">Soft shadow</option><option value="3px 3px 0 rgba(0,0,0,.6)">Hard shadow</option><option value="0 0 18px #ffcf00">Gold glow</option><option value="0 0 18px #00e5ff">Cyan glow</option><option value="0 0 18px #ff3d81">Pink glow</option></select></div>';
+    h += '</details>';
   }
   h += '<h5>Box</h5>' + cRow('Fill', 'background-color', get('background-color', cs.bg), '<button class="stu-x" onclick="stuSet(\'background-color\',\'transparent\')">none</button>') + gradRow('Gradient fill', 'background-image', st['background-image']);
+    h += '<details class="stu-more"><summary>More box options</summary>';
   h += nRow('Corners', 'border-radius', stuNum(get('border-radius'), Math.round(cs.radius || 0)), 'px', 0, 200) + nRow('Border', 'border-width', stuNum(get('border-width'), NaN), 'px', 0, 30) + cRow('Border color', 'border-color', get('border-color', '#ffffff'));
   if (st['border-width'] && !st['border-style']) setTimeout(() => stuSet('border-style', 'solid'), 0);
   h += '<div class="stu-r"><label>Shadow</label><select onchange="stuSet(\'box-shadow\',this.value||null)"><option value="">None</option><option value="0 10px 30px rgba(0,0,0,.35)">Soft</option><option value="0 24px 60px rgba(0,0,0,.55)">Deep</option><option value="6px 6px 0 rgba(0,0,0,.7)">Hard</option><option value="0 0 30px var(--a)">Accent glow</option><option value="0 0 40px #ff3d81">Pink glow</option></select></div>';
   h += '<div class="stu-r"><label>Opacity</label><input type="range" min="0" max="1" step="0.05" value="' + get('opacity', 1) + '" oninput="stuSet(\'opacity\',this.value)"></div>';
+    h += '</details>';
   h += '<h5>Position &amp; size</h5>';
   if (!fr) h += nRow('Move X', 'translate-x', tr[0], '', -2000, 2000).replace(/stuSet\('translate-x',[^)]*\)/g, "stuMoveAxis(0,this.value)") + nRow('Move Y', 'translate-y', tr[1], '', -2000, 2000).replace(/stuSet\('translate-y',[^)]*\)/g, "stuMoveAxis(1,this.value)");
   h += nRow('Width', 'width', stuNum(get('width'), cs.w), 'px', 10, 3000) + nRow('Height', 'height', stuNum(get('height'), cs.h), 'px', 10, 3000);
+    h += '<details class="stu-more"><summary>More options</summary>';
   h += nRow('Rotate', 'rotate', stuNum(get('rotate'), 0), 'deg', -360, 360) + nRow('Scale', 'scale', stuNum(get('scale'), 1), '', 0.1, 5, 0.05) + nRow('Padding', 'padding', stuNum(get('padding'), NaN), 'px', 0, 200);
   h += '<h5>Effects</h5><div class="stu-r"><label>Animation</label><select onchange="stuSet(\'anim\',this.value===\'none\'?null:this.value)">' + ['none', 'float', 'pulse', 'glow', 'shake', 'wiggle', 'spin', 'fadein', 'rise', 'rainbow'].map(a => '<option' + (get('anim', 'none') === a ? ' selected' : '') + '>' + a + '</option>').join('') + '</select></div>' + nRow('Blur', 'filter', NaN, 'px', 0, 40).replace(/stuSet\('filter',([^)]*)\)/, "stuSet('filter',this.value===''?null:'blur('+this.value+'px)')");
+    h += '</details>';
   h += '<h5>Actions</h5><div class="stu-tg"><button onclick="stuSet(\'display\',\'none\')">Hide</button><button onclick="stuSet(\'display\',null)">Show</button>' + (fr ? '<button onclick="stuDup()">Duplicate</button><button onclick="stuDelete()">Delete</button>' : '<button onclick="stuReset()">Reset element</button>') + '</div><p style="color:#6f7d94;margin-top:8px">Arrow keys nudge &middot; Shift = 10x &middot; Delete hides</p>';
   pane.innerHTML = h;
 }
