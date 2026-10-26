@@ -125,7 +125,7 @@ const UserSchema = new mongoose.Schema({
   designDraft:{type:mongoose.Schema.Types.Mixed},
   faqItems:{type:[{question:String,answer:String,_id:false}],default:[]},
   termsAcceptedAt: Date,
-  siteLang: { type: String, enum: ['en', 'bg'], default: 'en' }, // language of the public website (the link)
+  siteLang: { type: String, maxlength: 24, default: 'en' }, // language of the public website (the link)
   ownerId: { type: mongoose.Schema.Types.ObjectId, index: true }, // set for extra websites created under a main account
   aiGenerated: { type: Boolean, default: false },
   resetTokenHash: String,
@@ -814,7 +814,7 @@ app.put('/api/site', authenticateToken, async (req, res) => {
     if (b.instagram !== undefined) user.instagram = cleanSocial(b.instagram, 'instagram.com');
     if (b.logoUrl !== undefined) user.logoUrl = /^https:\/\//.test(b.logoUrl || '') ? b.logoUrl : '';
     if (b.lang === 'bg' || b.lang === 'en') user.lang = b.lang;
-    if (b.siteLang === 'bg' || b.siteLang === 'en') user.siteLang = b.siteLang;
+    if (typeof b.siteLang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(b.siteLang)) user.siteLang = b.siteLang;
     if (b.notifyEmail !== undefined) user.notifyEmail = isEmail(b.notifyEmail) ? String(b.notifyEmail).trim() : '';
     if (typeof b.notifyOn === 'boolean') user.notifyOn = b.notifyOn;
     if (Object.keys(THEMES).includes(theme)) user.theme = theme;
@@ -3219,7 +3219,7 @@ function pageShell(user, { title, desc, body, cls, page }) {
   const D = user._gd !== undefined ? user._gd : user.design; const studio = !!user._studio;
   const dFonts = GD.fontLinks(D).map(g => `<link href="https://fonts.googleapis.com/css2?family=${g}&display=swap" rel="stylesheet">`).join('');
   return `<!DOCTYPE html>
-<html lang="${user.siteLang === 'bg' ? 'bg' : 'en'}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<html lang="${esc(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(user.siteLang || '') ? user.siteLang : 'en')}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#05070b">
@@ -4325,9 +4325,10 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     const count = await User.countDocuments({ ownerId: root._id });
     if (count + 1 >= SITE_CAP(root)) return res.status(400).json({ message: 'You reached the website limit for your plan.' });
     const name = cleanStr(req.body.name, 60), desc = cleanStr(req.body.description, 1500);
-    const lang = req.body.lang === 'bg' ? 'bg' : 'en';
+    const lang = (typeof req.body.lang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(req.body.lang)) ? req.body.lang : 'en';
+    const languageName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(lang) || lang; } catch (e) { return lang; } })();
     if (!name || desc.length < 10) return res.status(400).json({ message: 'Give a name and describe the business (at least a sentence).' });
-    const sys = `You create small-business websites. Reply with ONE JSON object only, no markdown. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), theme (one of ${Object.keys(THEMES).join(', ')}), layout (one of ${Object.keys(LAYOUTS).join(', ')}), font (one of ${Object.keys(FONTS).join(', ')}), offers (array of 3-6 objects {title, price (number, 0 if unknown), description}), faq (array of 3 objects {question, answer}). Write all texts in ${lang === 'bg' ? 'Bulgarian' : 'English'}. Use only facts the owner gave; do not invent addresses, phone numbers or reviews. Prices only if the owner mentioned them, otherwise 0.`;
+    const sys = `You create small-business websites. Reply with ONE JSON object only, no markdown. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), theme (one of ${Object.keys(THEMES).join(', ')}), layout (one of ${Object.keys(LAYOUTS).join(', ')}), font (one of ${Object.keys(FONTS).join(', ')}), offers (array of 3-6 objects {title, price (number, 0 if unknown), description}), faq (array of 3 objects {question, answer}). Write all user-facing texts in ${languageName} (language code ${lang}). Use only facts the owner gave; do not invent addresses, phone numbers or reviews. Prices only if the owner mentioned them, otherwise 0.`;
     const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
       model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
       messages: [{ role: 'system', content: sys }, { role: 'user', content: `Business name: ${name}\nDescription: ${desc}` }],
@@ -4357,7 +4358,16 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     res.json({ site: { id: String(sub._id), slug: sub.slug, siteName: sub.siteName, siteUrl: `${PUBLIC_BASE}/site/${sub.slug}` }, token: signToken(sub), user: publicUser(sub) });
   } catch (e) {
     console.error('AI generate error', e.response ? JSON.stringify(e.response.data) : e.message);
-    res.status(500).json({ message: 'Could not generate the site. Check the AI key and try again.' });
+    if (e.response) {
+      const status = e.response.status;
+      if (status === 401 || status === 403) return res.status(502).json({ message: 'AI provider rejected the API key. Check OPENROUTER_API_KEY on Render.' });
+      if (status === 402) return res.status(502).json({ message: 'AI provider account has insufficient credits. Check OpenRouter billing.' });
+      if (status === 429) return res.status(503).json({ message: 'AI provider rate limit reached. Please try again later.' });
+      return res.status(502).json({ message: 'AI provider returned HTTP ' + status + '. Check OPENROUTER_MODEL and Render logs.' });
+    }
+    if (e.code === 'ECONNABORTED') return res.status(504).json({ message: 'AI provider timed out. Please retry.' });
+    if (e.code === 'ENOTFOUND' || e.code === 'ECONNRESET') return res.status(503).json({ message: 'Could not reach AI provider. Check connectivity and retry.' });
+    res.status(500).json({ message: 'Could not finish website generation. Check the Render server logs for the cause.' });
   }
 });
 
