@@ -128,6 +128,8 @@ const UserSchema = new mongoose.Schema({
   siteLang: { type: String, maxlength: 24, default: 'en' }, // language of the public website (the link)
   ownerId: { type: mongoose.Schema.Types.ObjectId, index: true }, // set for extra websites created under a main account
   aiGenerated: { type: Boolean, default: false },
+  aiPage: { type: mongoose.Schema.Types.Mixed, default: null },
+  siteTranslations: { type: mongoose.Schema.Types.Mixed, default: {} },
   resetTokenHash: String,
   resetExpires: Date,
   emailVerified: { type: Boolean, default: true }, // old accounts count as verified; new sign-ups are saved with false
@@ -3235,7 +3237,7 @@ ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p
 <script>(function(){var d=document.getElementById('bkDate');if(!d)return;var slug=document.body.getAttribute('data-slug'),box=document.getElementById('bkSlots'),hid=document.getElementById('bkStart'),off=document.getElementById('bkOffer');var t=new Date();d.min=t.toISOString().slice(0,10);function load(){hid.value='';if(!d.value)return;box.textContent='Loading...';fetch('/site/'+encodeURIComponent(slug)+'/slots?date='+d.value+(off&&off.value?'&offerId='+off.value:''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){box.textContent='';if(!j.slots||!j.slots.length){box.textContent='No free times on this day. Try another day.';return}j.slots.forEach(function(s){var b=document.createElement('button');b.type='button';b.textContent=s.time;b.style.cssText='padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font-weight:700;cursor:pointer';b.onclick=function(){hid.value=s.iso;[].forEach.call(box.children,function(x){x.style.background='transparent';x.style.color='inherit'});b.style.background='var(--a)';b.style.color='var(--on)'};box.appendChild(b)})}).catch(function(){box.textContent='Could not load times.'})}d.addEventListener('change',load);if(off)off.addEventListener('change',load);var f=d.form;if(f)f.addEventListener('submit',function(e){if(!hid.value){e.preventDefault();box.textContent='Please pick a time first.'}})})();</script>
 <script>(function(){var form=document.querySelector('#book form');if(form)form.addEventListener('submit',function(){var x=form.querySelector('[name="startsAt"]');if(x){var d=new Date(x.value);if(Number.isFinite(d.getTime())){x.type='hidden';x.value=d.toISOString()}}})})();</script>
 <script>${SITE_JS}</script>
-${user.siteLang === 'bg' && !user._studio ? `<script>${SITE_I18N_JS}</script>` : ''}
+${!studio && user.siteLang === 'bg' ? `<script>${SITE_I18N_JS}</script>` : !studio && user.siteTranslations && user.siteTranslations[user.siteLang] ? `<script>(${goI18nClient.toString()})(${JSON.stringify(user.siteTranslations[user.siteLang]).replace(/</g,'\\u003c')},[])</script>` : ''}
 ${studio ? '' : `<script>(function(){
   var slug = document.body.getAttribute('data-slug');
   var token = null;
@@ -3335,7 +3337,35 @@ function renderSellerProfile(user, offers) {
   return pageShell(user,{title:`${sellerName(user)} — Seller profile`,desc:`View offers and visitor feedback for ${sellerName(user)}`,body,cls:'sellerprofile',page:'profile'});
 }
 
+// AI-specific page composition, independent from the eight template home layouts.
+// Dynamic content is escaped; never execute AI-supplied HTML, JS or CSS.
+function renderAiHome(user, offers, sent) {
+  const a = user.aiPage || {};
+  const allowed = ['hero','about','offers','contact'];
+  const order = Array.isArray(a.order) ? [...new Set(a.order.filter(x => allowed.includes(x)))].slice(0,4) : allowed;
+  for (const k of allowed) if (!order.includes(k)) order.push(k);
+  const d = user.design && user.design.v || {};
+  const hex = (v, fallback) => /^#[0-9a-f]{6}$/i.test(String(v||'')) ? v : fallback;
+  const accent = hex(d.accent,'#7957ff'), bg = hex(d.bg,'#0c101c'), panel = hex(d.panel,'#191e32'), ink = hex(d.text,'#f4f4fc');
+  const radius = Math.max(0,Math.min(35,parseInt(d.radius,10)||16));
+  const slug = encodeURIComponent(user.slug||'');
+  const text = (v, fallback, n=240) => esc(String(v||fallback).slice(0,n));
+  const oCards = offers.map(o => `<article class="ai-card"><a href="/site/${slug}/offer/${o._id}">${o.imageUrl?`<img loading="lazy" src="${esc(o.imageUrl)}" alt="${esc(o.title)}">`:'<div class="ai-pattern"></div>'}<h3>${esc(o.title||'Offer')}</h3></a><p>${esc((o.description||'').slice(0,180))}</p>${Number(o.price)>0?`<strong>${Number(o.price).toFixed(2)}</strong>`:''}</article>`).join('');
+  const sections = {
+    hero:`<section class="ai-hero"><span class="ai-kicker">${text(a.eyebrow,user.category||'Independent business',100)}</span><h1>${text(a.headline,user.siteName,150)}</h1><p>${text(a.subheading,user.sellerBio||'',360)}</p><a class="ai-btn" href="#ai-offers">${text(a.cta,'Explore offers',60)}</a></section>`,
+    about:`<section class="ai-about"><span class="ai-kicker">${text(a.aboutEyebrow,'Our story',70)}</span><h2>${text(a.aboutTitle,'Why choose us',140)}</h2><p>${text(user.sellerBio,a.aboutText||'Discover our work.',650)}</p></section>`,
+    offers:`<section id="ai-offers" class="ai-offers"><span class="ai-kicker">${text(a.offersEyebrow,'Collection',70)}</span><h2>${text(a.offersTitle,'Explore our offers',140)}</h2><div class="ai-grid">${oCards||'<p>New offers coming soon.</p>'}</div></section>`,
+    contact:`<section class="ai-contact"><h2>${text(a.contactTitle,'Get in touch',140)}</h2><p>${text(a.contactText,'Questions? Contact us to learn more.',300)}</p><div class="ai-actions">${user.phone?`<a class="ai-btn" href="tel:${esc(String(user.phone).replace(/[^0-9+]/g,''))}">${text(a.contactAction,'Call us',60)}</a>`:''}<a class="ai-btn ai-secondary" href="/site/${slug}/messages">${text(a.messageAction,'Send a message',60)}</a><a class="ai-btn ai-secondary" href="/site/${slug}/profile">${text(a.profileAction,'Seller profile',60)}</a></div></section>`
+  };
+  const align = ['left','center'].includes(a.align)?a.align:'left';
+  const grid = [2,3,4].includes(Number(a.columns))?Number(a.columns):3;
+  const style=`<style>.ai-root{--a:${accent};--bg:${bg};--panel:${panel};--ink:${ink};--r:${radius}px;background:var(--bg);color:var(--ink);min-height:100vh;font-family:Inter,system-ui,sans-serif}.ai-top{display:flex;align-items:center;justify-content:space-between;padding:24px max(5vw,20px);gap:16px;border-bottom:1px solid #ffffff26}.ai-top a{color:inherit;text-decoration:none}.ai-brand{font-size:1.2rem;font-weight:800}.ai-root section{padding:clamp(55px,7vw,115px) max(5vw,24px);max-width:1440px;margin:auto}.ai-root h1{font-size:clamp(3rem,7vw,7.5rem);line-height:1.02;letter-spacing:-.055em;max-width:13ch;margin:18px 0 22px}.ai-root h2{font-size:clamp(2rem,4vw,4rem);line-height:1.1;margin:12px 0 24px}.ai-root p{opacity:.82;line-height:1.75;max-width:65ch}.ai-kicker{text-transform:uppercase;letter-spacing:.2em;color:var(--a);font-size:.75rem;font-weight:900}.ai-hero{min-height:65vh;display:flex;flex-direction:column;justify-content:center;text-align:${align};align-items:${align==='center'?'center':'start'};background:radial-gradient(ellipse at 85% 30%,color-mix(in srgb,var(--a) 28%,transparent),transparent 65%)}.ai-btn{display:inline-flex;padding:12px 22px;background:var(--a);color:#fff!important;border-radius:var(--r);text-decoration:none;font-weight:800;margin-top:25px}.ai-secondary{background:var(--panel);border:1px solid #ffffff36}.ai-grid{display:grid;grid-template-columns:repeat(${grid},minmax(0,1fr));gap:18px}.ai-card{overflow:hidden;background:var(--panel);border:1px solid #ffffff24;border-radius:var(--r);padding:0 0 24px}.ai-card img,.ai-pattern{width:100%;height:220px;object-fit:cover;background:linear-gradient(135deg,var(--a),var(--panel))}.ai-card a{color:inherit;text-decoration:none}.ai-card h3,.ai-card p,.ai-card strong{display:block;padding:0 22px}.ai-card h3{font-size:1.3rem;margin:18px 0 6px}.ai-about{border-top:1px solid #ffffff24;border-bottom:1px solid #ffffff24}.ai-contact{background:var(--panel);border-radius:var(--r);margin-bottom:70px!important}.ai-actions{display:flex;flex-wrap:wrap;gap:12px}@media(max-width:850px){.ai-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:540px){.ai-grid{grid-template-columns:1fr}.ai-card img,.ai-pattern{height:180px}.ai-root section{padding:55px 20px}.ai-hero{min-height:60vh}}</style>`;
+  const body=`${style}<div class="ai-root"><header class="ai-top"><a class="ai-brand" href="/site/${slug}">${esc(user.siteName)}</a><a href="/site/${slug}/profile">${text(a.profileAction,'Profile',50)}</a></header>${order.map(x=>sections[x]).join('')}<footer style="padding:26px;text-align:center;opacity:.6">${esc(user.siteName)} · GoldOffer Studio</footer></div>`;
+  return pageShell(user,{title:user.siteName||'Website',desc:user.sellerBio||'',body,cls:'ai-generated',page:'home'});
+}
+
 function renderSite(user, offers, sent) {
+  if (user.aiGenerated && user.aiPage) return renderAiHome(user, offers, sent);
   const meta = [user.categoryLabel || user.category, user.city].filter(Boolean).map(esc);
   const sub = meta.length === 2 ? `${meta[0]} in ${meta[1]}` : meta.join('');
   const hours = String(user.hours || '').split('\n')[0].trim();
@@ -4267,6 +4297,26 @@ function goI18nClient(DICT, PAT) {
 }
 const SITE_I18N_JS = `(${goI18nClient.toString()})(${JSON.stringify(SITE_BG)},${JSON.stringify(SITE_BG_PAT)});`;
 
+// Translate fixed public interface phrases for the current website without touching customer content.
+const siteTranslateLimiter = rateLimit({windowMs:60*60*1000,max:6});
+app.post('/api/site/translate', authenticateToken, siteTranslateLimiter, async (req,res)=>{
+ try {
+  const u=await User.findById(req.user.id); if(!u)return res.status(404).json({message:'Site not found.'});
+  const lang=String(req.body&&req.body.lang||u.siteLang||'en');
+  if(!/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(lang))return res.status(400).json({message:'Invalid language.'});
+  if(lang==='bg'||lang==='en') {u.siteLang=lang;await u.save();return res.json({ok:true,language:lang});}
+  const key=process.env.OPENROUTER_API_KEY; if(!key)return res.status(503).json({message:'Set OPENROUTER_API_KEY on Render to translate this site.'});
+  const keys=Object.keys(SITE_BG).filter(k=>k.length<=100).slice(0,160);
+  const r=await axios.post('https://openrouter.ai/api/v1/chat/completions',{model:process.env.OPENROUTER_MODEL||'openrouter/free',messages:[{role:'system',content:'Translate these website UI labels into language '+lang+'. Return only one JSON object mapping every original English phrase exactly to its translation. Preserve placeholders and avoid adding commentary.'},{role:'user',content:JSON.stringify(keys)}],temperature:0.15},{headers:{Authorization:'Bearer '+key},timeout:70000});
+  const translated=extractJson(r.data?.choices?.[0]?.message?.content);
+  if(!translated||typeof translated!=='object'||Array.isArray(translated))return res.status(502).json({message:'Translation response was incomplete. Try again.'});
+  const dictionary={}; for(const k of keys)if(typeof translated[k]==='string' && translated[k].length<=240) dictionary[k]=translated[k];
+  if(Object.keys(dictionary).length<20)return res.status(502).json({message:'Translation response did not contain enough phrases.'});
+  u.siteTranslations=u.siteTranslations||{};u.siteTranslations[lang]=dictionary;u.markModified('siteTranslations');u.siteLang=lang;await u.save();
+  res.json({ok:true,language:lang,translated:Object.keys(dictionary).length});
+ }catch(e){console.error('Site translation error:',e.response?.status||e.message);res.status(502).json({message:e.response?.status===402?'AI provider has no credits. Select a free model or add credits.':'Translation failed. Check OPENROUTER_MODEL and server logs.'});}
+});
+
 // ---------- Several websites under one account + AI site generator ----------
 const aiSiteLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 12, message: { message: 'Too many generations. Try again later.' } });
 const familyOf = async (userId) => {
@@ -4328,7 +4378,7 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     const lang = (typeof req.body.lang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(req.body.lang)) ? req.body.lang : 'en';
     const languageName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(lang) || lang; } catch (e) { return lang; } })();
     if (!name || desc.length < 10) return res.status(400).json({ message: 'Give a name and describe the business (at least a sentence).' });
-    const sys = `You create small-business websites. Reply with ONE JSON object only, no markdown. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), theme (one of ${Object.keys(THEMES).join(', ')}), layout (one of ${Object.keys(LAYOUTS).join(', ')}), font (one of ${Object.keys(FONTS).join(', ')}), offers (array of 3-6 objects {title, price (number, 0 if unknown), description}), faq (array of 3 objects {question, answer}). Write all user-facing texts in ${languageName} (language code ${lang}). Use only facts the owner gave; do not invent addresses, phone numbers or reviews. Prices only if the owner mentioned them, otherwise 0.`;
+    const sys = `You create small-business websites. Reply with ONE JSON object only, no markdown. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), theme (one of ${Object.keys(THEMES).join(', ')}), layout (one of ${Object.keys(LAYOUTS).join(', ')}), font (one of ${Object.keys(FONTS).join(', ')}), offers (array of 3-6 objects {title, price (number, 0 if unknown), description}), faq (array of 3 objects {question, answer}), page (object with order array containing hero/about/offers/contact in an original order, headline, subheading, eyebrow, cta, aboutTitle, offersTitle, contactTitle, contactText, contactAction, messageAction, profileAction, align left/center, columns 2/3/4), translations (object mapping standard English UI words like Home, Offers, Contact, Message, Messages, Request, Book now, Send, Search, All offers, Seller profile, Reviews, Share, Back, Price, Saved, Favorites, About, Hours, Email, Phone, Call to natural translations in the chosen language), visual (object with accent, background, panel, text colors as 6-digit hex strings, font from inter/poppins/montserrat/raleway/space/playfair/dmserif/lora/oswald/anton/bebas/archivo/orbitron/righteous/pacifico/lobster/dancing/caveat/marker/jetbrains/comfortaa and radius number between 0 and 35). Create a unique visual identity derived from the business description rather than copying a preset color scheme. Write all user-facing texts in ${languageName} (language code ${lang}). Use only facts the owner gave; do not invent addresses, phone numbers or reviews. Prices only if the owner mentioned them, otherwise 0.`;
     const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
       model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
       messages: [{ role: 'system', content: sys }, { role: 'user', content: `Business name: ${name}\nDescription: ${desc}` }],
@@ -4347,6 +4397,18 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
       notifyEmail: root.notifyEmail || root.email,
       faqItems: (Array.isArray(j.faq) ? j.faq : []).slice(0, 6).map(f => ({ question: cleanStr(f && f.question, 160), answer: cleanStr(f && f.answer, 500) })).filter(f => f.question && f.answer)
     });
+    // AI-specific design tokens, independently generated and validated by the Studio design engine.
+    // The core storefront routes / offers / booking remain shared for functional compatibility.
+    const vis = j.visual && typeof j.visual === 'object' ? j.visual : {};
+    sub.design = sanitizeDesign({ v: {
+      accent: vis.accent, bg: vis.background, panel: vis.panel, text: vis.text,
+      font: vis.font, headFont: vis.font, radius: vis.radius
+    }});
+    sub.designDraft = sub.design;
+    const pg = j.page && typeof j.page === 'object' ? j.page : {};
+    const aiText = (v,n=250)=>cleanStr(v,n);
+    sub.aiPage = {order:Array.isArray(pg.order)?pg.order.filter(x=>['hero','about','offers','contact'].includes(x)).slice(0,4):undefined, headline:aiText(pg.headline,150),subheading:aiText(pg.subheading,360),eyebrow:aiText(pg.eyebrow,100),cta:aiText(pg.cta,60),aboutTitle:aiText(pg.aboutTitle,140),offersTitle:aiText(pg.offersTitle,140),contactTitle:aiText(pg.contactTitle,140),contactText:aiText(pg.contactText,300),contactAction:aiText(pg.contactAction,60),messageAction:aiText(pg.messageAction,60),profileAction:aiText(pg.profileAction,60),align:pg.align==='center'?'center':'left',columns:[2,3,4].includes(Number(pg.columns))?Number(pg.columns):3};
+    if (j.translations && typeof j.translations === 'object' && !Array.isArray(j.translations)) sub.siteTranslations = {[lang]:Object.fromEntries(Object.entries(j.translations).filter(([k,v])=>typeof k==='string' && k.length<=100 && typeof v==='string').slice(0,110).map(([k,v])=>[k,cleanStr(v,140)]))};
     sub.slug = await uniqueSlug(req.body.slug || name, sub._id);
     await sub.save();
     const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
