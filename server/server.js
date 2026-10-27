@@ -4360,8 +4360,18 @@ app.delete('/api/my-sites/:id', authenticateToken, async (req, res) => {
     const root = await familyOf(req.user.id);
     const target = await User.findById(req.params.id);
     if (!root || !target || !target.ownerId || String(target.ownerId) !== String(root._id)) return res.status(403).json({ message: 'Only extra sites can be deleted.' });
-    await Offer.deleteMany({ userId: target._id });
-    await User.deleteOne({ _id: target._id });
+    // Clean up data belonging exclusively to this additional website.
+    const siteId = target._id;
+    await Promise.all([
+      Offer.deleteMany({ userId: siteId }), Order.deleteMany({ userId: siteId }),
+      Review.deleteMany({ sellerId: siteId }), Image.deleteMany({ userId: siteId }),
+      Conversation.deleteMany({ userId: siteId }), Appointment.deleteMany({ sellerId: siteId }),
+      ShopSetting.deleteMany({ sellerId: siteId }), Note.deleteMany({ sellerId: siteId }),
+      Reminder.deleteMany({ sellerId: siteId }), GONotification.deleteMany({ sellerId: siteId }),
+      GOVersion.deleteMany({ sellerId: siteId }), GOCalendar.deleteMany({ sellerId: siteId }),
+      GOSlot.deleteMany({ sellerId: siteId }), GOCustomer.deleteMany({ sellerId: siteId })
+    ]);
+    await User.deleteOne({ _id: siteId, ownerId: root._id });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ message: 'Could not delete the site.' }); }
 });
