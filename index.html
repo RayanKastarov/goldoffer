@@ -695,6 +695,7 @@
 .go-site-actions{display:flex;align-items:center;gap:10px;white-space:nowrap}
 .go-site-action-primary{border:0;border-radius:8px;background:#dedcfb;color:#16152c;padding:8px 11px;font-weight:700;font-size:12px;cursor:pointer;text-decoration:none}
 .go-simple-link{color:#b9c6de;text-underline-offset:3px;font-size:12px}
+.go-site-delete{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-width:32px;border:1px solid #5f3442;border-radius:8px;background:#2b1921;color:#ffb5bf;cursor:pointer;transition:background .15s,border-color .15s}.go-site-delete:hover{background:#512431;border-color:#e86a80}.go-site-delete:focus-visible{outline:2px solid #ffb5bf;outline-offset:2px}.go-site-delete:disabled{opacity:.3;cursor:not-allowed;background:transparent;border-color:#444d5d}
 @media(max-width:650px){.go-build-simple{justify-content:flex-start}.go-sites-heading{align-items:flex-start;flex-direction:column;gap:3px}.go-ai-mini{padding:9px 12px}}
 
 /* Simplified editor: advanced settings stay accessible without crowding the initial view. */
@@ -1097,11 +1098,11 @@
   <div data-nav="dark" style="min-height:100vh">
     <div class="page-head"><h1>Build your website.</h1><p>Answer a few questions, then design every detail in the Studio.</p></div>
     <div class="go-build-simple">
-      <a href="/ai-sites" data-link class="go-ai-mini">✦ Създай си собствен сайт с AI</a>
+      <a href="/ai-sites" data-link class="go-ai-mini">✦ Create your own website with AI</a>
     </div>
     <section class="go-sites-section" aria-label="Your websites">
-      <div class="go-sites-heading"><h2>Моите сайтове</h2><span>Избери кой сайт да редактираш</span></div>
-      <div class="go-sites-table-wrap"><table class="go-sites-table"><thead><tr><th>Сайт</th><th>Създаден с</th><th>Състояние</th><th>Действия</th></tr></thead><tbody id="buildSitesRows"><tr><td colspan="4">Зареждане…</td></tr></tbody></table></div>
+      <div class="go-sites-heading"><h2>My websites</h2><span>Choose the website you want to edit</span></div>
+      <div class="go-sites-table-wrap"><table class="go-sites-table"><thead><tr><th>Website</th><th>Created with</th><th>Status</th><th>Actions</th></tr></thead><tbody id="buildSitesRows"><tr><td colspan="4">Loading...</td></tr></tbody></table></div>
     </section>
     <div class="section" style="padding-top:10px">
       <div class="layout">
@@ -1376,7 +1377,7 @@
 <!-- =================== AI SITES =================== -->
 <main class="view" id="v-aisites"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">AI WEBSITE GENERATOR</span><h1>My websites</h1><p>Describe a business and AI builds a new website with its own link.</p></div></div>
   <div class="go-desktop-tools"><a href="/build" data-link>← Build your website</a></div>
-  <div class="panel go-ai-create-panel"><h2>Създай си собствен сайт с AI</h2>
+  <div class="panel go-ai-create-panel"><h2>Create your own website with AI</h2>
     <div class="ai-form"><input id="aiName" maxlength="60" placeholder="Website name (e.g. Sunny Barber)"><textarea id="aiDesc" rows="5" maxlength="1500" placeholder="Describe the business: what you do, services, prices, city, style you like..."></textarea>
     <select id="aiLang" onchange="this.dataset.chosen='1'" aria-label="Language for AI generated site"><option value="en">English</option><option value="bg">Bulgarian</option><option value="es">Spanish</option><option value="de">German</option><option value="fr">French</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="tr">Turkish</option><option value="ro">Romanian</option><option value="el">Greek</option><option value="ar">Arabic</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="hi">Hindi</option><option value="uk">Ukrainian</option><option value="pl">Polish</option><option value="nl">Dutch</option><option value="sv">Swedish</option><option value="sq">Albanian</option><option value="ab">Abkhazian</option><option value="aa">Afar</option><option value="af">Afrikaans</option><option value="ak">Akan</option><option value="am">Amharic</option><option value="an">Aragonese</option><option value="hy">Armenian</option><option value="as">Assamese</option><option value="av">Avaric</option><option value="ae">Avestan</option><option value="ay">Aymara</option><option value="az">Azerbaijani</option><option value="bm">Bambara</option><option value="bn">Bangla</option><option value="ba">Bashkir</option><option value="eu">Basque</option><option value="be">Belarusian</option><option value="bi">Bislama</option><option value="bs">Bosnian</option><option value="br">Breton</option><option value="my">Burmese</option><option value="ca">Catalan</option><option value="ch">Chamorro</option><option value="ce">Chechen</option><option value="zh-Hans">Chinese (Simplified)</option><option value="zh-Hant">Chinese (Traditional)</option><option value="cu">Church Slavic</option><option value="cv">Chuvash</option><option value="kw">Cornish</option><option value="co">Corsican</option><option value="cr">Cree</option><option value="hr">Croatian</option><option value="cs">Czech</option><option value="da">Danish</option><option value="dv">Divehi</option><option value="dz">Dzongkha</option><option value="en-GB">English (United Kingdom)</option><option value="en-US">English (United States)</option><option value="eo">Esperanto</option><option value="et">Estonian</option><option value="ee">Ewe</option><option value="fo">Faroese</option><option value="fj">Fijian</option><option value="fi">Finnish</option><option value="fr-CA">French (Canada)</option><option value="ff">Fula</option><option value="gl">Galician</option><option value="lg">Ganda</option><option value="ka">Georgian</option><option value="gn">Guarani</option><option value="gu">Gujarati</option><option value="ht">Haitian Creole</option><option value="ha">Hausa</option><option value="he">Hebrew</option><option value="hz">Herero</option><option value="ho">Hiri Motu</option><option value="hu">Hungarian</option><option value="is">Icelandic</option><option value="io">Ido</option><option value="ig">Igbo</option><option value="id">Indonesian</option><option value="ia">Interlingua</option><option value="ie">Interlingue</option><option value="iu">Inuktitut</option><option value="ik">Inupiaq</option><option value="ga">Irish</option><option value="jv">Javanese</option><option value="kl">Kalaallisut</option><option value="kn">Kannada</option><option value="kr">Kanuri</option><option value="ks">Kashmiri</option><option value="kk">Kazakh</option><option value="km">Khmer</option><option value="ki">Kikuyu</option><option value="rw">Kinyarwanda</option><option value="kv">Komi</option><option value="kg">Kongo</option><option value="kj">Kuanyama</option><option value="ku">Kurdish</option><option value="ky">Kyrgyz</option><option value="lo">Lao</option><option value="la">Latin</option><option value="lv">Latvian</option><option value="li">Limburgish</option><option value="ln">Lingala</option><option value="lt">Lithuanian</option><option value="lu">Luba-Katanga</option><option value="lb">Luxembourgish</option><option value="mk">Macedonian</option><option value="mg">Malagasy</option><option value="ms">Malay</option><option value="ml">Malayalam</option><option value="mt">Maltese</option><option value="gv">Manx</option><option value="mr">Marathi</option><option value="mh">Marshallese</option><option value="mn">Mongolian</option><option value="mi">Māori</option><option value="na">Nauru</option><option value="nv">Navajo</option><option value="ng">Ndonga</option><option value="ne">Nepali</option><option value="nd">North Ndebele</option><option value="se">Northern Sami</option><option value="no">Norwegian</option><option value="nb">Norwegian Bokmål</option><option value="nn">Norwegian Nynorsk</option><option value="ny">Nyanja</option><option value="oc">Occitan</option><option value="or">Odia</option><option value="oj">Ojibwa</option><option value="om">Oromo</option><option value="os">Ossetic</option><option value="pi">Pali</option><option value="ps">Pashto</option><option value="fa">Persian</option><option value="pt-BR">Portuguese (Brazil)</option><option value="pt-PT">Portuguese (Portugal)</option><option value="pa">Punjabi</option><option value="qu">Quechua</option><option value="rm">Romansh</option><option value="rn">Rundi</option><option value="sm">Samoan</option><option value="sg">Sango</option><option value="sa">Sanskrit</option><option value="sc">Sardinian</option><option value="gd">Scottish Gaelic</option><option value="sr">Serbian</option><option value="sr-Latn">Serbian (Latin)</option><option value="sh">Serbo-Croatian</option><option value="sn">Shona</option><option value="ii">Sichuan Yi</option><option value="sd">Sindhi</option><option value="si">Sinhala</option><option value="sk">Slovak</option><option value="sl">Slovenian</option><option value="so">Somali</option><option value="nr">South Ndebele</option><option value="st">Southern Sotho</option><option value="es-MX">Spanish (Mexico)</option><option value="su">Sundanese</option><option value="sw">Swahili</option><option value="ss">Swati</option><option value="tl">Tagalog</option><option value="ty">Tahitian</option><option value="tg">Tajik</option><option value="ta">Tamil</option><option value="tt">Tatar</option><option value="te">Telugu</option><option value="th">Thai</option><option value="bo">Tibetan</option><option value="ti">Tigrinya</option><option value="to">Tongan</option><option value="ts">Tsonga</option><option value="tn">Tswana</option><option value="tk">Turkmen</option><option value="tw">Twi</option><option value="ur">Urdu</option><option value="ug">Uyghur</option><option value="uz">Uzbek</option><option value="ve">Venda</option><option value="vi">Vietnamese</option><option value="vo">Volapük</option><option value="wa">Walloon</option><option value="cy">Welsh</option><option value="fy">Western Frisian</option><option value="wo">Wolof</option><option value="xh">Xhosa</option><option value="yi">Yiddish</option><option value="yo">Yoruba</option><option value="za">Zhuang</option><option value="zu">Zulu</option></select>
     <button class="btn" id="aiGo" onclick="generateSite()">Generate website</button><div id="aiMsg" aria-live="polite" style="opacity:.8"></div></div></div>
@@ -1565,18 +1566,35 @@ async function loadSites() {
 }
 async function loadBuildSites() {
   const tbody = $('buildSitesRows'); if (!tbody) return;
-  if (!S.token || !S.user) { tbody.innerHTML = '<tr><td colspan="4">Влез в акаунта, за да видиш сайтовете си.</td></tr>'; return; }
+  if (!S.token || !S.user) { tbody.innerHTML = '<tr><td colspan="4">Log in to see your websites.</td></tr>'; return; }
   try {
     const d = await api('/api/my-sites'); S.sitesInfo = d;
     tbody.innerHTML = d.sites.map(x => {
       const current = String(x.id) === String(d.currentId);
       const name = esc(x.siteName || 'Untitled');
-      const link = x.siteUrl ? '<a href="'+esc(x.siteUrl)+'" target="_blank" rel="noopener" class="go-simple-link">Преглед</a>' : '';
-      return '<tr'+(current?' class="go-site-selected"':'')+'><td><strong>'+name+'</strong><small>'+esc(x.slug||'')+'</small></td><td><span class="go-source-tag '+(x.aiGenerated?'ai':'template')+'">'+(x.aiGenerated?'✦ AI':'▦ Шаблон')+'</span></td><td>'+(current?'● Избран':(x.published?'Публикуван':'Чернова'))+'</td><td><div class="go-site-actions">'+(current?'<a href="/studio" data-link class="go-site-action-primary">Редактирай</a>':'<button type="button" class="go-site-action-primary" onclick="switchBuildSite(&quot;'+x.id+'&quot;)">Избери</button>')+link+'</div></td></tr>';
-    }).join('') || '<tr><td colspan="4">Все още нямаш сайтове.</td></tr>';
+      const link = x.siteUrl ? '<a href="'+esc(x.siteUrl)+'" target="_blank" rel="noopener" class="go-simple-link">Preview</a>' : '';
+      return '<tr'+(current?' class="go-site-selected"':'')+'><td><strong>'+name+'</strong><small>'+esc(x.slug||'')+'</small></td><td><span class="go-source-tag '+(x.aiGenerated?'ai':'template')+'">'+(x.aiGenerated?'✦ AI':'▦ Template')+'</span></td><td>'+(current?'● Selected':(x.published?'Published':'Draft'))+'</td><td><div class="go-site-actions">'+(current?'<a href="/studio" data-link class="go-site-action-primary">Edit</a>':'<button type="button" class="go-site-action-primary" onclick="switchBuildSite(&quot;'+x.id+'&quot;)">Select</button>')+link+(x.isMain?'<button class="go-site-delete" type="button" disabled title="The primary website cannot be deleted" aria-label="Primary website cannot be deleted">🗑</button>':'<button class="go-site-delete" type="button" title="Delete website" aria-label="Delete '+name+'" onclick="deleteBuildSite(&quot;'+x.id+'&quot;)">🗑</button>')+'</div></td></tr>';
+    }).join('') || '<tr><td colspan="4">You have no websites yet.</td></tr>';
   } catch(e) { tbody.innerHTML = '<tr><td colspan="4">'+esc(e.message || 'Could not load websites')+'</td></tr>'; }
 }
 async function switchBuildSite(id) { await switchSite(id); await loadBuildSites(); }
+async function deleteBuildSite(id) {
+  const info = S.sitesInfo;
+  const item = info && info.sites && info.sites.find(x => String(x.id) === String(id));
+  if (!item || item.isMain) { notify('The primary website cannot be deleted.', 'Error'); return; }
+  if (!confirm('Permanently delete "' + (item.siteName || 'this website') + '"?\n\nIts offers, orders, messages and associated data will be removed. This cannot be undone.')) return;
+  try {
+    // Switch away before deleting the active sub-site, so its token cannot remain selected.
+    if (String(info.currentId) === String(id)) {
+      await switchSite(info.rootId);
+    }
+    await api('/api/my-sites/' + encodeURIComponent(id), { method: 'DELETE' });
+    notify('Website deleted.');
+    await loadBuildSites();
+    await loadSites();
+  } catch (e) { notify(e.message || 'Could not delete the website.', 'Error'); await loadBuildSites(); }
+}
+
 async function generateSite() {
   const name = $('aiName').value.trim(), desc = $('aiDesc').value.trim(), btn = $('aiGo');
   if (!name || desc.length < 10) return notify('Add a name and describe the business.');
@@ -1595,7 +1613,7 @@ async function switchSite(id) {
     S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user; renderAuth(); notify('Switched to ' + (d.user.siteName || 'site')); loadSites(); } catch (e) { notify(e.message, 'Error'); }
 }
 async function backToMain() { try { const root = S.sitesInfo && S.sitesInfo.rootId; const d = await api('/api/my-sites'); await switchSite(d.rootId); navigate('/ai-sites'); } catch (e) { notify(e.message, 'Error'); } }
-async function deleteSite(id) { if (!confirm('Delete this website and its offers? This cannot be undone.')) return; try { await api('/api/my-sites/' + id, { method: 'DELETE' }); loadSites(); } catch (e) { notify(e.message, 'Error'); } }
+async function deleteSite(id) { const item = S.sitesInfo && S.sitesInfo.sites.find(x => x.id === id); await deleteBuildSite(id, item && item.siteName); }
 </script>
 <script>
   const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
@@ -2057,7 +2075,7 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
     document.body.classList.toggle('logged', !!S.user);
     if (S.user) {
       const nm = [S.user.firstName, S.user.lastName].filter(Boolean).join(' ');
-      a.innerHTML = (S.user.ownerId ? '<button class="btn-ghost" onclick="backToMain()">← Main site</button>' : '') + '<span class="who hide-m" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span>' + bellHtml() + '<a class="btn-ghost hide-m" href="/messages" data-link>Messages<span class="badge-msg who-badge" style="display:none"></span></a><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><a class="btn-ghost go-nav-settings" href="/settings" data-link>⚙ Settings</a><button class="btn-ghost" onclick="logout()">Log out</button>';
+      a.innerHTML = '<span class="who hide-m" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span>' + bellHtml() + '<a class="btn-ghost hide-m" href="/messages" data-link>Messages<span class="badge-msg who-badge" style="display:none"></span></a><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><a class="btn-ghost go-nav-settings" href="/settings" data-link>⚙ Settings</a><button class="btn-ghost" onclick="logout()">Log out</button>';
       setTimeout(() => { if (S.user) { loadInbox(); startBell(); } }, 400);
     } else {
       a.innerHTML = '<button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button><button class="btn" onclick="openAuth(\'signup\')">Get started</button>';
