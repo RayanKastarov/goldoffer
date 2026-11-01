@@ -286,11 +286,11 @@
     .look-demo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .look-demo i { height: 38px; border-radius: 10px; }
 
-    .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 920px; }
-    .plan { border: 1px solid var(--lline); border-radius: 22px; padding: 38px; background: #fff; display: flex; flex-direction: column; }
+    .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: 1160px; }
+    .plan { border: 1px solid var(--lline); border-radius: 22px; padding: 30px; background: #fff; display: flex; flex-direction: column; }
     .plan.pro { background: #0b0e14; color: #fff; border-color: #0b0e14; }
     .plan h3 { font-size: 1.4rem; margin-bottom: 18px; font-weight: 500; }
-    .plan .price { font-family: var(--display); font-size: 3.6rem; letter-spacing: -.04em; line-height: 1; font-weight: 600; }
+    .plan .price { font-family: var(--display); font-size: clamp(2.4rem, 3.6vw, 3.4rem); letter-spacing: -.04em; line-height: 1; font-weight: 600; }
     .plan .price small { font-family: 'Inter', sans-serif; font-size: 1rem; opacity: .6; letter-spacing: 0; font-weight: 400; }
     .plan .sub2 { opacity: .6; font-size: .92rem; margin: 10px 0 26px; min-height: 1.4em; }
     .plan ul { list-style: none; margin-bottom: 30px; flex: 1; }
@@ -1014,11 +1014,11 @@
         <div class="plan rv"><h3>Free</h3><div class="price">EUR 0</div><div class="sub2">No card needed</div>
           <ul><li>1 website on an onrender.com link</li><li>Up to 3 offers</li><li>Request form and dashboard</li><li>No Pro tools, no AI, no custom domain</li><li>"Built with GoldOffer Studio" badge</li></ul>
           <button class="btn btn-dark btn-block" style="margin-top:0" type="button" onclick="cta()">Start building</button></div>
-        <div class="plan pro rv" style="--d:100ms"><h3>Pro</h3><div class="price">EUR 20 <small>/ month</small></div><div class="sub2">Billed monthly, cancel any time</div>
-          <ul><li>GoldOffer Pro tools: Automations, CRM, Calendar, Intelligence, Commerce, AI Receptionist</li><li>Up to 500 offers</li><li>Up to 3 websites</li><li>3 AI website generations / month</li><li>onrender.com link, with badge</li></ul>
+        <div class="plan pro rv" style="--d:100ms"><h3>Pro</h3><div class="price">EUR 19.99 <small>/ month</small></div><div class="sub2">For growing businesses</div>
+          <ul><li>CRM, Automations, Calendar & AI</li><li>Up to 500 offers</li><li>Up to 3 websites</li><li>3 AI website generations / month</li><li>onrender.com link, with badge</li></ul>
           <button class="btn btn-block" style="margin-top:0" type="button" onclick="proCta('pro')">Get Pro</button></div>
-        <div class="plan rv" style="--d:200ms"><h3>Agency</h3><div class="price">EUR 99 <small>/ month</small></div><div class="sub2">For agencies and multi-brand owners</div>
-          <ul><li>Up to 2000 offers</li><li>Up to 20 websites in one profile</li><li>50 AI generations / month</li><li>Real custom domains</li><li>White-label: no GoldOffer badge</li><li>Create sites from templates</li></ul>
+        <div class="plan rv" style="--d:200ms"><h3>Agency</h3><div class="price">EUR 99 <small>/ month</small></div><div class="sub2">For teams and agencies</div>
+          <ul><li>Everything in Pro</li><li>Up to 2000 offers</li><li>Up to 20 websites in one profile</li><li>50 AI generations / month</li><li>Real custom domains</li><li>White-label: no GoldOffer badge</li><li>Create sites from templates</li></ul>
           <button class="btn btn-dark btn-block" style="margin-top:0" type="button" onclick="proCta('agency')">Get Agency</button></div>
       </div>
       <p class="price-note">Free and Pro sites live on an onrender.com link. Real custom domains (for example yourbusiness.com) and white-label are part of Agency.</p>
@@ -1027,7 +1027,7 @@
         <details><summary>Do I need a card to start?</summary><p>No. The free plan starts the moment you register, with no card and no trial clock. You can build, publish and add up to 3 offers for as long as you like.</p></details>
         <details><summary>What happens when I pass 3 offers?</summary><p>The builder asks you to upgrade. Pro allows 500 offers, Agency 2000. Your existing site and offers stay exactly as they are.</p></details>
         <details><summary>Can customers open my site without an account?</summary><p>Yes. Your site has a public link that anyone can open on a phone or a computer.</p></details>
-        <details><summary>Can I use my own domain?</summary><p>Not yet. Your site lives on this platform's domain. Connecting your own domain can be added later.</p></details>
+        <details><summary>Can I use my own domain?</summary><p>Yes, with Agency. Free and Pro use a GoldOffer-hosted link.</p></details>
       </div>
     </div>
   </div>
@@ -1164,8 +1164,8 @@
               <label>Change the address name</label>
               <div class="row" style="flex-wrap:nowrap"><input type="text" id="slugInput" placeholder="my-business"><button class="btn" onclick="changeSlug()">Save</button></div>
             </div>
-            <button class="btn btn-block" onclick="payNow('pro')">Pro: EUR 20 / month</button>
-            <button class="btn-ghost btn-block" style="margin-top:8px" onclick="payNow('agency')">Agency: EUR 99 / month, 20 sites, custom domains, white-label</button>
+            <button class="btn btn-block" onclick="payNow('pro')">Pro: EUR 19.99 / month · More tools</button>
+            <button class="btn-ghost btn-block" style="margin-top:8px" onclick="payNow('agency')">Agency: EUR 99 / month · 20 sites</button>
             <p class="note" id="planNote">Free and Pro sites are hosted on an onrender.com link. Custom domains are an Agency feature.</p>
           </div>
         </div>
@@ -1286,7 +1286,7 @@
         <h2>2. Account</h2>
         <p>You provide correct details and keep your password safe. You are responsible for everything that happens through your account.</p>
         <h2>3. Free and paid plan</h2>
-        <p>The free plan includes a public website and up to 3 offers, with no card and no trial period. The Pro plan costs EUR 20 per month and the Agency plan EUR 99 per month; both allow more offers and websites. You can cancel at any time. Payment is handled by Stripe.</p>
+        <p>The free plan includes a public website and up to 3 offers, with no card and no trial period. The Pro plan costs EUR 19.99 per month and the Agency plan EUR 99 per month; both allow more offers and websites. You can cancel at any time. Payment is handled by Stripe.</p>
         <h2>4. Your content</h2>
         <p>You are responsible for the text, prices and photos you upload. Do not upload unlawful, misleading or other people's copyrighted content. Offers and prices are yours and we do not check them.</p>
         <h2>5. What is not allowed</h2>
@@ -1685,7 +1685,7 @@ function proOpen(t) {
 }
 async function gpLoad() {
   const m = gq('gpMain'); const tab = GP.tab;
-  if (S.user && S.user.planLimits && S.user.planLimits.proModules === false) { m.innerHTML = '<div class="empty" style="padding:80px 20px"><div style="font-size:2rem">\uD83D\uDD12</div><h2 style="color:#fff;margin:10px 0">GoldOffer Pro tools</h2><p>Automations, CRM, Smart Calendar, Intelligence, Commerce and the AI Receptionist are part of the Pro and Agency plans.</p><p><button class="btn" data-a="upgrade" data-v="pro" style="margin:6px">Get Pro (EUR 20)</button><button class="btn" data-a="upgrade" data-v="agency" style="margin:6px">Get Agency (EUR 99)</button></p></div>'; return; }
+  if (S.user && S.user.planLimits && S.user.planLimits.proModules === false) { m.innerHTML = '<div class="empty" style="padding:80px 20px"><div style="font-size:2rem">\uD83D\uDD12</div><h2 style="color:#fff;margin:10px 0">GoldOffer Pro tools</h2><p>Automations, CRM, Smart Calendar, Intelligence, Commerce and the AI Receptionist are part of the Pro and Agency plans.</p><p><button class="btn" data-a="upgrade" data-v="pro" style="margin:6px">Get Pro (EUR 19.99)</button><button class="btn" data-a="upgrade" data-v="agency" style="margin:6px">Get Agency (EUR 99)</button></p></div>'; return; }
   try {
     if (tab === 'auto') GP.d = await gj('GET', '/api/pro/automations');
     else if (tab === 'crm') GP.d = await gj('GET', '/api/pro/crm');

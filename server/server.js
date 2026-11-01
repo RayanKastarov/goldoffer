@@ -65,7 +65,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
       if (own) {
         const live = ['active', 'trialing', 'past_due'].includes(sub.status);
         const priceId = sub.items && sub.items.data && sub.items.data[0] && sub.items.data[0].price && sub.items.data[0].price.id;
-        const upd = live ? { subscriptionStatus: 'active', plan: planFromPrice(priceId) } : { subscriptionStatus: 'canceled', plan: 'free' };
+        const upd = live ? { subscriptionStatus: 'active', plan: (sub.metadata && PLANS[sub.metadata.plan] ? sub.metadata.plan : planFromPrice(priceId)) } : { subscriptionStatus: 'canceled', plan: 'free' };
         await User.updateOne({ _id: own._id }, upd);
         await User.updateMany({ ownerId: own._id }, upd);
       }
@@ -527,7 +527,7 @@ async function sendMail({ to, subject, html, text }) {
 const FREE_OFFER_LIMIT = 3;
 const PLANS = {
   free:   { name: 'Free',   price: 0,  offers: 3,    sites: 1,  aiGen: 0,  aiGenPeriod: 'month', proModules: false, whiteLabel: false, customDomain: false, templateSites: false },
-  pro:    { name: 'Pro',    price: 20, offers: 500,  sites: 3,  aiGen: 3,  aiGenPeriod: 'month', proModules: true, whiteLabel: false, customDomain: false, templateSites: false },
+  pro:    { name: 'Pro',    price: 19.99, offers: 500,  sites: 3,  aiGen: 3,  aiGenPeriod: 'month', proModules: true, whiteLabel: false, customDomain: false, templateSites: false },
   agency: { name: 'Agency', price: 99, offers: 2000, sites: 20, aiGen: 50, aiGenPeriod: 'month', proModules: true, whiteLabel: true,  customDomain: true,  templateSites: true }
 };
 // Existing paying users without a plan field are treated as Pro.
@@ -4880,8 +4880,12 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
     let user = await User.findById(req.user.id);
     if (user && user.ownerId) user = await User.findById(user.ownerId);
     const plan = (req.body && req.body.plan === 'agency') ? 'agency' : 'pro';
-    const priceId = plan === 'agency' ? process.env.STRIPE_PRICE_AGENCY : process.env.STRIPE_PRICE_ID;
-    if (!priceId) return res.status(503).json({ message: 'This plan is not available for purchase yet.' });
+    if (!user) return res.status(404).json({ message: 'Account not found.' });
+    if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ message: 'Payments are not configured. Add STRIPE_SECRET_KEY in Render environment settings.' });
+    // Stripe creates the monthly price inside Checkout. No STRIPE_PRICE_ID needed.
+    // This also guarantees the charged amount matches the displayed plan price.
+    const unitAmount = plan === 'agency' ? 9900 : 1999;
+    const planName = plan === 'agency' ? 'GoldOffer Agency' : 'GoldOffer Pro';
     if (user.subscriptionStatus === 'active' && user.stripeCustomerId) {
       const portal = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: `${PUBLIC_BASE}/dashboard` });
       return res.json({ url: portal.url, portal: true });
@@ -4889,7 +4893,7 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       metadata: { plan },
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price_data: { currency: 'eur', unit_amount: unitAmount, recurring: { interval: 'month' }, product_data: { name: planName } }, quantity: 1 }],
       allow_promotion_codes: true,
       client_reference_id: String(user._id),
       customer_email: user.email,
