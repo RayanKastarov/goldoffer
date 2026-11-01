@@ -4653,7 +4653,7 @@ app.get('/api/pro/intelligence', authenticateToken, async (req, res) => {
 });
 // --- Commerce
 app.get('/api/pro/commerce', authenticateToken, async (req, res) => {
-  const [offers, coupons] = await Promise.all([Offer.find({ userId: req.user.id }).select('title price salePrice variants').sort({ order: 1 }).lean(), GOCoupon.find({ sellerId: req.user.id }).sort({ _id: -1 }).lean()]);
+  const [offers, coupons] = await Promise.all([Offer.find({ userId: req.user.id }).select('title price salePrice variants imageUrl images').sort({ order: 1 }).lean(), GOCoupon.find({ sellerId: req.user.id }).sort({ _id: -1 }).lean()]);
   res.set('Cache-Control', 'no-store').json({ offers, coupons });
 });
 app.put('/api/pro/offers/:id/commerce', authenticateToken, async (req, res) => {
