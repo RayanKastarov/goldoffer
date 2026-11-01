@@ -128,8 +128,8 @@ const UserSchema = new mongoose.Schema({
   siteLang: { type: String, maxlength: 24, default: 'en' }, // language of the public website (the link)
   ownerId: { type: mongoose.Schema.Types.ObjectId, index: true }, // set for extra websites created under a main account
   aiGenerated: { type: Boolean, default: false },
-  aiPage: { type: mongoose.Schema.Types.Mixed, default: null },
-  siteTranslations: { type: mongoose.Schema.Types.Mixed, default: {} },
+  receptionist: { type: mongoose.Schema.Types.Mixed },
+  aiPage: { type: mongoose.Schema.Types.Mixed }, // fully AI-written page: { html, css, palette }
   resetTokenHash: String,
   resetExpires: Date,
   emailVerified: { type: Boolean, default: true }, // old accounts count as verified; new sign-ups are saved with false
@@ -148,6 +148,8 @@ const OfferSchema = new mongoose.Schema({
   imageUrl: String,                      // cover photo (always the first gallery image)
   images: { type: [String], default: [] }, // gallery: links to /api/image/<id> (the bytes live in the Image collection)
   longDescription: String,
+  salePrice: { type: Number, default: 0 },
+  variants: { type: [{ name: String, price: Number, stock: Number, _id: false }], default: [] },
   order: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
@@ -160,7 +162,7 @@ const OrderSchema = new mongoose.Schema({
   customerContact: String,
   contacts: [{ type: { type: String }, value: String, _id: false }],
   note: String,
-  amount: Number,
+  amount: Number, variant: String, coupon: String, discount: Number,
   status: { type: String, default: 'Pending' }, // Pending, Accepted, Processing, Completed, Cancelled
   trackToken: { type: String, index: true }, history: { type: [{ status: String, at: Date, by: String, _id: false }], default: [] }, stockApplied: { type: Boolean, default: false }, ownerNote: String, anonymized: Boolean,
   createdAt: { type: Date, default: Date.now }
@@ -503,7 +505,7 @@ const publicUser = (u) => ({
   categoryLabel: u.categoryLabel, phone: u.phone, address: u.address, hours: u.hours,
   facebook: u.facebook, instagram: u.instagram, logoUrl: u.logoUrl,
   lang: u.lang || 'bg', notifyEmail: u.notifyEmail, notifyOn: u.notifyOn !== false,
-  siteLang: u.siteLang || 'en', ownerId: u.ownerId || null, aiGenerated: !!u.aiGenerated
+  siteLang: u.siteLang || 'en', ownerId: u.ownerId || null, aiGenerated: !!u.aiGenerated, aiCustom: !!(u.aiPage && u.aiPage.html)
 });
 if (!process.env.JWT_SECRET) console.error('WARNING: JWT_SECRET is not set. Login and registration will fail.');
 const signToken = (u) => jwt.sign({ id: u._id, email: u.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -1744,6 +1746,7 @@ const Appointment = mongoose.model('GOAppointment',new mongoose.Schema({
  customer:{type:String,required:true,maxlength:80}, contact:{type:String,required:true,maxlength:140},
  startsAt:{type:Date,required:true},endsAt:Date,durationMin:Number,anonymized:Boolean,note:{type:String,maxlength:500},
  status:{type:String,enum:['Pending','Confirmed','Cancelled','Completed'],default:'Pending'},
+ staffId:mongoose.Schema.Types.ObjectId,
  createdAt:{type:Date,default:Date.now}
 }));
 Appointment.schema.index({sellerId:1,startsAt:1},{unique:true,partialFilterExpression:{status:{$in:['Pending','Confirmed']}}});
@@ -2418,6 +2421,7 @@ app.patch('/api/orders/:id', authenticateToken, async (req, res) => {
       try { const fresh = await Order.findById(order._id); if (fresh) await applyStock(fresh, req.user.id, fresh.status); } catch (_) {}
       throw saveErr;
     }
+    if (status === 'Completed') void runAutomations(req.user.id, 'order.completed', { customer: order.customerName, contact: order.customerContact, offer: order.offerTitle, offerId: order.offerId, amount: order.amount });
     res.json({ order, trackUrl: order.trackToken ? PUBLIC_BASE + '/track/' + order.trackToken : '' });
   } catch (e) { res.status(500).json({ message: 'Could not change order status' }); }
 });
@@ -2535,6 +2539,7 @@ app.post('/site/:slug/appointment', publicLimiter, rejectOwnerSelfAction, async 
     if (!free.some(s => new Date(s.iso).getTime() === d.getTime())) return res.status(409).send('This time is no longer available. Please go back and pick another slot.');
     const appt = await Appointment.create({ sellerId: owner._id, offerId, startsAt: d, endsAt: new Date(d.getTime() + dur * 60000), durationMin: dur, customer, contact, note: String(b.note || '').slice(0, 500) });
     if (!(await lockRange(owner._id, d.getTime(), dur, cal.bufferMin, appt._id))) { await Appointment.deleteOne({ _id: appt._id }); return res.status(409).send('Someone just booked this time. Please pick another slot.'); }
+    void runAutomations(owner._id, 'booking.created', { customer, contact, time: d.toISOString().slice(0, 16).replace('T', ' ') });
     await pushNote(owner._id, 'booking', String(appt._id), 'New booking', `${customer} · ${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`, '/calendar');
     if (owner.email) void sendMail({ to: owner.notifyEmail || owner.email, subject: 'New booking', text: `${customer} booked ${d.toISOString()}. Contact: ${contact}` });
     res.redirect(303, `/site/${encodeURIComponent(req.params.slug)}?booking=1`);
@@ -3221,14 +3226,14 @@ function pageShell(user, { title, desc, body, cls, page }) {
   const D = user._gd !== undefined ? user._gd : user.design; const studio = !!user._studio;
   const dFonts = GD.fontLinks(D).map(g => `<link href="https://fonts.googleapis.com/css2?family=${g}&display=swap" rel="stylesheet">`).join('');
   return `<!DOCTYPE html>
-<html lang="${esc(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(user.siteLang || '') ? user.siteLang : 'en')}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<html dir="${RTL_LANGS.test(user.siteLang || '') ? 'rtl' : 'ltr'}" lang="${esc(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(user.siteLang || '') ? user.siteLang : 'en')}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#05070b">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-${dFonts}<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style><style id="go-design-css">${GD.css(D, page)}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+${dFonts}${(page === 'home' && user.aiGenerated && user.aiPage && user.aiPage.html) ? `<style>${aiBaseCss(user)}</style><style>${user.aiPage.css || ''}</style>` : `<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style>`}<style id="go-design-css">${GD.css(D, page)}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
 ${GD.freeHtml(D, page)}
@@ -3237,7 +3242,7 @@ ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p
 <script>(function(){var d=document.getElementById('bkDate');if(!d)return;var slug=document.body.getAttribute('data-slug'),box=document.getElementById('bkSlots'),hid=document.getElementById('bkStart'),off=document.getElementById('bkOffer');var t=new Date();d.min=t.toISOString().slice(0,10);function load(){hid.value='';if(!d.value)return;box.textContent='Loading...';fetch('/site/'+encodeURIComponent(slug)+'/slots?date='+d.value+(off&&off.value?'&offerId='+off.value:''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){box.textContent='';if(!j.slots||!j.slots.length){box.textContent='No free times on this day. Try another day.';return}j.slots.forEach(function(s){var b=document.createElement('button');b.type='button';b.textContent=s.time;b.style.cssText='padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font-weight:700;cursor:pointer';b.onclick=function(){hid.value=s.iso;[].forEach.call(box.children,function(x){x.style.background='transparent';x.style.color='inherit'});b.style.background='var(--a)';b.style.color='var(--on)'};box.appendChild(b)})}).catch(function(){box.textContent='Could not load times.'})}d.addEventListener('change',load);if(off)off.addEventListener('change',load);var f=d.form;if(f)f.addEventListener('submit',function(e){if(!hid.value){e.preventDefault();box.textContent='Please pick a time first.'}})})();</script>
 <script>(function(){var form=document.querySelector('#book form');if(form)form.addEventListener('submit',function(){var x=form.querySelector('[name="startsAt"]');if(x){var d=new Date(x.value);if(Number.isFinite(d.getTime())){x.type='hidden';x.value=d.toISOString()}}})})();</script>
 <script>${SITE_JS}</script>
-${!studio && user.siteLang === 'bg' ? `<script>${SITE_I18N_JS}</script>` : !studio && user.siteTranslations && user.siteTranslations[user.siteLang] ? `<script>(${goI18nClient.toString()})(${JSON.stringify(user.siteTranslations[user.siteLang]).replace(/</g,'\\u003c')},[])</script>` : ''}
+${!user._studio && user.receptionist && user.receptionist.enabled ? `<script>${aiWidgetJs(user.slug, user.receptionist.greeting)}</script>` : ''}${!user._studio && user.siteLang === 'bg' ? `<script>${SITE_I18N_JS}</script>` : ''}${!user._studio && user.siteLang && !/^(en|bg)(-|$)/.test(user.siteLang) ? `<script>${SITE_I18N_LOADER}</script>` : ''}
 ${studio ? '' : `<script>(function(){
   var slug = document.body.getAttribute('data-slug');
   var token = null;
@@ -3298,7 +3303,7 @@ function offerCard(user, o, i) {
   const stock=tracked?Number(user._stockMap[String(o._id)]):null;
   return `<a class="card rv" style="--d:${(i % 6) * 70}ms" href="/site/${esc(user.slug)}/offer/${o._id}">
   <div class="pic">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : artPlaceholder(o.title, user.categoryLabel || user.category || user.siteName)}
-    <span class="tag">${eur(o.price)}</span>${stock===0?'<span class="count" style="top:auto;bottom:12px;background:#6b1723">Sold out</span>':''}${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
+    <span class="tag">${eur(o.salePrice > 0 ? o.salePrice : o.price)}</span>${stock===0?'<span class="count" style="top:auto;bottom:12px;background:#6b1723">Sold out</span>':''}${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
   <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p><span class="more">View details</span></div>
 </a>`;
 }
@@ -3337,35 +3342,8 @@ function renderSellerProfile(user, offers) {
   return pageShell(user,{title:`${sellerName(user)} — Seller profile`,desc:`View offers and visitor feedback for ${sellerName(user)}`,body,cls:'sellerprofile',page:'profile'});
 }
 
-// AI-specific page composition, independent from the eight template home layouts.
-// Dynamic content is escaped; never execute AI-supplied HTML, JS or CSS.
-function renderAiHome(user, offers, sent) {
-  const a = user.aiPage || {};
-  const allowed = ['hero','about','offers','contact'];
-  const order = Array.isArray(a.order) ? [...new Set(a.order.filter(x => allowed.includes(x)))].slice(0,4) : allowed;
-  for (const k of allowed) if (!order.includes(k)) order.push(k);
-  const d = user.design && user.design.v || {};
-  const hex = (v, fallback) => /^#[0-9a-f]{6}$/i.test(String(v||'')) ? v : fallback;
-  const accent = hex(d.accent,'#7957ff'), bg = hex(d.bg,'#0c101c'), panel = hex(d.panel,'#191e32'), ink = hex(d.text,'#f4f4fc');
-  const radius = Math.max(0,Math.min(35,parseInt(d.radius,10)||16));
-  const slug = encodeURIComponent(user.slug||'');
-  const text = (v, fallback, n=240) => esc(String(v||fallback).slice(0,n));
-  const oCards = offers.map(o => `<article class="ai-card"><a href="/site/${slug}/offer/${o._id}">${o.imageUrl?`<img loading="lazy" src="${esc(o.imageUrl)}" alt="${esc(o.title)}">`:'<div class="ai-pattern"></div>'}<h3>${esc(o.title||'Offer')}</h3></a><p>${esc((o.description||'').slice(0,180))}</p>${Number(o.price)>0?`<strong>${Number(o.price).toFixed(2)}</strong>`:''}</article>`).join('');
-  const sections = {
-    hero:`<section class="ai-hero"><span class="ai-kicker">${text(a.eyebrow,user.category||'Independent business',100)}</span><h1>${text(a.headline,user.siteName,150)}</h1><p>${text(a.subheading,user.sellerBio||'',360)}</p><a class="ai-btn" href="#ai-offers">${text(a.cta,'Explore offers',60)}</a></section>`,
-    about:`<section class="ai-about"><span class="ai-kicker">${text(a.aboutEyebrow,'Our story',70)}</span><h2>${text(a.aboutTitle,'Why choose us',140)}</h2><p>${text(user.sellerBio,a.aboutText||'Discover our work.',650)}</p></section>`,
-    offers:`<section id="ai-offers" class="ai-offers"><span class="ai-kicker">${text(a.offersEyebrow,'Collection',70)}</span><h2>${text(a.offersTitle,'Explore our offers',140)}</h2><div class="ai-grid">${oCards||'<p>New offers coming soon.</p>'}</div></section>`,
-    contact:`<section class="ai-contact"><h2>${text(a.contactTitle,'Get in touch',140)}</h2><p>${text(a.contactText,'Questions? Contact us to learn more.',300)}</p><div class="ai-actions">${user.phone?`<a class="ai-btn" href="tel:${esc(String(user.phone).replace(/[^0-9+]/g,''))}">${text(a.contactAction,'Call us',60)}</a>`:''}<a class="ai-btn ai-secondary" href="/site/${slug}/messages">${text(a.messageAction,'Send a message',60)}</a><a class="ai-btn ai-secondary" href="/site/${slug}/profile">${text(a.profileAction,'Seller profile',60)}</a></div></section>`
-  };
-  const align = ['left','center'].includes(a.align)?a.align:'left';
-  const grid = [2,3,4].includes(Number(a.columns))?Number(a.columns):3;
-  const style=`<style>.ai-root{--a:${accent};--bg:${bg};--panel:${panel};--ink:${ink};--r:${radius}px;background:var(--bg);color:var(--ink);min-height:100vh;font-family:Inter,system-ui,sans-serif}.ai-top{display:flex;align-items:center;justify-content:space-between;padding:24px max(5vw,20px);gap:16px;border-bottom:1px solid #ffffff26}.ai-top a{color:inherit;text-decoration:none}.ai-brand{font-size:1.2rem;font-weight:800}.ai-root section{padding:clamp(55px,7vw,115px) max(5vw,24px);max-width:1440px;margin:auto}.ai-root h1{font-size:clamp(3rem,7vw,7.5rem);line-height:1.02;letter-spacing:-.055em;max-width:13ch;margin:18px 0 22px}.ai-root h2{font-size:clamp(2rem,4vw,4rem);line-height:1.1;margin:12px 0 24px}.ai-root p{opacity:.82;line-height:1.75;max-width:65ch}.ai-kicker{text-transform:uppercase;letter-spacing:.2em;color:var(--a);font-size:.75rem;font-weight:900}.ai-hero{min-height:65vh;display:flex;flex-direction:column;justify-content:center;text-align:${align};align-items:${align==='center'?'center':'start'};background:radial-gradient(ellipse at 85% 30%,color-mix(in srgb,var(--a) 28%,transparent),transparent 65%)}.ai-btn{display:inline-flex;padding:12px 22px;background:var(--a);color:#fff!important;border-radius:var(--r);text-decoration:none;font-weight:800;margin-top:25px}.ai-secondary{background:var(--panel);border:1px solid #ffffff36}.ai-grid{display:grid;grid-template-columns:repeat(${grid},minmax(0,1fr));gap:18px}.ai-card{overflow:hidden;background:var(--panel);border:1px solid #ffffff24;border-radius:var(--r);padding:0 0 24px}.ai-card img,.ai-pattern{width:100%;height:220px;object-fit:cover;background:linear-gradient(135deg,var(--a),var(--panel))}.ai-card a{color:inherit;text-decoration:none}.ai-card h3,.ai-card p,.ai-card strong{display:block;padding:0 22px}.ai-card h3{font-size:1.3rem;margin:18px 0 6px}.ai-about{border-top:1px solid #ffffff24;border-bottom:1px solid #ffffff24}.ai-contact{background:var(--panel);border-radius:var(--r);margin-bottom:70px!important}.ai-actions{display:flex;flex-wrap:wrap;gap:12px}@media(max-width:850px){.ai-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:540px){.ai-grid{grid-template-columns:1fr}.ai-card img,.ai-pattern{height:180px}.ai-root section{padding:55px 20px}.ai-hero{min-height:60vh}}</style>`;
-  const body=`${style}<div class="ai-root"><header class="ai-top"><a class="ai-brand" href="/site/${slug}">${esc(user.siteName)}</a><a href="/site/${slug}/profile">${text(a.profileAction,'Profile',50)}</a></header>${order.map(x=>sections[x]).join('')}<footer style="padding:26px;text-align:center;opacity:.6">${esc(user.siteName)} · GoldOffer Studio</footer></div>`;
-  return pageShell(user,{title:user.siteName||'Website',desc:user.sellerBio||'',body,cls:'ai-generated',page:'home'});
-}
-
 function renderSite(user, offers, sent) {
-  if (user.aiGenerated && user.aiPage) return renderAiHome(user, offers, sent);
+  if (user.aiGenerated && user.aiPage && user.aiPage.html) return renderAiSite(user, offers, sent);
   const meta = [user.categoryLabel || user.category, user.city].filter(Boolean).map(esc);
   const sub = meta.length === 2 ? `${meta[0]} in ${meta[1]}` : meta.join('');
   const hours = String(user.hours || '').split('\n')[0].trim();
@@ -3545,7 +3523,7 @@ ${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book
 var lines=[].slice.call(document.querySelectorAll('.copyline'));if(lines.length&&'IntersectionObserver' in window){var io=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting)entry.target.classList.add('on');})},{threshold:.45});lines.forEach(function(el){io.observe(el)})}else{lines.forEach(function(el){el.classList.add('on')})}
 var shell=document.querySelector('[data-story-shell]'),canvas=document.querySelector('[data-story-canvas]');if(shell&&canvas&&window.matchMedia('(min-width: 801px)').matches&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){var ticking=false;var run=function(){ticking=false;var rect=shell.getBoundingClientRect(),vh=window.innerHeight||1,total=Math.max(1,shell.offsetHeight-vh),p=Math.min(1,Math.max(0,-rect.top/total));var scale=1-p*.12,shift=p*26;canvas.style.transform='translate3d(0,'+shift+'px,0) scale('+scale+')';canvas.style.borderRadius=(34+p*14)+'px';};addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(run)}},{passive:true});run();}
 var stack=document.querySelector('[data-cine-stack]');if(stack&&matchMedia('(pointer:fine)').matches&&!matchMedia('(prefers-reduced-motion: reduce)').matches){stack.addEventListener('pointermove',function(e){var r=stack.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;stack.style.transform='rotateY('+(x*7)+'deg) rotateX('+(-y*5)+'deg)'});stack.addEventListener('pointerleave',function(){stack.style.transform=''})}})()</script>`;
-  const extraHtml = `<style>.go-steps{width:min(100% - 28px,1100px);margin:50px auto;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.go-steps div{padding:22px;border-radius:20px;background:color-mix(in srgb,var(--a) 8%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 22%,transparent)}.go-steps b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);margin-bottom:10px}.go-steps h3{margin:0 0 6px;font-size:1.05rem}.go-steps p{margin:0;opacity:.75;font-size:.92rem}.go-stick{display:none}@media(max-width:720px){.go-steps{grid-template-columns:1fr}.go-stick{display:flex;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:80;gap:8px}.go-stick a{flex:1;text-align:center;padding:13px;border-radius:999px;font-weight:800;text-decoration:none;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);box-shadow:0 8px 24px #0006}.go-stick a.sec{background:var(--panel);color:inherit;border:1px solid var(--line)}body{padding-bottom:80px}}</style><section class="go-steps"><div><b>1</b><h3>Choose</h3><p>Browse the offers and pick what fits you.</p></div><div><b>2</b><h3>Request</h3><p>Send a short request or book a time.</p></div><div><b>3</b><h3>Get it done</h3><p>We reply fast and take care of the rest.</p></div></section><nav class="go-stick">${phoneRaw ? `<a class="sec" href="tel:${esc(phoneRaw)}">Call</a>` : ''}${user.bookingEnabled ? '<a href="#book">Request an appointment</a>' : ''}</nav>`;
+  const extraHtml = `<style>.go-stick{display:none}@media(max-width:720px){.go-stick{display:flex;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:80;gap:8px}.go-stick a{flex:1;text-align:center;padding:13px;border-radius:999px;font-weight:800;text-decoration:none;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);box-shadow:0 8px 24px #0006}.go-stick a.sec{background:var(--panel);color:inherit;border:1px solid var(--line)}body{padding-bottom:80px}}</style><nav class="go-stick">${phoneRaw ? `<a class="sec" href="tel:${esc(phoneRaw)}">Call</a>` : ''}${user.bookingEnabled ? '<a href="#book">Request an appointment</a>' : ''}</nav>`;
   return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body: user._studio ? body : body + extraHtml, page: 'home' });
 }
 
@@ -3584,6 +3562,7 @@ function renderOfferPage(user, offer, others, sent) {
         <input name="customerName" placeholder="Your name" required maxlength="80">
         <label class="lbl">Describe what you want (optional)</label>
         <textarea name="note" rows="3" maxlength="1000" placeholder="e.g. extra cheese, no onions, a bigger size, the day you need it..."></textarea>
+        ${(offer.variants || []).length ? `<label class="lbl">Choose an option</label><select name="variant" required>${offer.variants.map(v => `<option value="${esc(v.name)}"${typeof v.stock === 'number' && v.stock <= 0 ? ' disabled' : ''}>${esc(v.name)}${v.price > 0 ? ' - ' + eur(v.price) : ''}${typeof v.stock === 'number' && v.stock <= 0 ? ' (sold out)' : ''}</option>`).join('')}</select>` : ''}
         <label class="lbl">How can we reach you?</label>
         <div class="contacts" id="contacts"><div class="crow">
           <select name="ctype" aria-label="Contact type">${Object.entries(CONTACT_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
@@ -4212,16 +4191,35 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
     if (qty === 0) return res.status(409).send('This offer is currently sold out. Please contact the seller.');
     const parsed = parseContacts(req.body);
     if (parsed.error) return res.status(400).send(`${esc(parsed.error)} Please go back and try again.`);
+    let orderAmount = Number(offer.salePrice > 0 ? offer.salePrice : offer.price) || 0, variantName = '', couponCode = '', discount = 0;
+    const vWant = String(req.body.variant || '').slice(0, 40);
+    if ((offer.variants || []).length) {
+      const v = offer.variants.find(x => x.name === vWant);
+      if (!v) return res.status(400).send('Please go back and choose an option.');
+      if (typeof v.stock === 'number' && v.stock <= 0) return res.status(409).send('This option is sold out.');
+      variantName = v.name; if (v.price > 0) orderAmount = v.price;
+    }
+    const cWant = String(req.body.coupon || '').trim().toUpperCase().slice(0, 24);
+    if (cWant) {
+      const cp = await GOCoupon.findOne({ sellerId: user._id, code: cWant, active: true });
+      if (!cp || (cp.max && cp.uses >= cp.max)) return res.status(400).send('This coupon code is not valid. Please go back and check it.');
+      discount = cp.percent ? Math.round(orderAmount * cp.percent) / 100 : Math.min(cp.amount, orderAmount);
+      orderAmount = Math.max(0, Math.round((orderAmount - discount) * 100) / 100); couponCode = cp.code;
+      await GOCoupon.updateOne({ _id: cp._id }, { $inc: { uses: 1 } });
+    }
+    if (variantName) await Offer.updateOne({ _id: offer._id, 'variants.name': variantName, 'variants.stock': { $gt: 0 } }, { $inc: { 'variants.$.stock': -1 } });
     const trackToken = crypto.randomBytes(12).toString('hex');
     const newOrder = await Order.create({
+      variant: variantName, coupon: couponCode, discount,
       trackToken, history: [{ status: 'Pending', at: new Date() }],
-      userId: user._id, offerId: offer._id, offerTitle: offer.title, amount: offer.price,
+      userId: user._id, offerId: offer._id, offerTitle: offer.title, amount: orderAmount,
       customerName: String(req.body.customerName || '').slice(0, 80),
       customerContact: parsed.text.slice(0, 400),
       contacts: parsed.contacts,
       note: String(req.body.note || '').replace(/\r/g, '').trim().slice(0, 1000),
       status: 'Pending'
     });
+    void runAutomations(user._id, 'order.created', { customer: String(req.body.customerName || '').slice(0, 80), contact: parsed.text, offer: offer.title, offerId: offer._id, amount: orderAmount });
     await pushNote(user._id, 'order', String(newOrder._id), 'New request', `${String(req.body.customerName || 'A customer').slice(0, 60)} · ${offer.title}`, '/orders');
     const mailC = (parsed.contacts || []).find(c => c.type === 'email' && isEmail(c.value));
     if (mailC) void sendMail({ to: mailC.value, subject: `We received your request: ${offer.title}`, text: `Thank you! Track your request any time:\n${PUBLIC_BASE}/track/${trackToken}` });
@@ -4296,25 +4294,126 @@ function goI18nClient(DICT, PAT) {
   try { new MutationObserver(function (ms) { if (busy) return; busy = true; try { ms.forEach(function (m) { m.addedNodes.forEach(node); if (m.type === 'characterData') node(m.target); }); } catch (e) {} busy = false; }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) {}
 }
 const SITE_I18N_JS = `(${goI18nClient.toString()})(${JSON.stringify(SITE_BG)},${JSON.stringify(SITE_BG_PAT)});`;
+const SITE_I18N_LOADER = `(function(){var L=document.documentElement.lang;fetch('/api/i18n/site?lang='+encodeURIComponent(L)).then(function(r){return r.json()}).then(function(m){(${goI18nClient.toString()})(m.map||{},[])}).catch(function(){})})();`;
 
-// Translate fixed public interface phrases for the current website without touching customer content.
-const siteTranslateLimiter = rateLimit({windowMs:60*60*1000,max:6});
-app.post('/api/site/translate', authenticateToken, siteTranslateLimiter, async (req,res)=>{
- try {
-  const u=await User.findById(req.user.id); if(!u)return res.status(404).json({message:'Site not found.'});
-  const lang=String(req.body&&req.body.lang||u.siteLang||'en');
-  if(!/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(lang))return res.status(400).json({message:'Invalid language.'});
-  if(lang==='bg'||lang==='en') {u.siteLang=lang;await u.save();return res.json({ok:true,language:lang});}
-  const key=process.env.OPENROUTER_API_KEY; if(!key)return res.status(503).json({message:'Set OPENROUTER_API_KEY on Render to translate this site.'});
-  const keys=Object.keys(SITE_BG).filter(k=>k.length<=100).slice(0,160);
-  const r=await axios.post('https://openrouter.ai/api/v1/chat/completions',{model:process.env.OPENROUTER_MODEL||'openrouter/free',messages:[{role:'system',content:'Translate these website UI labels into language '+lang+'. Return only one JSON object mapping every original English phrase exactly to its translation. Preserve placeholders and avoid adding commentary.'},{role:'user',content:JSON.stringify(keys)}],temperature:0.15},{headers:{Authorization:'Bearer '+key},timeout:70000});
-  const translated=extractJson(r.data?.choices?.[0]?.message?.content);
-  if(!translated||typeof translated!=='object'||Array.isArray(translated))return res.status(502).json({message:'Translation response was incomplete. Try again.'});
-  const dictionary={}; for(const k of keys)if(typeof translated[k]==='string' && translated[k].length<=240) dictionary[k]=translated[k];
-  if(Object.keys(dictionary).length<20)return res.status(502).json({message:'Translation response did not contain enough phrases.'});
-  u.siteTranslations=u.siteTranslations||{};u.siteTranslations[lang]=dictionary;u.markModified('siteTranslations');u.siteLang=lang;await u.save();
-  res.json({ok:true,language:lang,translated:Object.keys(dictionary).length});
- }catch(e){console.error('Site translation error:',e.response?.status||e.message);res.status(502).json({message:e.response?.status===402?'AI provider has no credits. Select a free model or add credits.':'Translation failed. Check OPENROUTER_MODEL and server logs.'});}
+// ---------- Fully AI-written pages ----------
+const RTL_LANGS = /^(ar|he|fa|ur|ps|sd|ug|yi|dv)(-|$)/;
+function aiCleanCss(c) {
+  c = String(c || '').slice(0, 50000).replace(/<[^>]*>?/g, '');
+  c = c.replace(/@import[^;]*;?/gi, '').replace(/expression\s*\(/gi, 'x(').replace(/-moz-binding|behavior\s*:/gi, 'x').replace(/javascript:/gi, '');
+  c = c.replace(/url\(\s*(['"]?)(?!https:|data:image\/|#)[^)]*\)/gi, 'none');
+  return c;
+}
+function aiCleanHtml(h) {
+  h = String(h || '').slice(0, 60000);
+  for (let i = 0; i < 4; i++) {
+    const before = h;
+    h = h.replace(/<!--[\s\S]*?-->/g, '');
+    h = h.replace(/<\s*(script|style|iframe|object|embed|form|template|noscript|textarea|select)\b[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+    h = h.replace(/<\s*\/?\s*(script|style|iframe|object|embed|link|meta|base|form|input|template|noscript|textarea|select|foreignobject|html|head|body)\b[^>]*>/gi, '');
+    h = h.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    if (h === before) break;
+  }
+  h = h.replace(/\s(href|src|xlink:href)\s*=\s*(["'])\s*(?!(?:#|\/(?!\/)|https:\/\/|mailto:|tel:))[^"']*\2/gi, ' $1="#"');
+  h = h.replace(/\sstyle\s*=\s*("([^"]*)"|'([^']*)')/gi, (m, _a, x, y) => ` style="${aiCleanCss(x || y || '').replace(/"/g, "'")}"`);
+  if (/<\s*script|\son[a-z]+\s*=|javascript:/i.test(h)) return '';
+  return h;
+}
+function aiBaseCss(user) {
+  const p = (user.aiPage && user.aiPage.palette) || {};
+  const col = (v, d) => (/^#[0-9a-f]{3,8}$/i.test(String(v || '')) ? v : d);
+  const a = col(p.a, '#ffb703'), b = col(p.b, a), bg = col(p.bg, '#0b0f17'), panel = col(p.panel, '#151b27'), text = col(p.text, '#f3f4f6');
+  return `:root{--a:${a};--b:${b};--bg:${bg};--panel:${panel};--text:${text};--on:#111;--line:rgba(127,127,127,.25);--mute:#9aa3b2;--soft:#cbd2dc;--ink:${a}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.55;-webkit-text-size-adjust:100%}
+img{max-width:100%;height:auto}a{color:inherit}
+.ai-offers{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}.ai-offer{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.ai-offer-img{aspect-ratio:4/3;width:100%;object-fit:cover;display:block;background:linear-gradient(135deg,var(--a),var(--b))}.ai-offer-body{padding:16px}.ai-offer-title{margin:0 0 6px;font-size:1.1rem}.ai-offer-desc{margin:0 0 10px;opacity:.8;font-size:.92rem}.ai-offer-price{font-weight:800;color:var(--a)}
+.ai-faq details{border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin:8px 0;background:var(--panel)}.ai-faq summary{cursor:pointer;font-weight:700}.ai-contact{display:grid;gap:8px}.ai-contact a{text-decoration:underline}
+.ai-float{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:80}.ai-float a{display:inline-block;padding:11px 18px;border-radius:999px;background:var(--a);color:var(--on);font-weight:800;text-decoration:none;box-shadow:0 8px 24px #0005}
+.go-public-announcement{margin:12px auto!important;max-width:1100px}`;
+}
+function renderAiSite(user, offers, sent) {
+  const slug = esc(user.slug);
+  const offersHtml = offers.length ? `<div class="ai-offers">${offers.map(o => {
+    const g = galleryOf(o);
+    return `<a class="ai-offer" href="/site/${slug}/offer/${o._id}">${g.length ? `<img class="ai-offer-img" src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : '<div class="ai-offer-img"></div>'}<div class="ai-offer-body"><h3 class="ai-offer-title">${esc(o.title)}</h3>${o.description ? `<p class="ai-offer-desc">${esc(String(o.description).slice(0, 140))}</p>` : ''}${Number(o.price) > 0 ? `<span class="ai-offer-price">${eur(o.price)}</span>` : ''}</div></a>`;
+  }).join('')}</div>` : '<p>No offers yet. Please check back soon.</p>';
+  const faqs = (user.faqItems || []).filter(f => f.question && f.answer);
+  const faqHtml = faqs.length ? `<div class="ai-faq">${faqs.map(f => `<details><summary>${esc(f.question)}</summary><p>${esc(f.answer)}</p></details>`).join('')}</div>` : '';
+  const phone = String(user.phone || '').replace(/[^\d+]/g, '');
+  const cl = [];
+  if (phone) cl.push(`<a href="tel:${esc(phone)}">${esc(user.phone)}</a>`);
+  if (user.address) cl.push(`<span>${esc(user.address)}</span>`);
+  if (user.hours) cl.push(`<span>${esc(String(user.hours).split('\n')[0])}</span>`);
+  if (user.instagram) cl.push(`<a href="${esc(user.instagram)}" target="_blank" rel="noopener">Instagram</a>`);
+  if (user.facebook) cl.push(`<a href="${esc(user.facebook)}" target="_blank" rel="noopener">Facebook</a>`);
+  const contactHtml = `<div class="ai-contact">${cl.join('') || `<span>${esc(user.siteName)}</span>`}</div>`;
+  let html = aiCleanHtml(user.aiPage.html);
+  const hadOffers = html.includes('{{OFFERS}}');
+  html = html.replace(/\{\{OFFERS\}\}/g, offersHtml).replace(/\{\{FAQ\}\}/g, faqHtml).replace(/\{\{CONTACT\}\}/g, contactHtml);
+  if (!hadOffers) html += `<section id="offers" style="padding:40px 18px;max-width:1100px;margin:auto">${offersHtml}</section>`;
+  const body = `${html}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>`;
+  return pageShell(user, { title: user.siteName, desc: String(user.sellerBio || user.siteName).slice(0, 160), body, page: 'home' });
+}
+
+// ---------- Translations for every language (AI, cached in the database) ----------
+const I18nCache = mongoose.models.I18nCache || mongoose.model('I18nCache', new mongoose.Schema({
+  lang: { type: String, index: true }, src: String, text: String
+}).index({ lang: 1, src: 1 }, { unique: true }));
+const LANG_RE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/;
+const langName = (l) => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(l) || l; } catch (e) { return l; } };
+const i18nBusy = {};
+async function translateStrings(lang, strings) {
+  const out = {};
+  const uniq = [...new Set(strings)];
+  const cached = await I18nCache.find({ lang, src: { $in: uniq } }).lean();
+  cached.forEach(c => { out[c.src] = c.text; });
+  const missing = uniq.filter(x => !(x in out));
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!missing.length || !key) return out;
+  for (let i = 0; i < missing.length; i += 50) {
+    const part = missing.slice(i, i + 50);
+    try {
+      const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+        model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+        messages: [{ role: 'system', content: `Translate each UI string in the JSON array from English to ${langName(lang)}. Return ONLY a JSON array of the same length and order. Keep arrows, emoji, numbers and punctuation. Short, natural UI wording.` }, { role: 'user', content: JSON.stringify(part) }],
+        temperature: 0.2
+      }, { headers: { Authorization: 'Bearer ' + key }, timeout: 60000 });
+      const txt = String(r.data.choices[0].message.content || '');
+      const a = txt.indexOf('['), b = txt.lastIndexOf(']');
+      const arr = JSON.parse(txt.slice(a, b + 1));
+      if (!Array.isArray(arr) || arr.length !== part.length) continue;
+      for (let k = 0; k < part.length; k++) {
+        const t = cleanStr(arr[k], 400);
+        if (!t) continue;
+        out[part[k]] = t;
+        await I18nCache.updateOne({ lang, src: part[k] }, { $set: { text: t } }, { upsert: true });
+      }
+    } catch (e) { console.error('i18n error', e.message); }
+  }
+  return out;
+}
+const i18nSiteLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 40 });
+const i18nPanelLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 60 });
+app.get('/api/i18n/site', i18nSiteLimiter, async (req, res) => {
+  try {
+    const lang = String(req.query.lang || '');
+    if (!LANG_RE.test(lang)) return res.status(400).json({ map: {} });
+    if (/^bg(-|$)/.test(lang)) return res.json({ map: SITE_BG });
+    if (/^en(-|$)/.test(lang)) return res.json({ map: {} });
+    const keys = Object.keys(SITE_BG).filter(k => k.length < 140);
+    if (!i18nBusy[lang]) i18nBusy[lang] = translateStrings(lang, keys).finally(() => { delete i18nBusy[lang]; });
+    const map = await i18nBusy[lang];
+    res.set('Cache-Control', 'public, max-age=3600').json({ map });
+  } catch (e) { res.json({ map: {} }); }
+});
+app.post('/api/i18n/panel', authenticateToken, i18nPanelLimiter, async (req, res) => {
+  try {
+    const lang = String(req.body.lang || '');
+    if (!LANG_RE.test(lang)) return res.status(400).json({ map: {} });
+    const strings = (Array.isArray(req.body.strings) ? req.body.strings : []).map(x => String(x).trim()).filter(x => x.length > 1 && x.length <= 140).slice(0, 200);
+    res.json({ map: await translateStrings(lang, strings) });
+  } catch (e) { res.json({ map: {} }); }
 });
 
 // ---------- Several websites under one account + AI site generator ----------
@@ -4360,18 +4459,8 @@ app.delete('/api/my-sites/:id', authenticateToken, async (req, res) => {
     const root = await familyOf(req.user.id);
     const target = await User.findById(req.params.id);
     if (!root || !target || !target.ownerId || String(target.ownerId) !== String(root._id)) return res.status(403).json({ message: 'Only extra sites can be deleted.' });
-    // Clean up data belonging exclusively to this additional website.
-    const siteId = target._id;
-    await Promise.all([
-      Offer.deleteMany({ userId: siteId }), Order.deleteMany({ userId: siteId }),
-      Review.deleteMany({ sellerId: siteId }), Image.deleteMany({ userId: siteId }),
-      Conversation.deleteMany({ userId: siteId }), Appointment.deleteMany({ sellerId: siteId }),
-      ShopSetting.deleteMany({ sellerId: siteId }), Note.deleteMany({ sellerId: siteId }),
-      Reminder.deleteMany({ sellerId: siteId }), GONotification.deleteMany({ sellerId: siteId }),
-      GOVersion.deleteMany({ sellerId: siteId }), GOCalendar.deleteMany({ sellerId: siteId }),
-      GOSlot.deleteMany({ sellerId: siteId }), GOCustomer.deleteMany({ sellerId: siteId })
-    ]);
-    await User.deleteOne({ _id: siteId, ownerId: root._id });
+    await Offer.deleteMany({ userId: target._id });
+    await User.deleteOne({ _id: target._id });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ message: 'Could not delete the site.' }); }
 });
@@ -4388,37 +4477,30 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     const lang = (typeof req.body.lang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(req.body.lang)) ? req.body.lang : 'en';
     const languageName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(lang) || lang; } catch (e) { return lang; } })();
     if (!name || desc.length < 10) return res.status(400).json({ message: 'Give a name and describe the business (at least a sentence).' });
-    const sys = `You create small-business websites. Reply with ONE JSON object only, no markdown. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), theme (one of ${Object.keys(THEMES).join(', ')}), layout (one of ${Object.keys(LAYOUTS).join(', ')}), font (one of ${Object.keys(FONTS).join(', ')}), offers (array of 3-6 objects {title, price (number, 0 if unknown), description}), faq (array of 3 objects {question, answer}), page (object with order array containing hero/about/offers/contact in an original order, headline, subheading, eyebrow, cta, aboutTitle, offersTitle, contactTitle, contactText, contactAction, messageAction, profileAction, align left/center, columns 2/3/4), translations (object mapping standard English UI words like Home, Offers, Contact, Message, Messages, Request, Book now, Send, Search, All offers, Seller profile, Reviews, Share, Back, Price, Saved, Favorites, About, Hours, Email, Phone, Call to natural translations in the chosen language), visual (object with accent, background, panel, text colors as 6-digit hex strings, font from inter/poppins/montserrat/raleway/space/playfair/dmserif/lora/oswald/anton/bebas/archivo/orbitron/righteous/pacifico/lobster/dancing/caveat/marker/jetbrains/comfortaa and radius number between 0 and 35). Create a unique visual identity derived from the business description rather than copying a preset color scheme. Write all user-facing texts in ${languageName} (language code ${lang}). Use only facts the owner gave; do not invent addresses, phone numbers or reviews. Prices only if the owner mentioned them, otherwise 0.`;
+    const sys = `You are a senior web designer. Create a UNIQUE, modern, mobile-first one-page website for a small business. Reply with ONE JSON object only, no markdown fences. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), palette {a,b,bg,panel,text} (hex colors with strong contrast: a=accent, b=second accent, bg=page background, panel=card background, text=text color), offers (array of 3-6 {title, price (number, 0 if unknown), description}), faq (array of 3 {question, answer}), css (string), html (string).
+Rules for html: a body fragment only. No html/head/body/script/style/iframe/form tags, no inline event handlers, no external images: make visuals with CSS gradients, emoji or inline SVG. Structure: a hero with a big headline and a call-to-action link href="#offers"; an about/story section; 3 benefit cards; then <section id="offers"> with a heading and exactly the text {{OFFERS}}; a FAQ section containing exactly {{FAQ}}; a section id="contact" containing exactly {{CONTACT}}; a short footer. Never write the offer cards, FAQ items or contact details yourself, the server replaces the placeholders.
+Rules for css: plain CSS for that html, mobile-first with media queries, bold distinctive typography and layout (not a generic template). Use var(--a), var(--b), var(--bg), var(--panel), var(--text) for colors (they come from your palette). Also style the classes .ai-offers .ai-offer .ai-offer-img .ai-offer-title .ai-offer-desc .ai-offer-price .ai-faq .ai-contact if you want to change their look.
+Write all visible texts in ${languageName}. Use only facts the owner gave: do not invent addresses, phone numbers, reviews, awards or statistics. Prices only if the owner mentioned them, otherwise 0.`;
     const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
       model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
       messages: [{ role: 'system', content: sys }, { role: 'user', content: `Business name: ${name}\nDescription: ${desc}` }],
-      temperature: 0.7
-    }, { headers: { Authorization: 'Bearer ' + key }, timeout: 60000 });
+      temperature: 0.8, max_tokens: 7000
+    }, { headers: { Authorization: 'Bearer ' + key }, timeout: 100000 });
     const j = extractJson(r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message && r.data.choices[0].message.content);
     if (!j) return res.status(502).json({ message: 'AI answered in an unexpected way. Please try again.' });
+    const cleanHtml = aiCleanHtml(j.html);
+    const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
     const email = `site-${root._id}-${Date.now().toString(36)}@sites.goldoffer.local`;
     const pick = (v, obj, d) => (Object.keys(obj).includes(v) ? v : d);
     const sub = new User({
       firstName: root.firstName, lastName: root.lastName, email, password: root.password,
       subscriptionStatus: root.subscriptionStatus, ownerId: root._id, aiGenerated: true, emailVerified: true,
       siteName: name, sellerBio: cleanStr(j.bio, 650), category: cleanStr(j.category, 80), city: cleanStr(j.city, 80),
-      theme: pick(j.theme, THEMES, 'gold'), layout: pick(j.layout, LAYOUTS, 'signature'), font: pick(j.font, FONTS, 'sans'),
+      theme: 'gold', layout: 'signature', font: 'sans', aiPage,
       announcementText: cleanStr(j.announcement, 200), lang: root.lang || 'bg', siteLang: lang, published: true,
       notifyEmail: root.notifyEmail || root.email,
       faqItems: (Array.isArray(j.faq) ? j.faq : []).slice(0, 6).map(f => ({ question: cleanStr(f && f.question, 160), answer: cleanStr(f && f.answer, 500) })).filter(f => f.question && f.answer)
     });
-    // AI-specific design tokens, independently generated and validated by the Studio design engine.
-    // The core storefront routes / offers / booking remain shared for functional compatibility.
-    const vis = j.visual && typeof j.visual === 'object' ? j.visual : {};
-    sub.design = sanitizeDesign({ v: {
-      accent: vis.accent, bg: vis.background, panel: vis.panel, text: vis.text,
-      font: vis.font, headFont: vis.font, radius: vis.radius
-    }});
-    sub.designDraft = sub.design;
-    const pg = j.page && typeof j.page === 'object' ? j.page : {};
-    const aiText = (v,n=250)=>cleanStr(v,n);
-    sub.aiPage = {order:Array.isArray(pg.order)?pg.order.filter(x=>['hero','about','offers','contact'].includes(x)).slice(0,4):undefined, headline:aiText(pg.headline,150),subheading:aiText(pg.subheading,360),eyebrow:aiText(pg.eyebrow,100),cta:aiText(pg.cta,60),aboutTitle:aiText(pg.aboutTitle,140),offersTitle:aiText(pg.offersTitle,140),contactTitle:aiText(pg.contactTitle,140),contactText:aiText(pg.contactText,300),contactAction:aiText(pg.contactAction,60),messageAction:aiText(pg.messageAction,60),profileAction:aiText(pg.profileAction,60),align:pg.align==='center'?'center':'left',columns:[2,3,4].includes(Number(pg.columns))?Number(pg.columns):3};
-    if (j.translations && typeof j.translations === 'object' && !Array.isArray(j.translations)) sub.siteTranslations = {[lang]:Object.fromEntries(Object.entries(j.translations).filter(([k,v])=>typeof k==='string' && k.length<=100 && typeof v==='string').slice(0,110).map(([k,v])=>[k,cleanStr(v,140)]))};
     sub.slug = await uniqueSlug(req.body.slug || name, sub._id);
     await sub.save();
     const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
@@ -4442,6 +4524,182 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     res.status(500).json({ message: 'Could not finish website generation. Check the Render server logs for the cause.' });
   }
 });
+
+// ======================= GoldOffer Pro: Automations, CRM, Calendar staff, Intelligence, Commerce, AI Receptionist =======================
+const oidOf = (x) => new mongoose.Types.ObjectId(String(x));
+const GOAutomation = mongoose.model('GOAutomation', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, index: true, required: true },
+  name: { type: String, maxlength: 80 }, trigger: String, enabled: { type: Boolean, default: true },
+  actions: { type: [{ type: { type: String }, text: String, value: Number, _id: false }], default: [] },
+  runs: { type: Number, default: 0 }, lastRunAt: Date, createdAt: { type: Date, default: Date.now }
+}));
+const GOTask = mongoose.model('GOTask', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, index: true, required: true },
+  title: { type: String, maxlength: 200 }, customer: String, due: Date, done: { type: Boolean, default: false }, auto: Boolean, createdAt: { type: Date, default: Date.now }
+}));
+const GODeal = mongoose.model('GODeal', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, index: true, required: true },
+  title: { type: String, maxlength: 120 }, customer: String, amount: { type: Number, default: 0 },
+  stage: { type: String, default: 'contacted' }, createdAt: { type: Date, default: Date.now }
+}));
+const GOStaff = mongoose.model('GOStaff', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, index: true, required: true },
+  name: { type: String, maxlength: 60 }, color: { type: String, default: '#7c5cff' }
+}));
+const GOCoupon = mongoose.model('GOCoupon', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, index: true, required: true },
+  code: String, percent: { type: Number, default: 0 }, amount: { type: Number, default: 0 }, max: { type: Number, default: 0 }, uses: { type: Number, default: 0 }, active: { type: Boolean, default: true }
+}));
+const DEAL_STAGES = ['contacted', 'negotiation', 'offer', 'won', 'lost'];
+const AUTO_TRIGGERS = ['order.created', 'order.completed', 'booking.created'];
+const AUTO_ACTIONS = ['task', 'notify', 'email', 'stock', 'tag'];
+const fillTpl = (t, c) => String(t || '').replace(/\{(customer|offer|amount|time)\}/g, (_, k) => String((c && c[k]) || ''));
+
+async function runAutomations(sellerId, trigger, ctx) {
+  try {
+    const list = await GOAutomation.find({ sellerId, trigger, enabled: true });
+    if (!list.length) return;
+    const owner = await User.findById(sellerId).select('email notifyEmail');
+    for (const a of list) {
+      for (const act of a.actions) {
+        const text = fillTpl(act.text, ctx);
+        try {
+          if (act.type === 'task') await GOTask.create({ sellerId, title: text || a.name, customer: ctx.customer, auto: true, due: new Date(Date.now() + 86400000) });
+          else if (act.type === 'notify') await GONotification.create({ sellerId, kind: 'auto', ref: String(Date.now()) + Math.random(), title: a.name || 'Automation', text: (text || a.name).slice(0, 200), link: '/pro' });
+          else if (act.type === 'email' && owner) void sendMail({ to: owner.notifyEmail || owner.email, subject: a.name || 'Automation', text: text || a.name });
+          else if (act.type === 'stock' && ctx.offerId) {
+            const inv = await ShopSetting.findOne({ sellerId }).select('stock').lean();
+            const q = inv && inv.stock ? (inv.stock.get ? inv.stock.get(String(ctx.offerId)) : inv.stock[String(ctx.offerId)]) : undefined;
+            if (typeof q === 'number' && q <= (act.value || 3)) await GONotification.create({ sellerId, kind: 'auto', ref: String(Date.now()) + Math.random(), title: 'Low stock', text: `${ctx.offer || 'Offer'}: ${q} left`, link: '/business' });
+          } else if (act.type === 'tag' && ctx.customer) {
+            await GOCustomer.updateOne({ sellerId, key: keyOf(ctx.customer, ctx.contact || '') }, { $addToSet: { tags: String(text || 'auto').slice(0, 30) } }, { upsert: true });
+          }
+        } catch (e) { /* one failing action must not stop the rest */ }
+      }
+      a.runs = (a.runs || 0) + 1; a.lastRunAt = new Date(); await a.save();
+    }
+  } catch (e) { /* automations never break the main action */ }
+}
+
+const proId = (req, res) => { if (!okId(req.params.id)) { res.status(400).json({ message: 'Invalid id' }); return false; } return true; };
+// --- Automations
+app.get('/api/pro/automations', authenticateToken, async (req, res) => res.set('Cache-Control', 'no-store').json({ automations: await GOAutomation.find({ sellerId: req.user.id }).sort({ createdAt: -1 }).lean() }));
+app.post('/api/pro/automations', authenticateToken, async (req, res) => {
+  const b = req.body || {};
+  if (!AUTO_TRIGGERS.includes(b.trigger)) return res.status(400).json({ message: 'Choose a trigger.' });
+  const actions = (Array.isArray(b.actions) ? b.actions : []).filter(a => AUTO_ACTIONS.includes(a && a.type)).slice(0, 6).map(a => ({ type: a.type, text: cleanStr(a.text, 200), value: Number(a.value) || 0 }));
+  if (!actions.length) return res.status(400).json({ message: 'Add at least one action.' });
+  if (await GOAutomation.countDocuments({ sellerId: req.user.id }) >= 30) return res.status(400).json({ message: 'Automation limit reached.' });
+  res.json({ automation: await GOAutomation.create({ sellerId: req.user.id, name: cleanStr(b.name, 80) || 'Automation', trigger: b.trigger, actions }) });
+});
+app.put('/api/pro/automations/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GOAutomation.updateOne({ _id: req.params.id, sellerId: req.user.id }, { $set: { enabled: !!(req.body || {}).enabled } }); res.json({ ok: true }); });
+app.delete('/api/pro/automations/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GOAutomation.deleteOne({ _id: req.params.id, sellerId: req.user.id }); res.json({ ok: true }); });
+// --- CRM: deals + tasks
+app.get('/api/pro/crm', authenticateToken, async (req, res) => {
+  const [deals, tasks] = await Promise.all([GODeal.find({ sellerId: req.user.id }).sort({ createdAt: -1 }).limit(300).lean(), GOTask.find({ sellerId: req.user.id }).sort({ done: 1, due: 1 }).limit(200).lean()]);
+  res.set('Cache-Control', 'no-store').json({ deals, tasks, stages: DEAL_STAGES });
+});
+app.post('/api/pro/deals', authenticateToken, async (req, res) => { const b = req.body || {}; if (!cleanStr(b.title, 120)) return res.status(400).json({ message: 'Give the deal a title.' }); res.json({ deal: await GODeal.create({ sellerId: req.user.id, title: cleanStr(b.title, 120), customer: cleanStr(b.customer, 80), amount: Math.max(0, Number(b.amount) || 0), stage: DEAL_STAGES.includes(b.stage) ? b.stage : 'contacted' }) }); });
+app.put('/api/pro/deals/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; const b = req.body || {}; const set = {}; if (DEAL_STAGES.includes(b.stage)) set.stage = b.stage; if (b.title) set.title = cleanStr(b.title, 120); await GODeal.updateOne({ _id: req.params.id, sellerId: req.user.id }, { $set: set }); res.json({ ok: true }); });
+app.delete('/api/pro/deals/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GODeal.deleteOne({ _id: req.params.id, sellerId: req.user.id }); res.json({ ok: true }); });
+app.post('/api/pro/tasks', authenticateToken, async (req, res) => { const b = req.body || {}; if (!cleanStr(b.title, 200)) return res.status(400).json({ message: 'Write the task.' }); const d = b.due ? new Date(b.due) : null; res.json({ task: await GOTask.create({ sellerId: req.user.id, title: cleanStr(b.title, 200), customer: cleanStr(b.customer, 80), due: d && Number.isFinite(d.valueOf()) ? d : undefined }) }); });
+app.put('/api/pro/tasks/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GOTask.updateOne({ _id: req.params.id, sellerId: req.user.id }, { $set: { done: !!(req.body || {}).done } }); res.json({ ok: true }); });
+app.delete('/api/pro/tasks/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GOTask.deleteOne({ _id: req.params.id, sellerId: req.user.id }); res.json({ ok: true }); });
+// --- Calendar staff
+app.get('/api/pro/staff', authenticateToken, async (req, res) => res.set('Cache-Control', 'no-store').json({ staff: await GOStaff.find({ sellerId: req.user.id }).lean() }));
+app.post('/api/pro/staff', authenticateToken, async (req, res) => { const n = cleanStr((req.body || {}).name, 60); if (!n) return res.status(400).json({ message: 'Enter a name.' }); if (await GOStaff.countDocuments({ sellerId: req.user.id }) >= 20) return res.status(400).json({ message: 'Staff limit reached.' }); const c = /^#[0-9a-f]{6}$/i.test((req.body || {}).color || '') ? req.body.color : '#7c5cff'; res.json({ staff: await GOStaff.create({ sellerId: req.user.id, name: n, color: c }) }); });
+app.delete('/api/pro/staff/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GOStaff.deleteOne({ _id: req.params.id, sellerId: req.user.id }); await Appointment.updateMany({ sellerId: req.user.id, staffId: req.params.id }, { $unset: { staffId: 1 } }); res.json({ ok: true }); });
+app.put('/api/pro/appointments/:id/staff', authenticateToken, async (req, res) => {
+  if (!proId(req, res)) return; const sid = (req.body || {}).staffId;
+  if (sid && (!okId(sid) || !(await GOStaff.exists({ _id: sid, sellerId: req.user.id })))) return res.status(400).json({ message: 'Unknown staff member.' });
+  await Appointment.updateOne({ _id: req.params.id, sellerId: req.user.id }, sid ? { $set: { staffId: sid } } : { $unset: { staffId: 1 } }); res.json({ ok: true });
+});
+// --- Intelligence
+app.get('/api/pro/intelligence', authenticateToken, async (req, res) => {
+  try {
+    const id = oidOf(req.user.id), since = new Date(Date.now() - 180 * 86400000);
+    const [orders, appts, offers, views, inv] = await Promise.all([
+      Order.find({ userId: id, createdAt: { $gte: since } }).select('offerId offerTitle amount status createdAt customerName contacts customerContact').lean(),
+      Appointment.find({ sellerId: id, startsAt: { $gte: since } }).select('startsAt status').lean(),
+      Offer.find({ userId: id }).select('_id title price').lean(),
+      Visit.aggregate([{ $match: { sellerId: id, kind: { $in: ['view', 'offer'] } } }, { $group: { _id: { k: '$kind', o: '$offerId' }, n: { $sum: 1 } } }]),
+      ShopSetting.findOne({ sellerId: id }).select('stock').lean()
+    ]);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], wd = [0, 0, 0, 0, 0, 0, 0];
+    orders.forEach(o => wd[new Date(o.createdAt).getDay()]++); appts.forEach(a => wd[new Date(a.startsAt).getDay()]++);
+    const months = []; for (let i = 5; i >= 0; i--) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i); months.push({ key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), revenue: 0, orders: 0 }); }
+    orders.forEach(o => { const d = new Date(o.createdAt), k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), m = months.find(x => x.key === k); if (m) { m.orders++; if (o.status === 'Completed') m.revenue += Number(o.amount) || 0; } });
+    const offerViews = {}; let siteViews = 0; views.forEach(v => { if (v._id.k === 'view') siteViews += v.n; else if (v._id.o) offerViews[String(v._id.o)] = v.n; });
+    const per = new Map(offers.map(o => [String(o._id), { id: String(o._id), title: o.title, orders: 0, revenue: 0, views: offerViews[String(o._id)] || 0 }]));
+    orders.forEach(o => { const r = per.get(String(o.offerId)); if (r) { r.orders++; if (o.status === 'Completed') r.revenue += Number(o.amount) || 0; } });
+    const top = [...per.values()].sort((a, b) => b.orders - a.orders || b.views - a.views).slice(0, 8);
+    const buyers = {}; orders.forEach(o => { const k = keyOf(o.customerName, o.customerContact || (o.contacts || []).map(c => c.value).join(' ')); buyers[k] = (buyers[k] || 0) + 1; });
+    const nb = Object.keys(buyers).length, repeat = Object.values(buyers).filter(n => n > 1).length;
+    const tips = [], best = wd.indexOf(Math.max(...wd));
+    if (Math.max(...wd) > 0) tips.push(`Your strongest day is ${days[best]}. Post offers and be online on that day.`);
+    const weak = [...per.values()].filter(o => o.views >= 5 && o.orders === 0).slice(0, 3);
+    weak.forEach(o => tips.push(`"${o.title}" gets views but no requests. Check its price, photos and description.`));
+    const none = [...per.values()].filter(o => o.views < 5 && o.orders === 0);
+    if (none.length) tips.push(`${none.length} offer(s) get almost no attention. Improve their first photo or remove them.`);
+    if (nb >= 3 && repeat / nb < 0.2) tips.push('Few customers come back. Create an automation that sends a thank-you task after each completed order.');
+    const pend = orders.filter(o => o.status === 'Pending' && Date.now() - new Date(o.createdAt).getTime() > 2 * 86400000).length;
+    if (pend) tips.push(`${pend} request(s) are waiting for more than 2 days. Answer them first.`);
+    const low = inv && inv.stock ? Object.entries(inv.stock instanceof Map ? Object.fromEntries(inv.stock) : inv.stock).filter(([, q]) => typeof q === 'number' && q <= 2).length : 0;
+    if (low) tips.push(`${low} product(s) are almost out of stock.`);
+    if (siteViews > 20 && orders.length < siteViews * 0.01) tips.push('Many visitors, few requests. Put a clear call-to-action and phone number at the top of your site.');
+    if (!tips.length) tips.push('Not enough data yet. Share your site link and check again in a few days.');
+    res.set('Cache-Control', 'no-store').json({ weekday: days.map((d, i) => ({ day: d, n: wd[i] })), months, top, siteViews, totalOrders: orders.length, totalBookings: appts.length, customers: nb, repeatCustomers: repeat, tips });
+  } catch (e) { res.status(500).json({ message: 'Could not build insights.' }); }
+});
+// --- Commerce
+app.get('/api/pro/commerce', authenticateToken, async (req, res) => {
+  const [offers, coupons] = await Promise.all([Offer.find({ userId: req.user.id }).select('title price salePrice variants').sort({ order: 1 }).lean(), GOCoupon.find({ sellerId: req.user.id }).sort({ _id: -1 }).lean()]);
+  res.set('Cache-Control', 'no-store').json({ offers, coupons });
+});
+app.put('/api/pro/offers/:id/commerce', authenticateToken, async (req, res) => {
+  if (!proId(req, res)) return; const b = req.body || {};
+  const variants = (Array.isArray(b.variants) ? b.variants : []).slice(0, 20).map(v => ({ name: cleanStr(v && v.name, 40), price: Math.max(0, Number(v && v.price) || 0), stock: (v && v.stock !== '' && v.stock != null && Number.isFinite(Number(v.stock))) ? Math.max(0, Math.floor(Number(v.stock))) : undefined })).filter(v => v.name);
+  const sale = Math.max(0, Number(b.salePrice) || 0);
+  const r = await Offer.updateOne({ _id: req.params.id, userId: req.user.id }, { $set: { variants, salePrice: sale } });
+  res.json({ ok: !!r.matchedCount });
+});
+app.post('/api/pro/coupons', authenticateToken, async (req, res) => {
+  const b = req.body || {}, code = cleanStr(b.code, 24).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+  const percent = Math.min(100, Math.max(0, Number(b.percent) || 0)), amount = Math.max(0, Number(b.amount) || 0);
+  if (!code || (!percent && !amount)) return res.status(400).json({ message: 'Enter a code and a discount.' });
+  if (await GOCoupon.exists({ sellerId: req.user.id, code })) return res.status(409).json({ message: 'This code already exists.' });
+  res.json({ coupon: await GOCoupon.create({ sellerId: req.user.id, code, percent, amount, max: Math.max(0, Math.floor(Number(b.max) || 0)) }) });
+});
+app.put('/api/pro/coupons/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GOCoupon.updateOne({ _id: req.params.id, sellerId: req.user.id }, { $set: { active: !!(req.body || {}).active } }); res.json({ ok: true }); });
+app.delete('/api/pro/coupons/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GOCoupon.deleteOne({ _id: req.params.id, sellerId: req.user.id }); res.json({ ok: true }); });
+// --- AI Receptionist
+app.get('/api/pro/receptionist', authenticateToken, async (req, res) => { const u = await User.findById(req.user.id).select('receptionist').lean(); res.json({ receptionist: (u && u.receptionist) || { enabled: false, greeting: '', notes: '' }, aiReady: !!process.env.OPENROUTER_API_KEY }); });
+app.put('/api/pro/receptionist', authenticateToken, async (req, res) => { const b = req.body || {}; await User.updateOne({ _id: req.user.id }, { $set: { receptionist: { enabled: !!b.enabled, greeting: cleanStr(b.greeting, 200), notes: cleanStr(b.notes, 1500) } } }); res.json({ ok: true }); });
+const aiAskLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 25, message: { answer: 'Too many questions. Please try again in a few minutes.', handoff: true } });
+app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), async (req, res) => {
+  try {
+    const user = await User.findOne({ slug: req.params.slug, published: true });
+    if (!user || !user.receptionist || !user.receptionist.enabled) return res.sendStatus(404);
+    const key = process.env.OPENROUTER_API_KEY;
+    const q = cleanStr((req.body || {}).question, 400);
+    if (!q) return res.status(400).json({ answer: '', handoff: false });
+    if (!key) return res.json({ answer: 'I cannot answer right now. Please message the owner directly.', handoff: true });
+    const [offers, cal] = await Promise.all([Offer.find({ userId: user._id }).select('title price salePrice description variants').limit(30).lean(), calOf(user._id)]);
+    const facts = [`Business: ${user.siteName}`, user.category && `Category: ${user.category}`, user.city && `City: ${user.city}`, user.sellerBio && `About: ${user.sellerBio}`, user.phone && `Phone: ${user.phone}`, user.address && `Address: ${user.address}`, user.hours && `Hours: ${user.hours}`, cal.enabled && 'Online booking is available on the site (section "Request an appointment").', user.receptionist.notes && `Owner notes: ${user.receptionist.notes}`,
+      'Offers:', ...offers.map(o => `- ${o.title}: ${o.salePrice > 0 ? o.salePrice + ' (sale)' : (o.price > 0 ? o.price : 'price on request')} EUR. ${String(o.description || '').slice(0, 160)}${(o.variants || []).length ? ' Options: ' + o.variants.map(v => v.name).join(', ') : ''}`)].filter(Boolean).join('\n');
+    const hist = (Array.isArray((req.body || {}).history) ? req.body.history : []).slice(-6).map(h => ({ role: h && h.role === 'assistant' ? 'assistant' : 'user', content: cleanStr(h && h.text, 400) })).filter(h => h.content);
+    const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+      messages: [{ role: 'system', content: `You are the friendly receptionist of a small business website. Answer in the language of the customer's message, in 1-3 short sentences. Use ONLY the facts below; never invent prices, hours or promises. If the answer is not in the facts, or the customer asks for a person, wants to order, complain or negotiate, answer exactly "[HANDOFF]" followed by one short polite sentence saying the owner will help.\n\nFACTS:\n${facts}` }, ...hist, { role: 'user', content: q }],
+      temperature: 0.3, max_tokens: 300
+    }, { headers: { Authorization: 'Bearer ' + key }, timeout: 30000 });
+    let a = String(r.data.choices[0].message.content || '').trim();
+    const handoff = /\[HANDOFF\]/i.test(a); a = a.replace(/\[HANDOFF\]/gi, '').trim() || 'The owner will help you personally.';
+    if (handoff) await pushNote(user._id, 'ai', 'ai-' + Date.now(), 'AI receptionist needs you', q.slice(0, 120), '/messages');
+    res.json({ answer: a.slice(0, 600), handoff });
+  } catch (e) { res.json({ answer: 'Sorry, I could not answer. Please message the owner.', handoff: true }); }
+});
+const aiWidgetJs = (slug, greeting) => `(function(){var slug=${JSON.stringify(slug)},hist=[];var b=document.createElement('button');b.textContent='\\u{1F4AC}';b.setAttribute('aria-label','Ask');b.style.cssText='position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:90;width:54px;height:54px;border-radius:50%;border:0;font-size:24px;cursor:pointer;background:var(--a,#7c5cff);color:var(--on,#fff);box-shadow:0 8px 24px #0006';var p=document.createElement('div');p.style.cssText='display:none;position:fixed;left:14px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:90;width:min(340px,calc(100vw - 28px));max-height:70vh;background:#141821;color:#eee;border:1px solid #ffffff2a;border-radius:18px;overflow:hidden;font:14px system-ui,sans-serif;flex-direction:column';var l=document.createElement('div');l.style.cssText='padding:12px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:8px;min-height:140px';var f=document.createElement('form');f.style.cssText='display:flex;gap:6px;padding:8px;border-top:1px solid #ffffff22';var i=document.createElement('input');i.placeholder='Ask a question...';i.maxLength=400;i.style.cssText='flex:1;padding:10px;border-radius:10px;border:1px solid #ffffff33;background:#0c0f15;color:#fff;font:inherit';var s=document.createElement('button');s.textContent='\\u27A4';s.style.cssText='padding:0 14px;border-radius:10px;border:0;background:var(--a,#7c5cff);color:var(--on,#fff);font-size:16px;cursor:pointer';f.append(i,s);p.append(l,f);document.body.append(b,p);function add(t,me){var d=document.createElement('div');d.textContent=t;d.style.cssText='padding:9px 12px;border-radius:12px;max-width:85%;'+(me?'align-self:flex-end;background:#7c5cff;color:#fff':'align-self:flex-start;background:#232a38');l.append(d);l.scrollTop=l.scrollHeight;return d}add(${JSON.stringify(greeting || 'Hi! Ask me about our offers, prices or opening hours.')},false);b.onclick=function(){p.style.display=p.style.display==='flex'?'none':'flex';if(p.style.display==='flex')i.focus()};f.onsubmit=function(e){e.preventDefault();var q=i.value.trim();if(!q)return;i.value='';add(q,true);var w=add('...',false);fetch('/site/'+encodeURIComponent(slug)+'/ai-ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,history:hist})}).then(function(r){return r.json()}).then(function(j){w.textContent=j.answer||'...';hist.push({role:'user',text:q},{role:'assistant',text:j.answer||''});if(j.handoff){var a=document.createElement('a');a.href='/site/'+encodeURIComponent(slug)+'/messages';a.textContent='Message the owner \\u2192';a.style.cssText='align-self:flex-start;color:var(--a,#7c5cff);font-weight:700';l.append(a);l.scrollTop=l.scrollHeight}}).catch(function(){w.textContent='Sorry, something went wrong.'})}})();`;
 
 // ---------- Stripe checkout ----------
 app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
@@ -4471,7 +4729,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases', '/ai-sites'];
+const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases', '/ai-sites', '/pro'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
