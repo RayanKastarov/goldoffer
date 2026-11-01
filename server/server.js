@@ -55,12 +55,23 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
       const s = event.data.object;
       const userId = s.client_reference_id;
       if (userId) {
-        await User.findByIdAndUpdate(userId, { subscriptionStatus: 'active', stripeCustomerId: s.customer });
-        await User.updateMany({ ownerId: userId }, { subscriptionStatus: 'active' });
+        const plan = (s.metadata && PLANS[s.metadata.plan]) ? s.metadata.plan : 'pro';
+        await User.findByIdAndUpdate(userId, { subscriptionStatus: 'active', plan, stripeCustomerId: s.customer });
+        await User.updateMany({ ownerId: userId }, { subscriptionStatus: 'active', plan });
+      }
+    } else if (event.type === 'customer.subscription.updated') {
+      const sub = event.data.object;
+      const own = await User.findOne({ stripeCustomerId: sub.customer });
+      if (own) {
+        const live = ['active', 'trialing', 'past_due'].includes(sub.status);
+        const priceId = sub.items && sub.items.data && sub.items.data[0] && sub.items.data[0].price && sub.items.data[0].price.id;
+        const upd = live ? { subscriptionStatus: 'active', plan: planFromPrice(priceId) } : { subscriptionStatus: 'canceled', plan: 'free' };
+        await User.updateOne({ _id: own._id }, upd);
+        await User.updateMany({ ownerId: own._id }, upd);
       }
     } else if (event.type === 'customer.subscription.deleted') {
-      const own = await User.findOneAndUpdate({ stripeCustomerId: event.data.object.customer }, { subscriptionStatus: 'canceled' });
-      if (own) await User.updateMany({ ownerId: own._id }, { subscriptionStatus: 'canceled' });
+      const own = await User.findOneAndUpdate({ stripeCustomerId: event.data.object.customer }, { subscriptionStatus: 'canceled', plan: 'free' });
+      if (own) await User.updateMany({ ownerId: own._id }, { subscriptionStatus: 'canceled', plan: 'free' });
     }
   } catch (e) {
     console.error('Webhook handling error', e);
@@ -69,6 +80,24 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
 });
 
 app.use(express.json({ limit: '256kb' }));
+// Custom domains (Agency): serve the site whose verified domain matches the Host header.
+const domainCache = new Map();
+const domHost = (u) => { try { return new URL(u).hostname.toLowerCase(); } catch (e) { return ''; } };
+app.use(async (req, res, next) => {
+  try {
+    const host = String(req.headers.host || '').split(':')[0].toLowerCase();
+    if (!host || !host.includes('.') || host.endsWith('.onrender.com') || host.endsWith('.netlify.app') || host === domHost(PUBLIC_BASE) || host === domHost(FRONTEND_URL)) return next();
+    let hit = domainCache.get(host);
+    if (!hit || hit.t < Date.now() - 60000) {
+      const st = await ShopSetting.findOne({ customDomain: host, customDomainStatus: 'active' }).lean();
+      const owner = st ? await User.findById(st.sellerId).lean() : null;
+      hit = { t: Date.now(), slug: owner && owner.published && hasFeature(owner, 'customDomain') ? owner.slug : null };
+      domainCache.set(host, hit);
+    }
+    if (hit.slug && (req.path === '/' || req.path === '')) req.url = '/site/' + hit.slug + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '');
+  } catch (e) { /* fall through to normal routing */ }
+  next();
+});
 app.use(express.urlencoded({ extended: false, limit: '32kb' }));
 
 // Images are kept in the database (memory storage), so no external service and no disk is needed
@@ -99,6 +128,7 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   subscriptionStatus: { type: String, default: 'trial' }, // trial, active, canceled
+  plan: { type: String, default: 'free' }, // free, pro, agency
   stripeCustomerId: String,
   siteName: String,
   sellerBio: { type: String, default: '' },
@@ -493,13 +523,24 @@ async function sendMail({ to, subject, html, text }) {
   return false;
 }
 
-// Free plan: up to 10 offers. Paid (active subscription): effectively unlimited.
-const FREE_OFFER_LIMIT = 10;
-const PAID_OFFER_LIMIT = 500; // safety cap against abuse
-const offerLimitFor = (u) => (u.subscriptionStatus === 'active' ? PAID_OFFER_LIMIT : FREE_OFFER_LIMIT);
+// Free plan: up to 3 offers, no card, no trial clock. Paid (active subscription): effectively unlimited.
+const FREE_OFFER_LIMIT = 3;
+const PLANS = {
+  free:   { name: 'Free',   price: 0,  offers: 3,    sites: 1,  aiGen: 0,  aiGenPeriod: 'month', proModules: false, whiteLabel: false, customDomain: false, templateSites: false },
+  pro:    { name: 'Pro',    price: 20, offers: 500,  sites: 3,  aiGen: 3,  aiGenPeriod: 'month', proModules: true, whiteLabel: false, customDomain: false, templateSites: false },
+  agency: { name: 'Agency', price: 99, offers: 2000, sites: 20, aiGen: 50, aiGenPeriod: 'month', proModules: true, whiteLabel: true,  customDomain: true,  templateSites: true }
+};
+// Existing paying users without a plan field are treated as Pro.
+const planOf = (u) => (u && u.subscriptionStatus === 'active' ? (PLANS[u.plan] ? u.plan : 'pro') : 'free');
+const limitsOf = (u) => PLANS[planOf(u)];
+const hasFeature = (u, f) => !!limitsOf(u)[f];
+const offerLimitFor = (u) => limitsOf(u).offers;
+const planFromPrice = (priceId) => (priceId && priceId === process.env.STRIPE_PRICE_AGENCY ? 'agency' : 'pro');
+const monthKey = () => 'gen-' + new Date().toISOString().slice(0, 7);
+const builtWith = (u, extra) => (hasFeature(u, 'whiteLabel') ? '' : `<span>Built with <a href="${PUBLIC_BASE}"${extra || ''}>GoldOffer Studio</a></span>`);
 const publicUser = (u) => ({
   id: u._id, firstName: u.firstName, lastName: u.lastName, email: u.email,
-  subscriptionStatus: u.subscriptionStatus, siteName: u.siteName, sellerBio: u.sellerBio || '', verificationStatus: u.verificationStatus || 'none', slug: u.slug,
+  subscriptionStatus: u.subscriptionStatus, plan: planOf(u), planLimits: limitsOf(u), siteName: u.siteName, sellerBio: u.sellerBio || '', verificationStatus: u.verificationStatus || 'none', slug: u.slug,
   category: u.category, city: u.city, theme: u.theme, layout: u.layout || 'signature', font: u.font, published: u.published,
   siteUrl: u.slug && u.published ? `${PUBLIC_BASE}/site/${u.slug}` : null,
   offerLimit: offerLimitFor(u),
@@ -863,9 +904,9 @@ app.post('/api/offers', authenticateToken, async (req, res) => {
     const existing = await Offer.countDocuments({ userId: req.user.id });
     if (existing >= limit) {
       return res.status(402).json({
-        message: owner.subscriptionStatus === 'active'
+        message: planOf(owner) === 'agency'
           ? `You reached the maximum of ${limit} offers.`
-          : `The free plan allows up to ${FREE_OFFER_LIMIT} offers. Upgrade to add more.`,
+          : `Your ${limitsOf(owner).name} plan allows up to ${limit} offers. Upgrade to add more.`,
         limitReached: true
       });
     }
@@ -1807,7 +1848,9 @@ app.put('/api/business/settings',authenticateToken,async(req,res)=>{
  if(typeof b.slotsEnabled==='boolean')update.slotsEnabled=b.slotsEnabled;
  if(Array.isArray(b.quickReplies))update.quickReplies=b.quickReplies.slice(0,12).map(x=>String(x).trim().slice(0,180)).filter(Boolean);
  if(typeof b.customDomain==='string'){
-   const domain=b.customDomain.trim().toLowerCase();if(domain&&!/^(?=.{4,180}$)(?!-)[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(domain))return res.status(400).json({message:'Enter a valid hostname'});
+   const domain=b.customDomain.trim().toLowerCase();
+   if(domain){const ow=await familyOf(req.user.id);if(!ow||!hasFeature(ow,'customDomain'))return res.status(402).json({message:'Custom domains are available on the Agency plan.',upgrade:true});}
+   if(domain&&!/^(?=.{4,180}$)(?!-)[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(domain))return res.status(400).json({message:'Enter a valid hostname'});
    update.customDomain=domain;update.customDomainStatus=domain?'pending-dns':'not-configured';
  }
  try{const setting=await ShopSetting.findOneAndUpdate({sellerId:req.user.id},{$set:update}, {new:true,upsert:true,setDefaultsOnInsert:true});res.json({setting})}catch(e){res.status(500).json({message:'Could not save settings'})}
@@ -3247,7 +3290,7 @@ ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p
 <script>(function(){var d=document.getElementById('bkDate');if(!d)return;var slug=document.body.getAttribute('data-slug'),box=document.getElementById('bkSlots'),hid=document.getElementById('bkStart'),off=document.getElementById('bkOffer');var t=new Date();d.min=t.toISOString().slice(0,10);function load(){hid.value='';if(!d.value)return;box.textContent='Loading...';fetch('/site/'+encodeURIComponent(slug)+'/slots?date='+d.value+(off&&off.value?'&offerId='+off.value:''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){box.textContent='';if(!j.slots||!j.slots.length){box.textContent='No free times on this day. Try another day.';return}j.slots.forEach(function(s){var b=document.createElement('button');b.type='button';b.textContent=s.time;b.style.cssText='padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font-weight:700;cursor:pointer';b.onclick=function(){hid.value=s.iso;[].forEach.call(box.children,function(x){x.style.background='transparent';x.style.color='inherit'});b.style.background='var(--a)';b.style.color='var(--on)'};box.appendChild(b)})}).catch(function(){box.textContent='Could not load times.'})}d.addEventListener('change',load);if(off)off.addEventListener('change',load);var f=d.form;if(f)f.addEventListener('submit',function(e){if(!hid.value){e.preventDefault();box.textContent='Please pick a time first.'}})})();</script>
 <script>(function(){var form=document.querySelector('#book form');if(form)form.addEventListener('submit',function(){var x=form.querySelector('[name="startsAt"]');if(x){var d=new Date(x.value);if(Number.isFinite(d.getTime())){x.type='hidden';x.value=d.toISOString()}}})})();</script>
 <script>${SITE_JS}</script>
-${!user._studio && user.receptionist && user.receptionist.enabled ? `<script>${aiWidgetJs(user.slug, user.receptionist.greeting)}</script>` : ''}${!user._studio && user.siteLang === 'bg' ? `<script>${SITE_I18N_JS}</script>` : ''}${!user._studio && user.siteLang && !/^(en|bg)(-|$)/.test(user.siteLang) ? `<script>${SITE_I18N_LOADER}</script>` : ''}
+${!user._studio && user.receptionist && user.receptionist.enabled && hasFeature(user, 'proModules') ? `<script>${aiWidgetJs(user.slug, user.receptionist.greeting)}</script>` : ''}${!user._studio && user.siteLang === 'bg' ? `<script>${SITE_I18N_JS}</script>` : ''}${!user._studio && user.siteLang && !/^(en|bg)(-|$)/.test(user.siteLang) ? `<script>${SITE_I18N_LOADER}</script>` : ''}
 ${studio ? '' : `<script>(function(){
   var slug = document.body.getAttribute('data-slug');
   var token = null;
@@ -3334,7 +3377,7 @@ function renderSellerProfile(user, offers) {
   </main>
   <div class="sp-overlay" id="spModal" hidden><div class="sp-dialog" role="dialog" aria-modal="true" aria-labelledby="spModalTitle"><div class="sp-modal-head"><h2 id="spModalTitle">Review ${name}</h2><button id="spClose" type="button" aria-label="Close">✕</button></div><p class="sp-subtle">Your review is about this seller. Reviews are submitted by visitors and are not purchase-verified.</p><form id="spForm"><label>Your name<input name="name" required minlength="2" maxlength="60" autocomplete="name" placeholder="Your name"></label><label>Email (not shown publicly)<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label><label>Your rating<select name="rating" required><option value="5">★★★★★ Excellent</option><option value="4">★★★★☆ Good</option><option value="3">★★★☆☆ Average</option><option value="2">★★☆☆☆ Fair</option><option value="1">★☆☆☆☆ Poor</option></select></label><label>Share your experience<textarea name="comment" rows="3" maxlength="600" placeholder="What should other visitors know?"></textarea></label><button type="submit" class="sp-btn sp-primary">Submit review</button><p role="status" id="spStatus"></p></form></div></div>
   <div class="sp-mobile-actions">${contact}<a class="sp-btn" href="#reviews">★ Reviews</a></div>
-  <footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}">GoldOffer Studio</a></span></footer>
+  <footer><b>${esc(user.siteName)}</b>${builtWith(user)}</footer>
   <style>
   .sp-update{background:#253224;border:1px solid #719a56;color:#e7ffdd;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-size:14px}
   .sp-wrap{max-width:1120px;width:min(100% - 36px,1120px);margin:auto;padding:38px 0 110px;min-width:0}.sp-back{display:inline-block;color:#aeb5c2;margin-bottom:20px;text-decoration:none;font-size:14px}.sp-hero{padding:clamp(22px,4vw,42px);border:1px solid #29303b;border-radius:26px;background:linear-gradient(128deg,#1b212c,#10151d);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:24px}.sp-identity{display:flex;align-items:center;gap:20px;min-width:0}.sp-avatar{flex:none;width:88px;height:88px;border-radius:22px;background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.04));color:#f4f5f7;display:grid;place-items:center;font-size:26px;font-weight:800;letter-spacing:.04em;overflow:hidden;border:1px solid rgba(255,255,255,.12)}.sp-avatar img{width:100%;height:100%;object-fit:cover}.sp-intro{min-width:0}.sp-intro h1{font-size:clamp(28px,4.5vw,48px);margin:5px 0 8px;color:#f5f6f9;overflow-wrap:anywhere}.sp-intro p{color:#b5bdc9}.sp-eyebrow{color:#e6ba50;letter-spacing:.16em;font-size:11px;font-weight:800}.sp-proof{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;color:#c9cfd9;font-size:12px}.sp-proof span{background:#242b36;padding:7px 10px;border:1px solid #353e4c;border-radius:30px}.sp-buttons,.sp-about-actions{display:flex;flex-wrap:wrap;gap:10px}.sp-btn{border:1px solid #394150;background:#242b37;color:#f5f6fa;padding:12px 17px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font:700 14px Inter,sans-serif;cursor:pointer;min-height:46px}.sp-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8}.sp-btn:hover{border-color:#d7aa33}.sp-btn.sp-primary{background:linear-gradient(110deg,#ffda00,#ff9900);color:#15120b;border-color:transparent}.sp-tabs{position:sticky;top:72px;z-index:12;display:flex;gap:24px;border-bottom:1px solid #2d3440;background:#0a0e15;padding-top:19px;margin-bottom:28px}.sp-tabs a{padding:12px 2px;color:#bac3d1;text-decoration:none;font-weight:650;font-size:14px}.sp-tabs a:hover,.sp-tabs a:focus{color:#ffcf35}.sp-section{scroll-margin-top:135px;padding:25px 0 46px;border-bottom:1px solid #272e39}.sp-section-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:24px}.sp-section-head h2{font-size:clamp(23px,3vw,34px);margin:6px 0;color:#f5f6fa}.sp-subtle{color:#aab2c0;font-size:14px}.sp-about{background:#151b25;border:1px solid #2f3745;border-radius:20px;padding:24px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}.sp-about h3{font-size:21px;color:#fff;margin-bottom:8px}.sp-about p{color:#bdc4cf;max-width:700px}.sp-review-box{display:grid;grid-template-columns:minmax(180px,270px) minmax(0,1fr);gap:18px}.sp-review-summary,.sp-review-list{border-radius:20px;background:#171e29;border:1px solid #333d4b;padding:24px;min-width:0}.sp-review-summary{display:flex;flex-direction:column;gap:8px;align-self:start}.sp-review-summary strong{font-size:52px;color:#fff}.sp-review-summary>span{color:#ffca28;font-size:23px}.sp-review-summary small{color:#b9c2cf}.sp-review-list{min-height:130px;color:#c7cfda}.sp-review-item{padding:14px 0;border-bottom:1px solid #343c48}.sp-review-item:last-child{border:0}.sp-review-item>div{display:flex;justify-content:space-between;gap:10px}.sp-review-item strong{color:#fff}.sp-review-item span{color:#ffd13a}.sp-review-item p{margin:10px 0;overflow-wrap:anywhere;white-space:pre-wrap}.sp-review-item small{color:#9ca9bb}.sp-bar{height:7px;background:#323b47;border-radius:6px;overflow:hidden;margin:8px 0}.sp-bar i{display:block;height:100%;background:#ffb800}.sp-overlay:not([hidden]){position:fixed;z-index:300;inset:0;background:#05070bd9;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}.sp-dialog{width:min(100%,470px);max-height:calc(100dvh - 40px);overflow:auto;border:1px solid #38414e;background:#171e28;border-radius:22px;padding:24px;color:#f7f7f7}.sp-modal-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}.sp-modal-head h2{font-size:23px}.sp-modal-head button{border:1px solid #444c59;border-radius:10px;background:#252d38;color:white;padding:9px 13px;cursor:pointer}.sp-dialog label{display:block;margin:14px 0;color:#eef1f5;font-size:13px;font-weight:600}.sp-dialog input,.sp-dialog select,.sp-dialog textarea{display:block;width:100%;background:#222a36;color:#fff;border:1px solid #485261;border-radius:11px;padding:13px;margin-top:6px;box-sizing:border-box;font:inherit}.sp-dialog .sp-btn{width:100%}.sp-mobile-actions{display:none}
@@ -3459,7 +3502,7 @@ function renderSite(user, offers, sent) {
 ${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book"><div class="sec-head"><h2>Request an appointment</h2><span>Available when the business enables appointments.</span></div><form class="glass" method="POST" action="/site/${esc(user.slug)}/appointment" style="display:grid;gap:12px;max-width:620px"><input name="customer" placeholder="Your name" required maxlength="80"><input name="contact" placeholder="Your contact details" required maxlength="140"><label style="font-size:13px">Service (optional)</label><select name="offerId" id="bkOffer"><option value="">Any</option>${(user._offerOpts||[]).map(o=>`<option value="${esc(o.id)}">${esc(o.title)}</option>`).join('')}</select><label style="font-size:13px">Pick a day</label><input type="date" id="bkDate" required><div id="bkSlots" style="display:flex;flex-wrap:wrap;gap:8px;min-height:38px;color:var(--soft);font-size:13px">Choose a day to see free times.</div><input type="hidden" name="startsAt" id="bkStart" required><textarea name="note" rows="2" placeholder="What do you need? (optional)" maxlength="500"></textarea><label style="font-size:12px;display:flex;gap:9px;align-items:start"><input type="checkbox" name="consent" value="1" required style="width:auto;margin:3px 0"><span>I agree to be contacted about this booking. <a href="${PUBLIC_BASE}/privacy">Privacy Policy</a></span></label><button class="btn" type="submit">Send booking request</button></form>${sent ? '' : ''}</section>
 ` : ''}${user.faqItems && user.faqItems.length ? `<section class="wrap go-faq" id="faq"><div class="sec-head"><h2>Frequently asked questions</h2></div><div style="display:grid;gap:12px">${user.faqItems.map(x=>`<details class="glass" style="padding:18px 22px"><summary style="cursor:pointer;font-weight:700">${esc(x.question)}</summary><p style="padding-top:10px;color:var(--soft)">${esc(x.answer)}</p></details>`).join('')}</div></section>` : ''}
 <section class="wrap findus" id="about" style="padding-top:60px"><div class="sec-head"><h2>Find us</h2></div>${aboutBlock(user)}</section>
-<footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>
+<footer><b>${esc(user.siteName)}</b>${builtWith(user, ' target="_blank" rel="noopener"')}</footer>
 <style>
 .cine-hero{position:relative;overflow:hidden;padding:108px 0 60px;background:radial-gradient(1200px circle at 78% 22%,rgba(255,200,32,.13),transparent 32%),radial-gradient(900px circle at 18% 10%,rgba(255,255,255,.06),transparent 28%),linear-gradient(180deg,#05070b 0%,#070b12 100%)}
 .cine-noise,.hero-fade{position:absolute;inset:0;pointer-events:none}.cine-noise{opacity:.25;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px);background-size:12px 12px;mask-image:linear-gradient(180deg,rgba(0,0,0,.7),transparent)}.hero-fade{background:linear-gradient(180deg,transparent 68%,#070b12 100%)}
@@ -3585,7 +3628,7 @@ ${more}
 </main>
 <div class="lb" id="lb"><img id="lbImg" alt=""></div>
 <div class="stick"><b>${eur(offer.price)}</b><a class="alt" href="#request">Request</a><a href="/site/${esc(user.slug)}/messages?offer=${offer._id}">Message</a></div>
-<footer><b>${esc(user.siteName)}</b><span>Built with <a href="${PUBLIC_BASE}" target="_blank" rel="noopener">GoldOffer Studio</a></span></footer>`;
+<footer><b>${esc(user.siteName)}</b>${builtWith(user, ' target="_blank" rel="noopener"')}</footer>`;
   return pageShell(user, { title: `${offer.title} - ${user.siteName}`, desc: String(offer.description || offer.title).slice(0, 160), body, cls: 'offerpage', page: 'offer' });
 }
 
@@ -3596,7 +3639,7 @@ function renderFavoritesPage(user) {
 <h2>Your favorites</h2><p class="sub">Offers you saved with the heart. They are kept in this browser only, so no account is needed.</p>
 <div class="grid" id="favList"><p class="none">Loading...</p></div>
 </main>
-<footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}<div style="margin-top:18px">Built with GoldOffer Studio</div></footer>`;
+<footer><b>${esc(user.siteName)}</b>${[user.category, user.city].filter(Boolean).map(esc).join(' &middot; ')}${hasFeature(user, 'whiteLabel') ? '' : '<div style="margin-top:18px">Built with GoldOffer Studio</div>'}</footer>`;
   return pageShell(user, { title: `Favorites - ${user.siteName}`, desc: `Offers you saved at ${user.siteName}`, body, page: 'favorites' });
 }
 
@@ -4431,7 +4474,7 @@ const familyOf = async (userId) => {
   if (!me) return null;
   return me.ownerId ? await User.findById(me.ownerId) : me;
 };
-const SITE_CAP = (root) => (root.subscriptionStatus === 'active' ? 20 : 5);
+const SITE_CAP = (root) => limitsOf(root).sites;
 const cleanStr = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').trim().slice(0, n);
 function extractJson(text) {
   const t = String(text || '');
@@ -4447,7 +4490,7 @@ app.get('/api/my-sites', authenticateToken, async (req, res) => {
     const subs = await User.find({ ownerId: root._id }).sort({ _id: 1 });
     const all = [root, ...subs];
     res.json({
-      currentId: String(req.user.id), rootId: String(root._id), cap: SITE_CAP(root), aiReady: !!process.env.OPENROUTER_API_KEY,
+      currentId: String(req.user.id), rootId: String(root._id), cap: SITE_CAP(root), plan: planOf(root), planLimits: limitsOf(root), canTemplate: hasFeature(root, 'templateSites'), aiReady: !!process.env.OPENROUTER_API_KEY,
       sites: all.map(u => ({ id: String(u._id), siteName: u.siteName || 'Untitled', slug: u.slug, published: !!u.published, aiGenerated: !!u.aiGenerated, isMain: String(u._id) === String(root._id), siteUrl: u.slug ? `${PUBLIC_BASE}/site/${u.slug}` : null }))
     });
   } catch (e) { res.status(500).json({ message: 'Could not load your sites.' }); }
@@ -4480,11 +4523,15 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     const root = await familyOf(req.user.id);
     if (!root) return res.status(404).json({ message: 'Account not found.' });
     const count = await User.countDocuments({ ownerId: root._id });
-    if (count + 1 >= SITE_CAP(root)) return res.status(400).json({ message: 'You reached the website limit for your plan.' });
+    if (count + 1 >= SITE_CAP(root)) return res.status(402).json({ message: `Your ${limitsOf(root).name} plan allows ${SITE_CAP(root)} website${SITE_CAP(root) === 1 ? '' : 's'}. Upgrade to add more.`, upgrade: true });
+    const genCap = limitsOf(root).aiGen;
+    if (genCap <= 0) return res.status(402).json({ message: 'AI website generation is available on Pro and Agency plans.', upgrade: true });
     const name = cleanStr(req.body.name, 60), desc = cleanStr(req.body.description, 1500);
     const lang = (typeof req.body.lang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(req.body.lang)) ? req.body.lang : 'en';
     const languageName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(lang) || lang; } catch (e) { return lang; } })();
     if (!name || desc.length < 10) return res.status(400).json({ message: 'Give a name and describe the business (at least a sentence).' });
+    if (!(await G.takeQuota(GOAiUsage, root._id, genCap, monthKey()))) return res.status(402).json({ message: `You used all ${genCap} AI generations for this month on the ${limitsOf(root).name} plan.`, upgrade: true });
+    res.on('finish', () => { if (res.statusCode >= 400) G.releaseQuota(GOAiUsage, root._id, monthKey()).catch(() => {}); });
     const sys = `You are a senior web designer. Create a UNIQUE, modern, mobile-first one-page website for a small business. Reply with ONE JSON object only, no markdown fences. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), palette {a,b,bg,panel,text} (hex colors with strong contrast: a=accent, b=second accent, bg=page background, panel=card background, text=text color), offers (array of 3-6 {title, price (number, 0 if unknown), description}), faq (array of 3 {question, answer}), css (string), html (string).
 Rules for html: a body fragment only. No html/head/body/script/style/iframe/form tags, no inline event handlers, no external images: make visuals with CSS gradients, emoji or inline SVG. Structure: a hero with a big headline and a call-to-action link href="#offers"; an about/story section; 3 benefit cards; then <section id="offers"> with a heading and exactly the text {{OFFERS}}; a FAQ section containing exactly {{FAQ}}; a section id="contact" containing exactly {{CONTACT}}; a short footer. Never write the offer cards, FAQ items or contact details yourself, the server replaces the placeholders.
 Rules for css: plain CSS for that html, mobile-first with media queries, bold distinctive typography and layout (not a generic template). Use var(--a), var(--b), var(--bg), var(--panel), var(--text) for colors (they come from your palette). Also style the classes .ai-offers .ai-offer .ai-offer-img .ai-offer-title .ai-offer-desc .ai-offer-price .ai-faq .ai-contact if you want to change their look.
@@ -4502,7 +4549,7 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
     const pick = (v, obj, d) => (Object.keys(obj).includes(v) ? v : d);
     const sub = new User({
       firstName: root.firstName, lastName: root.lastName, email, password: root.password,
-      subscriptionStatus: root.subscriptionStatus, ownerId: root._id, aiGenerated: true, emailVerified: true,
+      subscriptionStatus: root.subscriptionStatus, plan: root.plan, ownerId: root._id, aiGenerated: true, emailVerified: true,
       siteName: name, sellerBio: cleanStr(j.bio, 650), category: cleanStr(j.category, 80), city: cleanStr(j.city, 80),
       theme: 'gold', layout: 'signature', font: 'sans', aiPage,
       announcementText: cleanStr(j.announcement, 200), lang: root.lang || 'bg', siteLang: lang, published: true,
@@ -4543,7 +4590,7 @@ const GOAutomation = mongoose.model('GOAutomation', new mongoose.Schema({
 }));
 const GOAutoRun = mongoose.model('GOAutoRun', new mongoose.Schema({
   sellerId: { type: mongoose.Schema.Types.ObjectId, index: true }, autoId: mongoose.Schema.Types.ObjectId, name: String, trigger: String, ref: String,
-  status: { type: String, default: 'running' }, errors: { type: [{ step: Number, type: { type: String }, message: String, _id: false }], default: [] },
+  status: { type: String, default: 'running' }, failures: { type: [{ step: Number, type: { type: String }, message: String, _id: false }], default: [] },
   at: { type: Date, default: Date.now, expires: 2592000 }
 }).index({ autoId: 1, ref: 1 }, { unique: true }));
 const GOAiUsage = mongoose.model('GOAiUsage', new mongoose.Schema({
@@ -4572,8 +4619,17 @@ const AUTO_TRIGGERS = ['order.created', 'order.completed', 'booking.created'];
 const AUTO_ACTIONS = ['task', 'notify', 'email', 'stock', 'tag'];
 const fillTpl = (t, c) => String(t || '').replace(/\{(customer|offer|amount|time)\}/g, (_, k) => String((c && c[k]) || ''));
 
+// Pro modules (Automations, CRM, Calendar, Intelligence, Commerce, AI Receptionist) need a paid plan.
+app.use('/api/pro', authenticateToken, async (req, res, next) => {
+  try {
+    const root = await familyOf(req.user.id);
+    if (root && hasFeature(root, 'proModules')) return next();
+    res.status(402).json({ message: 'GoldOffer Pro tools are available on the Pro and Agency plans.', upgrade: true });
+  } catch (e) { res.status(500).json({ message: 'Could not check your plan.' }); }
+});
 async function runAutomations(sellerId, trigger, ctx) {
   let list = [];
+  try { const ow = await User.findById(sellerId).select('subscriptionStatus plan ownerId').lean(); if (!ow || !hasFeature(ow, 'proModules')) return; } catch (e) { return; }
   try { list = await GOAutomation.find({ sellerId, trigger, enabled: true }); }
   catch (e) { console.error('automations: could not load', e.message); return; }
   if (!list.length) return;
@@ -4605,12 +4661,12 @@ async function runAutomations(sellerId, trigger, ctx) {
         } catch (e) { errors.push({ step: i + 1, type: act.type, message: String(e && e.message || e).slice(0, 200) }); console.error('automation step failed', a._id, act.type, e && e.message); }
       }
       const status = !errors.length ? 'ok' : (errors.length < a.actions.length ? 'partial' : 'error');
-      await GOAutoRun.updateOne({ _id: run._id }, { $set: { status, errors } });
+      await GOAutoRun.updateOne({ _id: run._id }, { $set: { status, failures: errors } });
       await GOAutomation.updateOne({ _id: a._id }, { $inc: { runs: 1 }, $set: { lastRunAt: new Date(), lastStatus: status, lastError: errors.length ? `Step ${errors[0].step} (${errors[0].type}): ${errors[0].message}` : '' } });
       if (status !== 'ok') await pushNote(sellerId, 'auto', 'autoerr-' + a._id, 'Automation problem', `${a.name}: ${errors[0].message}`.slice(0, 200), '/pro');
     } catch (e) {
       console.error('automation failed', a && a._id, e && e.message);
-      try { if (run) await GOAutoRun.updateOne({ _id: run._id }, { $set: { status: 'error', errors: [{ step: 0, type: 'engine', message: String(e && e.message || e).slice(0, 200) }] } }); } catch (x) { /* nothing more we can do */ }
+      try { if (run) await GOAutoRun.updateOne({ _id: run._id }, { $set: { status: 'error', failures: [{ step: 0, type: 'engine', message: String(e && e.message || e).slice(0, 200) }] } }); } catch (x) { /* nothing more we can do */ }
     }
   }
 }
@@ -4723,7 +4779,7 @@ app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), asy
   const bump = (id, inc) => GOAiUsage.updateOne({ sellerId: id, day: G.dayKey() }, { $inc: inc }, { upsert: true }).catch(() => {});
   try {
     const user = await User.findOne({ slug: req.params.slug, published: true });
-    if (!user || !user.receptionist || !user.receptionist.enabled || process.env.AI_RECEPTIONIST_DISABLED === '1') return res.sendStatus(404);
+    if (!user || !user.receptionist || !user.receptionist.enabled || !hasFeature(user, 'proModules') || process.env.AI_RECEPTIONIST_DISABLED === '1') return res.sendStatus(404);
     const key = process.env.OPENROUTER_API_KEY;
     const q = G.sanitizeQuestion((req.body || {}).question);
     if (!q) return res.status(400).json({ answer: '', handoff: false });
@@ -4754,18 +4810,90 @@ app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), asy
 });
 const aiWidgetJs = (slug, greeting) => `(function(){var slug=${JSON.stringify(slug)},hist=[];var b=document.createElement('button');b.textContent='\\u{1F4AC}';b.setAttribute('aria-label','Ask');b.style.cssText='position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:90;width:54px;height:54px;border-radius:50%;border:0;font-size:24px;cursor:pointer;background:var(--a,#7c5cff);color:var(--on,#fff);box-shadow:0 8px 24px #0006';var p=document.createElement('div');p.style.cssText='display:none;position:fixed;left:14px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:90;width:min(340px,calc(100vw - 28px));max-height:70vh;background:#141821;color:#eee;border:1px solid #ffffff2a;border-radius:18px;overflow:hidden;font:14px system-ui,sans-serif;flex-direction:column';var l=document.createElement('div');l.style.cssText='padding:12px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:8px;min-height:140px';var f=document.createElement('form');f.style.cssText='display:flex;gap:6px;padding:8px;border-top:1px solid #ffffff22';var i=document.createElement('input');i.placeholder='Ask a question...';i.maxLength=400;i.style.cssText='flex:1;padding:10px;border-radius:10px;border:1px solid #ffffff33;background:#0c0f15;color:#fff;font:inherit';var s=document.createElement('button');s.textContent='\\u27A4';s.style.cssText='padding:0 14px;border-radius:10px;border:0;background:var(--a,#7c5cff);color:var(--on,#fff);font-size:16px;cursor:pointer';f.append(i,s);p.append(l,f);document.body.append(b,p);function add(t,me){var d=document.createElement('div');d.textContent=t;d.style.cssText='padding:9px 12px;border-radius:12px;max-width:85%;'+(me?'align-self:flex-end;background:#7c5cff;color:#fff':'align-self:flex-start;background:#232a38');l.append(d);l.scrollTop=l.scrollHeight;return d}add(${JSON.stringify(greeting || 'Hi! Ask me about our offers, prices or opening hours.')},false);b.onclick=function(){p.style.display=p.style.display==='flex'?'none':'flex';if(p.style.display==='flex')i.focus()};f.onsubmit=function(e){e.preventDefault();var q=i.value.trim();if(!q)return;i.value='';add(q,true);var w=add('...',false);fetch('/site/'+encodeURIComponent(slug)+'/ai-ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,history:hist})}).then(function(r){return r.json()}).then(function(j){w.textContent=j.answer||'...';hist.push({role:'user',text:q},{role:'assistant',text:j.answer||''});if(j.handoff){var a=document.createElement('a');a.href='/site/'+encodeURIComponent(slug)+'/messages';a.textContent='Message the owner \\u2192';a.style.cssText='align-self:flex-start;color:var(--a,#7c5cff);font-weight:700';l.append(a);l.scrollTop=l.scrollHeight}}).catch(function(){w.textContent='Sorry, something went wrong.'})}})();`;
 
+// ---------- Plans: usage, template sites, domain verification ----------
+app.get('/api/plan', authenticateToken, async (req, res) => {
+  try {
+    const root = await familyOf(req.user.id);
+    if (!root) return res.status(404).json({ message: 'Account not found.' });
+    const L = limitsOf(root);
+    const ids = [root._id, ...(await User.find({ ownerId: root._id }).select('_id').lean()).map(x => x._id)];
+    const [offers, usage] = await Promise.all([Offer.countDocuments({ userId: req.user.id }), GOAiUsage.findOne({ sellerId: root._id, day: monthKey() }).lean()]);
+    res.json({ plan: planOf(root), limits: L, plans: PLANS, usage: { offers, sites: ids.length, aiGen: usage ? usage.count : 0 } });
+  } catch (e) { res.status(500).json({ message: 'Could not load plan.' }); }
+});
+
+const SITE_TEMPLATES = {
+  blank:    { theme: 'gold', layout: 'signature', offers: [] },
+  shop:     { theme: 'emerald', layout: 'market', offers: [['Featured product', 29], ['Bestseller', 49]] },
+  services: { theme: 'neon-blue', layout: 'editorial', offers: [['Consultation', 40], ['Full service', 120]] },
+  portfolio:{ theme: 'gold', layout: 'atelier', offers: [['Signature project', 0], ['Custom commission', 0]] }
+};
+app.post('/api/my-sites/create', authenticateToken, async (req, res) => {
+  try {
+    const root = await familyOf(req.user.id);
+    if (!root) return res.status(404).json({ message: 'Account not found.' });
+    if (!hasFeature(root, 'templateSites')) return res.status(402).json({ message: 'Creating sites from templates is available on the Agency plan.', upgrade: true });
+    const count = await User.countDocuments({ ownerId: root._id });
+    if (count + 1 >= SITE_CAP(root)) return res.status(402).json({ message: `Your plan allows ${SITE_CAP(root)} websites.`, upgrade: true });
+    const name = cleanStr(req.body.name, 60);
+    if (!name) return res.status(400).json({ message: 'Give the site a name.' });
+    const tpl = SITE_TEMPLATES[req.body.template] || SITE_TEMPLATES.blank;
+    const sub = new User({
+      firstName: root.firstName, lastName: root.lastName, email: `site-${root._id}-${Date.now().toString(36)}@sites.goldoffer.local`, password: root.password,
+      subscriptionStatus: root.subscriptionStatus, plan: root.plan, ownerId: root._id, emailVerified: true,
+      siteName: name, category: cleanStr(req.body.category, 80), theme: tpl.theme, layout: tpl.layout, font: 'sans',
+      lang: root.lang || 'bg', siteLang: root.siteLang || 'en', published: true, notifyEmail: root.notifyEmail || root.email
+    });
+    sub.slug = await uniqueSlug(req.body.slug || name, sub._id);
+    await sub.save();
+    for (let i = 0; i < tpl.offers.length; i++) await Offer.create({ userId: sub._id, title: tpl.offers[i][0], price: tpl.offers[i][1], description: '', order: i });
+    res.json({ site: { id: String(sub._id), slug: sub.slug, siteName: sub.siteName, siteUrl: `${PUBLIC_BASE}/site/${sub.slug}` }, token: signToken(sub), user: publicUser(sub) });
+  } catch (e) { console.error('template site error', e.message); res.status(500).json({ message: 'Could not create the site.' }); }
+});
+
+app.post('/api/business/domain/verify', authenticateToken, async (req, res) => {
+  try {
+    const root = await familyOf(req.user.id);
+    if (!root || !hasFeature(root, 'customDomain')) return res.status(402).json({ message: 'Custom domains are available on the Agency plan.', upgrade: true });
+    const st = await ShopSetting.findOne({ sellerId: req.user.id });
+    if (!st || !st.customDomain) return res.status(400).json({ message: 'Save a domain first.' });
+    const dns = require('dns').promises, target = (process.env.CUSTOM_DOMAIN_TARGET || domHost(PUBLIC_BASE)).toLowerCase();
+    let ok = false;
+    try { ok = (await dns.resolveCname(st.customDomain)).some(c => c.replace(/\.$/, '').toLowerCase() === target); } catch (e) { /* no CNAME */ }
+    if (!ok) { try { const [a, b] = await Promise.all([dns.resolve4(st.customDomain), dns.resolve4(target)]); ok = a.some(x => b.includes(x)); } catch (e) { /* no A match */ } }
+    let registered = null;
+    if (ok && process.env.RENDER_API_KEY && process.env.RENDER_SERVICE_ID) {
+      try {
+        await axios.post(`https://api.render.com/v1/services/${process.env.RENDER_SERVICE_ID}/custom-domains`, { name: st.customDomain }, { headers: { Authorization: 'Bearer ' + process.env.RENDER_API_KEY }, timeout: 15000 });
+        registered = true;
+      } catch (e) { registered = !!(e.response && e.response.status === 409); console.error('Render domain error', e.response ? e.response.status : e.message); }
+    }
+    st.customDomainStatus = ok ? 'active' : 'pending-dns';
+    await st.save(); domainCache.delete(st.customDomain);
+    res.json({ ok, status: st.customDomainStatus, target, tlsRegistered: registered, message: ok ? 'Domain verified and connected.' : `DNS not ready yet. Point a CNAME for ${st.customDomain} to ${target}, then check again.` });
+  } catch (e) { res.status(500).json({ message: 'Could not verify the domain.' }); }
+});
+
 // ---------- Stripe checkout ----------
 app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
   try {
     let user = await User.findById(req.user.id);
     if (user && user.ownerId) user = await User.findById(user.ownerId);
+    const plan = (req.body && req.body.plan === 'agency') ? 'agency' : 'pro';
+    const priceId = plan === 'agency' ? process.env.STRIPE_PRICE_AGENCY : process.env.STRIPE_PRICE_ID;
+    if (!priceId) return res.status(503).json({ message: 'This plan is not available for purchase yet.' });
+    if (user.subscriptionStatus === 'active' && user.stripeCustomerId) {
+      const portal = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: `${PUBLIC_BASE}/dashboard` });
+      return res.json({ url: portal.url, portal: true });
+    }
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+      metadata: { plan },
+      line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       client_reference_id: String(user._id),
       customer_email: user.email,
-      subscription_data: { trial_period_days: 7 },
+      subscription_data: { metadata: { plan } },
       success_url: `${PUBLIC_BASE}/dashboard?paid=1`,
       cancel_url: `${PUBLIC_BASE}/build`
     });

@@ -33,11 +33,16 @@ async function claimRun(GOAutoRun, doc) {
 
 // ---- Daily quota for the AI receptionist (unique index on sellerId + day)
 const dayKey = () => new Date().toISOString().slice(0, 10);
-async function takeQuota(GOAiUsage, sellerId, cap) {
+async function takeQuota(GOAiUsage, sellerId, cap, key) {
+  if (!(cap > 0)) return false;
   try {
-    const r = await GOAiUsage.updateOne({ sellerId, day: dayKey(), count: { $lt: cap } }, { $inc: { count: 1 } }, { upsert: true });
+    const r = await GOAiUsage.updateOne({ sellerId, day: key || dayKey(), count: { $lt: cap } }, { $inc: { count: 1 } }, { upsert: true });
     return !!(r.modifiedCount || r.upsertedCount);
   } catch (e) { if (e && e.code === 11000) return false; throw e; }
+}
+
+async function releaseQuota(GOAiUsage, sellerId, key) {
+  return GOAiUsage.updateOne({ sellerId, day: key || dayKey(), count: { $gt: 0 } }, { $inc: { count: -1 } });
 }
 
 // ---- Answer safety
@@ -56,4 +61,4 @@ function checkGrounded(answer, facts) {
   if (/FACTS\s*:|system prompt|OPENROUTER|api[_ ]?key/i.test(a)) problems.push('leak');
   return { ok: !problems.length, problems };
 }
-module.exports = { reserveVariant, releaseVariant, reserveCoupon, releaseCoupon, claimRun, takeQuota, dayKey, sanitizeQuestion, looksLikeInjection, checkGrounded };
+module.exports = { reserveVariant, releaseVariant, reserveCoupon, releaseCoupon, claimRun, takeQuota, releaseQuota, dayKey, sanitizeQuestion, looksLikeInjection, checkGrounded };

@@ -1008,21 +1008,24 @@
 <!-- =================== PRICING =================== -->
 <main class="view" id="v-pricing">
   <div class="light" data-nav="light" style="min-height:100vh">
-    <div class="page-head"><h1>Start free. Pay when you grow.</h1><p>The free plan is a complete website. Upgrade when you need more offers.</p></div>
+    <div class="page-head"><h1>Start free. Pay when you grow.</h1><p>The free plan is a complete website. Upgrade when you need more offers, sites or AI.</p></div>
     <div class="section" style="padding-top:10px">
       <div class="plans">
         <div class="plan rv"><h3>Free</h3><div class="price">EUR 0</div><div class="sub2">No card needed</div>
-          <ul><li>Public website with its own link</li><li>Up to 10 offers with photos</li><li>Request form and dashboard</li></ul>
+          <ul><li>1 website on an onrender.com link</li><li>Up to 3 offers</li><li>Request form and dashboard</li><li>No Pro tools, no AI, no custom domain</li><li>"Built with GoldOffer Studio" badge</li></ul>
           <button class="btn btn-dark btn-block" style="margin-top:0" type="button" onclick="cta()">Start building</button></div>
-        <div class="plan pro rv" style="--d:100ms"><h3>Pro</h3><div class="price">EUR 19.99 <small>/ month</small></div><div class="sub2">First 7 days free</div>
-          <ul><li>Everything in Free</li><li>Up to 500 offers</li><li>Cancel any time</li></ul>
-          <button class="btn btn-block" style="margin-top:0" type="button" onclick="proCta()">Start 7-day free trial</button></div>
+        <div class="plan pro rv" style="--d:100ms"><h3>Pro</h3><div class="price">EUR 20 <small>/ month</small></div><div class="sub2">Billed monthly, cancel any time</div>
+          <ul><li>GoldOffer Pro tools: Automations, CRM, Calendar, Intelligence, Commerce, AI Receptionist</li><li>Up to 500 offers</li><li>Up to 3 websites</li><li>3 AI website generations / month</li><li>onrender.com link, with badge</li></ul>
+          <button class="btn btn-block" style="margin-top:0" type="button" onclick="proCta('pro')">Get Pro</button></div>
+        <div class="plan rv" style="--d:200ms"><h3>Agency</h3><div class="price">EUR 99 <small>/ month</small></div><div class="sub2">For agencies and multi-brand owners</div>
+          <ul><li>Up to 2000 offers</li><li>Up to 20 websites in one profile</li><li>50 AI generations / month</li><li>Real custom domains</li><li>White-label: no GoldOffer badge</li><li>Create sites from templates</li></ul>
+          <button class="btn btn-dark btn-block" style="margin-top:0" type="button" onclick="proCta('agency')">Get Agency</button></div>
       </div>
-      <p class="price-note">Your site is hosted for free on this platform's domain. Connecting your own domain, for example yourbusiness.com, can be added later.</p>
+      <p class="price-note">Free and Pro sites live on an onrender.com link. Real custom domains (for example yourbusiness.com) and white-label are part of Agency.</p>
       <div class="faq">
         <h2>Questions</h2>
-        <details><summary>Do I need a card to start?</summary><p>No. You can register, build, publish and add up to 10 offers without paying anything.</p></details>
-        <details><summary>What happens when I pass 10 offers?</summary><p>The builder asks you to upgrade to Pro. Your existing site and offers stay exactly as they are.</p></details>
+        <details><summary>Do I need a card to start?</summary><p>No. The free plan starts the moment you register, with no card and no trial clock. You can build, publish and add up to 3 offers for as long as you like.</p></details>
+        <details><summary>What happens when I pass 3 offers?</summary><p>The builder asks you to upgrade. Pro allows 500 offers, Agency 2000. Your existing site and offers stay exactly as they are.</p></details>
         <details><summary>Can customers open my site without an account?</summary><p>Yes. Your site has a public link that anyone can open on a phone or a computer.</p></details>
         <details><summary>Can I use my own domain?</summary><p>Not yet. Your site lives on this platform's domain. Connecting your own domain can be added later.</p></details>
       </div>
@@ -1088,7 +1091,7 @@
 
           <div id="step-0" class="step active">
             <h2>Create your unique website</h2>
-            <p class="sub">Answer a few quick questions and customize the look. Free for up to 10 offers.</p>
+            <p class="sub">Answer a few quick questions and customize the look. Free for up to 3 offers.</p>
             <button class="btn btn-lg btn-block" style="margin-top:0" onclick="startWizard()">Start the builder</button>
 
           </div>
@@ -1161,14 +1164,17 @@
               <label>Change the address name</label>
               <div class="row" style="flex-wrap:nowrap"><input type="text" id="slugInput" placeholder="my-business"><button class="btn" onclick="changeSlug()">Save</button></div>
             </div>
-            <button class="btn btn-block" onclick="payNow()">Start 7-day free trial (EUR 19.99 per month after)</button>
-            <p class="note">Your site is hosted for free on this platform's domain. Connecting your own domain (for example yourbusiness.com) can be added later.</p>
+            <button class="btn btn-block" onclick="payNow('pro')">Pro: EUR 20 / month</button>
+            <button class="btn-ghost btn-block" style="margin-top:8px" onclick="payNow('agency')">Agency: EUR 99 / month, 20 sites, custom domains, white-label</button>
+            <p class="note" id="planNote">Free and Pro sites are hosted on an onrender.com link. Custom domains are an Agency feature.</p>
           </div>
         </div>
 
       </div>
     </div>
     <div class="section" style="padding-top:0"><div class="card" id="buildSitesCard" style="display:none"><h2 style="margin-top:0">My websites</h2><p class="sub">Pick which website you want to work on. Everything you open (Studio, offers, orders) belongs to the selected one.</p>
+      <p class="sub" id="planLine" style="margin-top:-6px"></p>
+      <div class="row" style="gap:8px;margin:0 0 14px;flex-wrap:wrap"><input type="text" id="tplName" placeholder="New site name" style="flex:1;min-width:150px"><select id="tplKind"><option value="blank">Blank</option><option value="shop">Shop</option><option value="services">Services</option><option value="portfolio">Portfolio</option></select><button class="btn" type="button" onclick="createTemplateSite()" id="tplBtn">Create new site from template</button></div>
       <div style="overflow-x:auto"><table class="sites-table"><thead><tr><th>Website</th><th>Type</th><th>Link</th><th></th></tr></thead><tbody id="buildSitesBody"></tbody></table></div></div></div>
   </div>
 </main>
@@ -1280,7 +1286,7 @@
         <h2>2. Account</h2>
         <p>You provide correct details and keep your password safe. You are responsible for everything that happens through your account.</p>
         <h2>3. Free and paid plan</h2>
-        <p>The free plan includes a public website and up to 10 offers. The Pro plan costs EUR 19.99 per month, with the first 7 days free, and allows more offers. You can cancel at any time. Payment is handled by Stripe.</p>
+        <p>The free plan includes a public website and up to 3 offers, with no card and no trial period. The Pro plan costs EUR 20 per month and the Agency plan EUR 99 per month; both allow more offers and websites. You can cancel at any time. Payment is handled by Stripe.</p>
         <h2>4. Your content</h2>
         <p>You are responsible for the text, prices and photos you upload. Do not upload unlawful, misleading or other people's copyrighted content. Offers and prices are yours and we do not check them.</p>
         <h2>5. What is not allowed</h2>
@@ -1384,7 +1390,7 @@
           <div class="go-suite-card"><h3>Business messages</h3><p>Your visitor messages are in the dedicated inbox.</p><div class="go-suite-actions"><a href="/messages" data-link>Open inbox</a><a href="/reviews" data-link>Customer feedback</a></div><p id="goUnreadMsg" class="go-suite-accent"></p><label>Quick replies (one per line)<textarea id="goQuickReplies" rows="4" maxlength="2200" placeholder="Thanks for reaching out!
 I'll get back to you shortly."></textarea></label><button type="button" onclick="goSaveBusinessSettings()">Save replies</button></div>
           <div class="go-suite-card"><h3>Share your storefront</h3><p>Get your public link and a scannable QR code.</p><input id="goShareLink" type="text" readonly aria-label="Your public storefront link"><div class="go-suite-actions"><button type="button" onclick="goCopyLink()">Copy link</button><button type="button" onclick="goGetQr()">Show QR code</button></div><div id="goQR"></div><small>QR uses an external image provider when requested.</small></div>
-          <div class="go-suite-card"><h3>Domain connection</h3><p>Register a requested custom domain for future domain routing. DNS, TLS and host verification require separate infrastructure before it can go live.</p><label>Domain<input id="goCustomDomain" type="text" placeholder="shop.example.com"></label><button type="button" onclick="goSaveBusinessSettings()">Save request</button><small id="goDomainStatus"></small></div>
+          <div class="go-suite-card"><h3>Domain connection</h3><p>Agency plan: connect your own domain. Save it, add a CNAME record at your DNS provider pointing to the target shown after verification, then press Verify.</p><label>Domain<input id="goCustomDomain" type="text" placeholder="shop.example.com"></label><button type="button" onclick="goSaveBusinessSettings()">Save domain</button> <button type="button" onclick="goVerifyDomain()">Verify DNS</button><small id="goDomainStatus"></small></div>
           <div class="go-suite-card"><h3>Personal tasks</h3><p>Quick reminders for running your business.</p><input id="goTaskText" maxlength="250" placeholder="Follow up with a customer"><input id="goTaskDate" type="datetime-local"><button type="button" onclick="goAddTask()">Add reminder</button><div id="goTaskList" class="go-suite-list"></div></div>
           <div class="go-suite-card"><h3>Private notes</h3><p>Notes only you can read in your account.</p><textarea id="goNoteText" rows="3" maxlength="1200" placeholder="A useful idea or customer note..."></textarea><button type="button" onclick="goAddNote()">Save note</button><div id="goNoteList" class="go-suite-list"></div></div>
           <div class="go-suite-card"><h3>Announcement &amp; FAQ</h3><p>Keep your customers informed right from the storefront.</p><label>Announcement<input id="goAnnouncement" maxlength="160" placeholder="New services available this week"></label><label>Questions &amp; answers (one pair per line: Question | Answer)<textarea id="goFAQ" rows="5" placeholder="Do you ship? | Yes, within the city."></textarea></label><button type="button" onclick="goSaveBusinessSettings()">Publish information</button></div>
@@ -1567,7 +1573,7 @@ async function generateSite() {
     try { sessionStorage.setItem('mainToken', S.mainToken); } catch (e) {}
     S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user; renderAuth();
     notify('Created: ' + d.site.siteUrl); navigate('/studio');
-  } catch (e) { $('aiMsg').textContent = 'Could not generate website: ' + e.message + (e.status ? ' [HTTP '+e.status+']' : '') + '. Your existing sites were not changed.'; } finally { btn.disabled = false; }
+  } catch (e) { $('aiMsg').innerHTML = e.status === 402 ? esc(e.message) + ' <a href="#" onclick="payNow(\'agency\');return false">See plans</a>' : esc('Could not generate website: ' + e.message + (e.status ? ' [HTTP '+e.status+']' : '') + '. Your existing sites were not changed.'); } finally { btn.disabled = false; }
 }
 async function switchSite(id) {
   try { const d = await api('/api/my-sites/' + id + '/token', { method: 'POST' }); localStorage.setItem('token', d.token); location.reload(); } catch (e) { notify(e.message, 'Error'); }
@@ -1575,9 +1581,25 @@ async function switchSite(id) {
 async function backToMain() { try { const d = await api('/api/my-sites'); await switchSite(d.rootId); } catch (e) { notify(e.message, 'Error'); } }
 async function loadBuildSites() {
   const card = $('buildSitesCard'); if (!card || !S.user) return;
-  try { const d = await api('/api/my-sites'); if (d.sites.length < 2) { card.style.display = 'none'; return; } card.style.display = 'block';
-    $('buildSitesBody').innerHTML = d.sites.map(x => '<tr class="' + (x.id === d.currentId ? 'cur' : '') + '"><td><b>' + esc(x.siteName) + '</b></td><td>' + (x.aiGenerated ? 'AI' : 'Template') + '</td><td>' + (x.siteUrl ? '<a target="_blank" rel="noopener" href="' + esc(x.siteUrl) + '">' + esc(x.slug) + '</a>' : '—') + '</td><td>' + (x.id === d.currentId ? '<span data-notr>✓ </span>In use' : '<button class="btn-ghost" onclick="switchSite(\'' + x.id + '\')">Use this site</button>') + '</td></tr>').join('');
+  try { const d = await api('/api/my-sites'); card.style.display = 'block'; S.sitesInfo = d;
+    const L = d.planLimits || {};
+    $('planLine').innerHTML = 'Plan: <b>' + esc(L.name || d.plan) + '</b> · ' + d.sites.length + ' / ' + d.cap + ' websites' + (d.plan !== 'agency' ? ' · <a href="#" onclick="payNow(\'agency\');return false">Upgrade</a>' : '');
+    const tb = $('tplBtn'); if (tb) { tb.textContent = d.canTemplate ? 'Create new site from template' : '\uD83D\uDD12 Create from template (Agency)'; tb.style.opacity = d.canTemplate ? '' : '.75'; }
+    $('buildSitesBody').innerHTML = d.sites.map(x => '<tr class="' + (x.id === d.currentId ? 'cur' : '') + '"><td><b>' + esc(x.siteName) + '</b></td><td>' + (x.aiGenerated ? 'AI' : 'Template') + '</td><td>' + (x.siteUrl ? '<a target="_blank" rel="noopener" href="' + esc(x.siteUrl) + '">' + esc(x.slug || 'open') + '</a>' : '—') + '</td><td>' + (x.id === d.currentId ? '<small>Selected</small>' : '<button class="btn-ghost" type="button" onclick="switchSite(\'' + x.id + '\')">Open</button>') + '</td></tr>').join('');
   } catch (e) {}
+}
+async function createTemplateSite() {
+  const d0 = S.sitesInfo || {};
+  if (d0.canTemplate === false) { notify('Creating sites from templates is part of the Agency plan.'); return payNow('agency'); }
+  const name = $('tplName').value.trim(); if (!name) return notify('Give the new site a name.');
+  const btn = $('tplBtn'); btn.disabled = true;
+  try {
+    const d = await api('/api/my-sites/create', { method: 'POST', body: JSON.stringify({ name, template: $('tplKind').value }) });
+    if (!S.mainToken) S.mainToken = S.token;
+    try { sessionStorage.setItem('mainToken', S.mainToken); } catch (e) {}
+    S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user; renderAuth();
+    notify('Created: ' + d.site.siteUrl); navigate('/studio');
+  } catch (e) { notify(e.message, 'Error'); if (e.data && e.data.upgrade) payNow('agency'); } finally { btn.disabled = false; }
 }
 
 /* ===== GoldOffer Pro (isolated app, Shadow DOM) ===== */
@@ -1663,6 +1685,7 @@ function proOpen(t) {
 }
 async function gpLoad() {
   const m = gq('gpMain'); const tab = GP.tab;
+  if (S.user && S.user.planLimits && S.user.planLimits.proModules === false) { m.innerHTML = '<div class="empty" style="padding:80px 20px"><div style="font-size:2rem">\uD83D\uDD12</div><h2 style="color:#fff;margin:10px 0">GoldOffer Pro tools</h2><p>Automations, CRM, Smart Calendar, Intelligence, Commerce and the AI Receptionist are part of the Pro and Agency plans.</p><p><button class="btn" data-a="upgrade" data-v="pro" style="margin:6px">Get Pro (EUR 20)</button><button class="btn" data-a="upgrade" data-v="agency" style="margin:6px">Get Agency (EUR 99)</button></p></div>'; return; }
   try {
     if (tab === 'auto') GP.d = await gj('GET', '/api/pro/automations');
     else if (tab === 'crm') GP.d = await gj('GET', '/api/pro/crm');
@@ -1758,7 +1781,7 @@ const GP_PAGE = {
       + '<div class="card"><h3>Live test</h3><div class="chat" id="chat">' + (GP.preview.length ? GP.preview.map(m => '<div class="msg ' + m.r + '">' + esc(m.t) + '</div>').join('') : '<div class="msg a">' + esc(r.greeting || 'Hi! Ask me about our offers, prices or opening hours.') + '</div>') + '</div><div class="row"><input class="in" id="chatQ" placeholder="Ask a question..." maxlength="400"><button class="btn" data-a="chat">' + gi('send', 18) + '</button></div></div></div>';
   }
 };
-function GP_RUNS() { return '<div class="drawer" data-a="closedrawer"><div class="dp" data-stop="1"><div class="row" style="justify-content:space-between;margin-top:0"><h2 style="margin:0">Run history</h2><button class="btn g s" data-a="closedrawer">' + gi('x', 16) + '</button></div>' + (GP.runs.length ? GP.runs.map(r => '<div class="item" style="display:block"><b>' + new Date(r.at).toLocaleString() + '</b> <span class="pill" style="background:' + (r.status === 'ok' ? '#34d39933;color:#5be49b' : '#ff6b8133;color:#ff9db0') + '">' + esc(r.status) + '</span>' + (r.errors || []).map(e => '<div class="low" style="font-size:.85rem;margin-top:4px">Step ' + e.step + ' (' + esc(e.type) + '): ' + esc(e.message) + '</div>').join('') + '</div>').join('') : '<div class="empty">No runs yet.</div>') + '</div></div>'; }
+function GP_RUNS() { return '<div class="drawer" data-a="closedrawer"><div class="dp" data-stop="1"><div class="row" style="justify-content:space-between;margin-top:0"><h2 style="margin:0">Run history</h2><button class="btn g s" data-a="closedrawer">' + gi('x', 16) + '</button></div>' + (GP.runs.length ? GP.runs.map(r => '<div class="item" style="display:block"><b>' + new Date(r.at).toLocaleString() + '</b> <span class="pill" style="background:' + (r.status === 'ok' ? '#34d39933;color:#5be49b' : '#ff6b8133;color:#ff9db0') + '">' + esc(r.status) + '</span>' + (r.failures || []).map(e => '<div class="low" style="font-size:.85rem;margin-top:4px">Step ' + e.step + ' (' + esc(e.type) + '): ' + esc(e.message) + '</div>').join('') + '</div>').join('') : '<div class="empty">No runs yet.</div>') + '</div></div>'; }
 function GP_DRAWER() {
   const o = GP.d.offers.find(x => x._id === GP.drawer); if (!o) return '';
   const vr = (GP.vars || []).map((v, i) => '<div class="row" style="margin:6px 0"><input class="in" data-i="vname" data-n="' + i + '" value="' + esc(v.name) + '" placeholder="Army / XL"><input class="in" style="max-width:90px" type="number" min="0" data-i="vprice" data-n="' + i + '" value="' + (v.price || '') + '" placeholder="€"><input class="in" style="max-width:90px" type="number" min="0" data-i="vstock" data-n="' + i + '" value="' + (v.stock == null ? '' : v.stock) + '" placeholder="stock"><button class="btn r s" data-a="delvar" data-v="' + i + '">' + gi('x', 14) + '</button></div>').join('');
@@ -1767,6 +1790,7 @@ function GP_DRAWER() {
 async function gpAct(a, el) {
   const v = el.dataset.v, D = GP.draft;
   switch (a) {
+    case 'upgrade': return payNow(v);
     case 'tab': GP.tab = v; GP.drawer = null; gq('gpSide').querySelectorAll('.nav').forEach(b => b.classList.toggle('on', b.dataset.v === v)); return gpLoad();
     case 'back': return navigate('/dashboard');
     case 'go': return navigate(v);
@@ -1991,7 +2015,7 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
   });
 
   function cta() { navigate('/build'); if (!S.user) openAuth('signup'); else if ($('step-0').classList.contains('active')) goStep(1); }
-  function proCta() { if (!S.user) { openAuth('signup'); return; } payNow(); }
+  function proCta(plan) { if (!S.user) { openAuth('signup'); return; } payNow(plan || 'pro'); }
   function pickProf(name) {
     setCategory(name); renderProfs();
     navigate('/build');
@@ -2486,7 +2510,7 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
     const n = S.offers.length, max = offerLimit();
     if (isPaid()) { el.textContent = 'Paid plan: ' + n + ' offers added.'; return; }
     el.innerHTML = 'Free plan: <b>' + n + ' of ' + max + '</b> offers used.' +
-      (n >= max ? ' <button type="button" class="btn-ghost" style="padding:4px 10px;font-size:.8rem;margin-left:6px" onclick="payNow()">Upgrade for more</button>' : '');
+      (n >= max ? ' <button type="button" class="btn-ghost" style="padding:4px 10px;font-size:.8rem;margin-left:6px" onclick="payNow(\'pro\')">Upgrade for more</button>' : '');
   }
   function offerImgs(o) { return (o.images && o.images.length) ? o.images : (o.imageUrl ? [o.imageUrl] : []); }
   function renderOfferList() {
@@ -2686,8 +2710,8 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
     try { const d = await api('/api/site/slug', { method: 'PUT', body: JSON.stringify({ slug }) }); S.user = d.user; showLive(); notify('Address updated.'); }
     catch (e) { notify(e.message, 'Error'); }
   }
-  async function payNow() {
-    try { const d = await api('/api/stripe/create-checkout', { method: 'POST' }); if (d.url) window.location.href = d.url; }
+  async function payNow(plan) {
+    try { const d = await api('/api/stripe/create-checkout', { method: 'POST', body: JSON.stringify({ plan: plan || 'pro' }) }); if (d.url) window.location.href = d.url; }
     catch (e) { notify(e.message, 'Error'); }
   }
 
@@ -3120,6 +3144,7 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
   }
   async function goSaveStock(){try{const id=$('goStockOffer').value;if(!id)return;await api('/api/business/stock/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify({quantity:Number($('goStockQty').value)})});goSuiteSay('Inventory saved.');await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
   async function goSaveBusinessSettings(){try{await api('/api/business/settings',{method:'PUT',body:JSON.stringify({slotsEnabled:$('goBookingsOn').checked,quickReplies:$('goQuickReplies').value.split('\n').map(x=>x.trim()).filter(Boolean),customDomain:$('goCustomDomain').value.trim(),announcementText:$('goAnnouncement').value.trim(),faqItems:$('goFAQ').value.split('\n').filter(x=>x.includes('|')).map(x=>({question:x.split('|')[0].trim(),answer:x.split('|').slice(1).join('|').trim()}))})});await loadBusinessSuite();goSuiteSay('Business settings saved. Domain activation requires DNS and HTTPS setup.')}catch(e){goSuiteSay(e.message)}}
+  async function goVerifyDomain(){try{const d=await api('/api/business/domain/verify',{method:'POST'});$('goDomainStatus').textContent=d.message;}catch(e){$('goDomainStatus').textContent=e.message;}}
   async function goUpdateBooking(id,status){try{await api('/api/business/appointments/'+id,{method:'PATCH',body:JSON.stringify({status})});await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
   async function goAddTask(){try{const text=$('goTaskText').value.trim();if(!text)return;await api('/api/business/reminders',{method:'POST',body:JSON.stringify({text,due:$('goTaskDate').value||new Date().toISOString()})});$('goTaskText').value='';await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
   async function goFinishTask(id){try{await api('/api/business/reminders/'+id,{method:'PATCH',body:JSON.stringify({done:true})});await loadBusinessSuite()}catch(e){goSuiteSay(e.message)}}
