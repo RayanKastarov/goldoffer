@@ -1689,8 +1689,7 @@ const gErr = (e) => gToast(e.message || 'Error');
 function gToast(t) { const old = GP.root.querySelector('.toast'); if (old) old.remove(); const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; GP.root.append(d); setTimeout(() => d.remove(), 2600); }
 function gpLock() {
   const m = gq('gpMain'); gq('gpSide').innerHTML = '';
-  m.innerHTML = '<div class="lockwrap"><div class="lockcard"><div class="li">\uD83D\uDD12</div><h2>Pro tools are locked</h2><p>You need a paid plan to use these tools. Upgrade to unlock them.</p><button class="btn" data-a="upgrade" data-v="pro">Get Pro \u00b7 EUR 19.99 / month</button><button class="btn g" data-a="upgrade" data-v="agency">Get Agency \u00b7 EUR 99 / month</button><button class="lk" data-a="back">Back to dashboard</button></div></div>';
-}
+m.innerHTML = '<div class="lockwrap"><div class="lockcard"><div class="li">🔒</div><h2>Pro tools are locked</h2><p>You need a paid plan to use these tools. Upgrade to unlock them.</p><button class="btn" data-a="upgrade" data-v="pro">Get Pro EUR 19.99 / month</button><button class="btn g" data-a="upgrade" data-v="agency">Get Agency EUR 99 / month</button><button class="lk" data-a="back">Back to dashboard</button></div></div>';}
 const gpLocked = () => !!(S.user && S.user.planLimits && S.user.planLimits.proModules === false);
 function proOpen(t) {
   if (!S.user) { openAuth('login'); return; }
