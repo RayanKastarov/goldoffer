@@ -1181,7 +1181,73 @@ body{background:#f5f8fc;color:#14233c;}
 #v-home .fb-motion-feature.fb-motion-analytics{margin-bottom:140px!important}
 @media(max-width:800px){#v-home .fb-motion-feature{grid-template-columns:1fr!important;gap:25px!important;padding:15px 5px!important;margin:60px auto!important}#v-home .fb-motion-reverse .fb-motion-copy,#v-home .fb-motion-reverse .fb-motion-visual{order:initial}#v-home .fb-motion-copy h2{max-width:18ch}#v-home .fb-motion-visual .go-clip-card{min-height:0}}
 @media(prefers-reduced-motion:reduce){#v-home .fb-motion-feature .go-clip-card,#v-home .fb-motion-feature .go-clip-canvas *{animation:none!important;transition:none!important}}
-</style></head>
+</style>
+<style id="go-messages-coastal-theme">
+/* Messages: unified sapphire / aqua accents; no amber or gold. */
+#v-messages .mx-av,
+#v-messages .mx-head .mx-av {
+  background:linear-gradient(135deg,#4779f5 0%,#32c5d4 100%) !important;
+  color:#fff !important;
+  box-shadow:0 5px 16px rgba(51,119,214,.15);
+}
+#v-messages .conv-item.on {
+  background:linear-gradient(95deg,#eef4ff 0%,#eafbf9 100%) !important;
+  border-left:3px solid #3b82e8;
+}
+#v-messages .conv-item:hover {background:#f0f6ff !important;}
+#v-messages .mx-btn.call,
+#v-messages .mx-send {
+  background:linear-gradient(120deg,#4879ee 0%,#28b6d3 100%) !important;
+  color:#fff !important;
+  border:0 !important;
+  box-shadow:0 5px 15px rgba(45,113,207,.17);
+}
+#v-messages .mx-btn.call:hover,
+#v-messages .mx-send:hover {filter:brightness(1.06);transform:translateY(-1px);}
+#v-messages .cbub.me {
+  background:linear-gradient(120deg,#4a77ed 0%,#2ab9d0 100%) !important;
+  color:#fff !important;
+  border:0 !important;
+  box-shadow:0 4px 14px rgba(42,108,197,.12);
+}
+#v-messages .cbub.me small {color:rgba(255,255,255,.8) !important;opacity:1;}
+#v-messages .conv-form textarea:focus {
+  border-color:#5a9df0 !important;
+  box-shadow:0 0 0 3px rgba(69,146,233,.14) !important;
+}
+#v-messages .mx-btn:hover {border-color:#4c8fe5 !important;}
+#v-messages .mx-empty i {background:#e8f4ff !important;color:#337dd9 !important;}
+#v-messages .conv-dot {background:#3178df !important;color:#fff !important;}
+#v-messages .mx,.mx-sh,.mx-head {--go-chat-accent:#377fe5;}
+@media(prefers-reduced-motion:reduce) {
+  #v-messages .mx-btn.call:hover,#v-messages .mx-send:hover{transform:none;}
+}
+</style>
+<style>
+/* Public-site QR share: opens on demand, closes on route change or leave. */
+.go-qr-trigger{display:inline-flex!important;align-items:center;justify-content:center;gap:8px!important;border:1px solid #bcd5f3!important;color:#2056a4!important;background:#eef6ff!important}
+.go-qr-trigger:hover{background:#e1efff!important;border-color:#75a9e9!important}
+.go-qr-backdrop[hidden]{display:none!important}
+.go-qr-backdrop{position:fixed;inset:0;z-index:99997;background:rgba(18,37,66,.48);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;justify-content:center;align-items:center;padding:20px;animation:goQrFade .2s ease}
+.go-qr-card{width:min(100%,420px);background:#fff;color:#17304f;border:1px solid #dce7f5;border-radius:26px;padding:28px;box-shadow:0 35px 110px rgba(9,33,70,.28);position:relative;text-align:center;animation:goQrUp .28s ease}
+.go-qr-close{position:absolute;top:15px;right:15px;width:36px;height:36px;border:1px solid #dbe6f2;border-radius:11px;background:#f7fbff;color:#17304f;font-size:23px;cursor:pointer}
+.go-qr-eyebrow{font-size:11px;letter-spacing:.17em;font-weight:800;color:#3986ce;margin:2px 0 9px}
+.go-qr-card h2{color:#132947;font-size:27px!important;line-height:1.18!important;margin:0 18px 10px}
+.go-qr-card p{font-size:14px;color:#68809e;margin:0 8px 16px}
+.go-qr-frame{display:grid;place-items:center;min-height:246px;width:246px;margin:16px auto;padding:13px;border-radius:20px;background:#fff;border:1px solid #dce9f5;box-shadow:0 10px 30px #174c8a12}
+#goQrCanvas,#goQrCanvas img,#goQrCanvas canvas{display:block;width:218px!important;height:218px!important;object-fit:contain;image-rendering:pixelated}
+.go-qr-url{font-size:13px;color:#315b8e;background:#f3f8ff;border:1px solid #e0ebf8;border-radius:12px;padding:11px;overflow-wrap:anywhere;margin-bottom:17px;user-select:all}
+.go-qr-actions{display:flex;gap:10px}.go-qr-actions button{flex:1;border:0;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:700;cursor:pointer;color:#fff;background:linear-gradient(110deg,#4373ea,#26bed0)}.go-qr-actions button+button{color:#20456e;border:1px solid #d9e7f5;background:#f5f9ff}
+.go-qr-help{margin-top:11px;color:#7289a4;font-size:12px}
+@keyframes goQrFade{from{opacity:0}to{opacity:1}}@keyframes goQrUp{from{transform:translateY(18px) scale(.97);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+@media(max-width:520px){.go-qr-card{padding:22px 17px}.go-qr-card h2{font-size:23px!important}.go-qr-actions{flex-direction:column}}
+@media(prefers-reduced-motion:reduce){.go-qr-backdrop,.go-qr-card{animation:none!important}}
+</style>
+
+<style>
+.go-free-guide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:1060px;margin:16px auto 18px}.go-free-guide[hidden]{display:none!important}.go-free-guide>div{display:flex;flex-direction:column;gap:5px;padding:18px 20px;border:1px solid #d6e5f4;border-radius:18px;background:linear-gradient(140deg,#fff,#f0f8ff);box-shadow:0 10px 26px #2856820a;color:#142a4b}.go-free-guide strong{font-size:.84rem;letter-spacing:.05em;color:#476c97}.go-free-guide span{font-size:1.16rem;font-weight:800;color:#164ba6}.go-free-guide small{font-size:.83rem;line-height:1.45;color:#55718e}#v-aisites .go-free-guide .go-used{color:#b34b53}#v-aisites .site-card .acts button[onclick^="deleteSite"]{border-color:#d2dde9;color:#ad4759;background:#fff}@media(max-width:680px){.go-free-guide{grid-template-columns:1fr}}
+</style>
+</head>
 <body class="theme-neon-blue font-sans" id="top" data-page="home">
 <nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/pro" data-link data-t="pro"><i>⚡</i>Pro</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
 
@@ -1705,6 +1771,7 @@ body{background:#f5f8fc;color:#14233c;}
             <div class="url-box" id="siteUrlBox"></div>
             <div class="row live-actions">
               <button class="btn-ghost" onclick="copyUrl()">&#128203; Copy link</button>
+              <button class="btn-ghost go-qr-trigger" type="button" onclick="openSiteQr()" aria-haspopup="dialog"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM19 14h2v2h-2zM19 19h2v2h-2zM14 19h2v2h-2z"/></svg> Show QR code</button>
               <button class="btn-ghost" onclick="goStep(3)">&#128722; Add or edit offers</button>
               <button class="btn-ghost" onclick="openStudio()">&#127912; Open Design Studio</button>
             </div>
@@ -1912,10 +1979,11 @@ body{background:#f5f8fc;color:#14233c;}
 <main class="view" id="v-aisites"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">AI WEBSITE GENERATOR</span><h1>My websites</h1><p>Describe a business and AI builds a new website with its own link.</p></div></div>
 
   <div class="panel" id="aiPaywall" style="display:none;text-align:center"><div style="font-size:2rem">\uD83D\uDD12</div><h2>AI website generator is locked</h2><p style="opacity:.8">You need a paid plan to create websites with AI. Upgrade to unlock it.</p><button class="btn" type="button" onclick="payNow('pro')">Get Pro \u00b7 EUR 19.99 / month</button> <button class="btn-ghost" type="button" onclick="payNow('agency')">Get Agency \u00b7 EUR 99 / month</button></div>
+  <div class="go-free-guide" id="goFreeGuide" aria-live="polite"><div><strong>FREE · Source code</strong><span id="goFreeCodeStatus">1 generation available</span><small>One download generation. Deleting a site does not reset it.</small></div><div><strong>FREE · Published link</strong><span id="goFreeLinkStatus">1 active AI website allowed</span><small>Delete your AI website to free its slot and publish another.</small></div></div>
   <div class="panel" id="aiFormPanel"><h2>Create a new website</h2>
     <div class="ai-form"><input id="aiName" maxlength="60" placeholder="Website name (e.g. Sunny Barber)"><textarea id="aiDesc" rows="5" maxlength="1500" placeholder="Describe the business: what you do, services, prices, city, style you like..."></textarea>
     <select id="aiLang" onchange="this.dataset.chosen='1'" aria-label="Language for AI generated site"><option value="en">English</option><option value="bg">Bulgarian</option><option value="es">Spanish</option><option value="de">German</option><option value="fr">French</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="tr">Turkish</option><option value="ro">Romanian</option><option value="el">Greek</option><option value="ar">Arabic</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="hi">Hindi</option><option value="uk">Ukrainian</option><option value="pl">Polish</option><option value="nl">Dutch</option><option value="sv">Swedish</option><option value="sq">Albanian</option><option value="ab">Abkhazian</option><option value="aa">Afar</option><option value="af">Afrikaans</option><option value="ak">Akan</option><option value="am">Amharic</option><option value="an">Aragonese</option><option value="hy">Armenian</option><option value="as">Assamese</option><option value="av">Avaric</option><option value="ae">Avestan</option><option value="ay">Aymara</option><option value="az">Azerbaijani</option><option value="bm">Bambara</option><option value="bn">Bangla</option><option value="ba">Bashkir</option><option value="eu">Basque</option><option value="be">Belarusian</option><option value="bi">Bislama</option><option value="bs">Bosnian</option><option value="br">Breton</option><option value="my">Burmese</option><option value="ca">Catalan</option><option value="ch">Chamorro</option><option value="ce">Chechen</option><option value="zh-Hans">Chinese (Simplified)</option><option value="zh-Hant">Chinese (Traditional)</option><option value="cu">Church Slavic</option><option value="cv">Chuvash</option><option value="kw">Cornish</option><option value="co">Corsican</option><option value="cr">Cree</option><option value="hr">Croatian</option><option value="cs">Czech</option><option value="da">Danish</option><option value="dv">Divehi</option><option value="dz">Dzongkha</option><option value="en-GB">English (United Kingdom)</option><option value="en-US">English (United States)</option><option value="eo">Esperanto</option><option value="et">Estonian</option><option value="ee">Ewe</option><option value="fo">Faroese</option><option value="fj">Fijian</option><option value="fi">Finnish</option><option value="fr-CA">French (Canada)</option><option value="ff">Fula</option><option value="gl">Galician</option><option value="lg">Ganda</option><option value="ka">Georgian</option><option value="gn">Guarani</option><option value="gu">Gujarati</option><option value="ht">Haitian Creole</option><option value="ha">Hausa</option><option value="he">Hebrew</option><option value="hz">Herero</option><option value="ho">Hiri Motu</option><option value="hu">Hungarian</option><option value="is">Icelandic</option><option value="io">Ido</option><option value="ig">Igbo</option><option value="id">Indonesian</option><option value="ia">Interlingua</option><option value="ie">Interlingue</option><option value="iu">Inuktitut</option><option value="ik">Inupiaq</option><option value="ga">Irish</option><option value="jv">Javanese</option><option value="kl">Kalaallisut</option><option value="kn">Kannada</option><option value="kr">Kanuri</option><option value="ks">Kashmiri</option><option value="kk">Kazakh</option><option value="km">Khmer</option><option value="ki">Kikuyu</option><option value="rw">Kinyarwanda</option><option value="kv">Komi</option><option value="kg">Kongo</option><option value="kj">Kuanyama</option><option value="ku">Kurdish</option><option value="ky">Kyrgyz</option><option value="lo">Lao</option><option value="la">Latin</option><option value="lv">Latvian</option><option value="li">Limburgish</option><option value="ln">Lingala</option><option value="lt">Lithuanian</option><option value="lu">Luba-Katanga</option><option value="lb">Luxembourgish</option><option value="mk">Macedonian</option><option value="mg">Malagasy</option><option value="ms">Malay</option><option value="ml">Malayalam</option><option value="mt">Maltese</option><option value="gv">Manx</option><option value="mr">Marathi</option><option value="mh">Marshallese</option><option value="mn">Mongolian</option><option value="mi">Māori</option><option value="na">Nauru</option><option value="nv">Navajo</option><option value="ng">Ndonga</option><option value="ne">Nepali</option><option value="nd">North Ndebele</option><option value="se">Northern Sami</option><option value="no">Norwegian</option><option value="nb">Norwegian Bokmål</option><option value="nn">Norwegian Nynorsk</option><option value="ny">Nyanja</option><option value="oc">Occitan</option><option value="or">Odia</option><option value="oj">Ojibwa</option><option value="om">Oromo</option><option value="os">Ossetic</option><option value="pi">Pali</option><option value="ps">Pashto</option><option value="fa">Persian</option><option value="pt-BR">Portuguese (Brazil)</option><option value="pt-PT">Portuguese (Portugal)</option><option value="pa">Punjabi</option><option value="qu">Quechua</option><option value="rm">Romansh</option><option value="rn">Rundi</option><option value="sm">Samoan</option><option value="sg">Sango</option><option value="sa">Sanskrit</option><option value="sc">Sardinian</option><option value="gd">Scottish Gaelic</option><option value="sr">Serbian</option><option value="sr-Latn">Serbian (Latin)</option><option value="sh">Serbo-Croatian</option><option value="sn">Shona</option><option value="ii">Sichuan Yi</option><option value="sd">Sindhi</option><option value="si">Sinhala</option><option value="sk">Slovak</option><option value="sl">Slovenian</option><option value="so">Somali</option><option value="nr">South Ndebele</option><option value="st">Southern Sotho</option><option value="es-MX">Spanish (Mexico)</option><option value="su">Sundanese</option><option value="sw">Swahili</option><option value="ss">Swati</option><option value="tl">Tagalog</option><option value="ty">Tahitian</option><option value="tg">Tajik</option><option value="ta">Tamil</option><option value="tt">Tatar</option><option value="te">Telugu</option><option value="th">Thai</option><option value="bo">Tibetan</option><option value="ti">Tigrinya</option><option value="to">Tongan</option><option value="ts">Tsonga</option><option value="tn">Tswana</option><option value="tk">Turkmen</option><option value="tw">Twi</option><option value="ur">Urdu</option><option value="ug">Uyghur</option><option value="uz">Uzbek</option><option value="ve">Venda</option><option value="vi">Vietnamese</option><option value="vo">Volapük</option><option value="wa">Walloon</option><option value="cy">Welsh</option><option value="fy">Western Frisian</option><option value="wo">Wolof</option><option value="xh">Xhosa</option><option value="yi">Yiddish</option><option value="yo">Yoruba</option><option value="za">Zhuang</option><option value="zu">Zulu</option></select>
-    <div class="go-output-choice"><span>Choose your result</span><label><input name="goExportMode" type="radio" value="link" checked> Publish a link</label><label><input name="goExportMode" type="radio" value="code"> Download source code</label></div><label class="go-code-language" id="goCodeFmtRow" hidden>Code format <select id="goCodeLanguage"><option value="html">HTML + CSS</option><option value="react">React (JSX component)</option></select></label><p class="go-small-help">Code is an export for your own hosting. Features requiring GoldOffer servers, such as orders or messaging, only work on a hosted GoldOffer link.</p><button class="btn" id="aiGo" onclick="generateSite()">Generate website</button><div id="aiMsg" aria-live="polite" style="opacity:.8"></div></div></div>
+    <div class="go-output-choice"><span>Choose your result</span><label><input name="goExportMode" type="radio" value="link" checked> Publish a link</label><label><input name="goExportMode" type="radio" value="code"> Download source code</label></div><label class="go-code-language" id="goCodeFmtRow" hidden>Code format <select id="goCodeLanguage"><option value="html">HTML + CSS (standalone .html)</option><option value="react">React (JSX component)</option><option value="react-ts">React + TypeScript (TSX)</option><option value="vue">Vue 3 (single-file component)</option><option value="svelte">Svelte (single-file component)</option><option value="astro">Astro (single-file page)</option><option value="php">PHP (standalone .php)</option><option value="python">Python (Flask app)</option><option value="node">Node.js (HTTP server)</option><option value="go">Go (HTTP server)</option><option value="java">Java (HTTP server)</option><option value="csharp">C# (ASP.NET Core)</option></select></label><p class="go-small-help">Free plan: one lifetime source-code generation plus one replaceable AI website link. Source-code use never resets when a website is deleted. Select a source format to download your generated website. HTML works directly in a browser; React, TypeScript, Vue, Svelte, Astro, PHP, Python, Node.js, Go, Java and C# require their normal development environment. These exports contain the generated public page; GoldOffer orders, bookings and messages work only on a hosted GoldOffer link.</p><button class="btn" id="aiGo" onclick="generateSite()">Generate website</button><div id="aiMsg" aria-live="polite" style="opacity:.8"></div></div></div>
   <div class="panel"><h2>Your websites</h2><div id="sitesList">Loading...</div></div>
 </div></main>
 
@@ -1995,6 +2063,20 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   </div>
   <div class="foot-end">&copy; 2026 GoldOffer Studio. Founded by Rayan Katsarov.</div>
 </footer>
+
+
+<div id="goQrModal" class="go-qr-backdrop" hidden role="presentation" onclick="if(event.target===this)closeSiteQr()">
+  <div class="go-qr-card" role="dialog" aria-modal="true" aria-labelledby="goQrTitle" aria-describedby="goQrDesc">
+    <button type="button" class="go-qr-close" aria-label="Close QR code" onclick="closeSiteQr()">&times;</button>
+    <div class="go-qr-eyebrow">SHARE YOUR WEBSITE</div>
+    <h2 id="goQrTitle">Scan to visit your website</h2>
+    <p id="goQrDesc">Point your phone camera at the QR code to open your published site.</p>
+    <div class="go-qr-frame"><div id="goQrCanvas" aria-label="QR code for your published website" role="img"><span style="font-size:13px;color:#6e87a8">Preparing your QR code…</span></div></div>
+    <div id="goQrLink" class="go-qr-url"></div>
+    <div class="go-qr-actions"><button type="button" onclick="copySiteQrLink()">Copy website link</button><button type="button" onclick="closeSiteQr()">Done</button></div>
+    <div class="go-qr-help">The QR code updates automatically if you change the site address.</div>
+  </div>
+</div>
 
 <div id="authModal" class="modal go-auth-screen" role="main" aria-label="GoldOffer account page">
   <div class="go-auth-side"><a href="/" data-link class="go-auth-brand"><span class="go-auth-mark">G</span> GoldOffer Studio</a><div class="go-auth-art"><span class="go-auth-overline">ONE PLACE FOR YOUR BUSINESS</span><h2>Build your website.<br>Grow your business.</h2><p>Start with a beautiful website, then manage orders, bookings and customers from one workspace.</p><div class="go-auth-preview"><div class="go-auth-browser"><span>● &nbsp; ● &nbsp; ●</span><b>studio.goldoffer</b></div><div class="go-auth-preview-body"><small>YOUR NEW WEBSITE</small><strong>Everything your business needs.</strong><span>Website · Products · Bookings · Customers</span><i>Start building →</i></div></div></div><div class="go-auth-side-foot">Designed for businesses of every size.</div></div>
@@ -2116,6 +2198,15 @@ async function loadSites() {
   try { const gp = sessionStorage.getItem('gxPrompt'); if (gp && $('aiDesc') && !$('aiDesc').value) { $('aiDesc').value = gp; sessionStorage.removeItem('gxPrompt'); } } catch (e) {}
   { const lock = false; if ($('aiPaywall')) $('aiPaywall').style.display = lock ? 'block' : 'none'; if ($('aiFormPanel')) $('aiFormPanel').style.display = lock ? 'none' : ''; }
   try { const d = await api('/api/my-sites'); S.sitesInfo = d;
+    const guide = $('goFreeGuide');
+    if (guide) {
+      guide.hidden = d.plan !== 'free';
+      if (d.plan === 'free') {
+        $('goFreeCodeStatus').textContent = d.freeCodeUsed ? 'Used · 0 of 1 remaining' : 'Available · 1 of 1';
+        $('goFreeCodeStatus').classList.toggle('go-used', !!d.freeCodeUsed);
+        $('goFreeLinkStatus').textContent = d.freeLinkUsed ? '1 of 1 AI links active' : 'Available · 0 of 1 active';
+      }
+    }
     box.innerHTML = d.sites.map(x => '<div class="site-card' + (x.id === d.currentId ? ' cur' : '') + '"><div><b>' + esc(x.siteName) + '</b>' + (x.isMain ? ' · <span>Main site</span>' : '') + (x.aiGenerated ? ' · AI' : '') + '<br><small style="opacity:.7">' + esc(x.siteUrl || '—') + '</small></div><div class="acts">' + (x.siteUrl ? '<a class="btn-ghost" target="_blank" rel="noopener" href="' + esc(x.siteUrl) + '">Open</a>' : '') + (x.id === d.currentId ? '<span class="btn-ghost" data-notr>✓ Current</span>' : '<button class="btn-ghost" onclick="switchSite(\'' + x.id + '\')">Switch to this site</button>') + (!x.isMain ? '<button class="btn-ghost" onclick="deleteSite(\'' + x.id + '\')">Delete</button>' : '') + '</div></div>').join('');
     if (!d.aiReady && $('aiMsg')) $('aiMsg').textContent = 'AI key is not set on the server yet (OPENROUTER_API_KEY).';
   } catch (e) { box.textContent = e.message; }
@@ -2127,11 +2218,14 @@ async function generateSite() {
   try {
     const d = await api('/api/ai/site-generate', { method: 'POST', body: JSON.stringify({ name, description: desc, lang: $('aiLang').value, output: (document.querySelector('[name=goExportMode]:checked')||{}).value || 'link', codeLanguage: $('goCodeLanguage').value }) });
     if (d.output === 'code' && d.html) {
-      const blob = new Blob([d.html], { type: d.codeLanguage==='react' ? 'text/javascript;charset=utf-8' : 'text/html;charset=utf-8' });
+      const ext = {html:'.html',react:'.jsx','react-ts':'.tsx',vue:'.vue',svelte:'.svelte',astro:'.astro',php:'.php',python:'.py',node:'.js',go:'.go',java:'.java',csharp:'.cs'};
+      const suffix = ext[d.codeLanguage] || '.html';
+      const blob = new Blob([d.html], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob); const a = document.createElement('a');
-      a.href = url; a.download = (name.toLowerCase().replace(/[^a-z0-9]+/g,'-') || 'goldoffer') + (d.codeLanguage==='react'?'.jsx':'.html');
+      const base = (name.toLowerCase().replace(/[^a-z0-9]+/g,'-') || 'goldoffer');
+      a.href = url; a.download = d.fileName || (base + suffix);
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),30000);
-      $('aiMsg').textContent = 'Code downloaded. A hosted GoldOffer site is not created in code-export mode.';
+      $('aiMsg').textContent = 'Source downloaded: ' + (d.fileName || suffix) + '. Framework and server formats need their normal runtime or project setup. Orders and messaging require GoldOffer hosting.';
       return;
     }
     if (!S.mainToken) S.mainToken = S.token;
@@ -2427,7 +2521,18 @@ function gpInput(e) {
   else if (i === 'vname') GP.vars[t.dataset.n].name = t.value; else if (i === 'vprice') GP.vars[t.dataset.n].price = t.value; else if (i === 'vstock') GP.vars[t.dataset.n].stock = t.value;
 }
 
-async function deleteSite(id) { if (!confirm('Delete this website and its offers? This cannot be undone.')) return; try { await api('/api/my-sites/' + id, { method: 'DELETE' }); loadSites(); } catch (e) { notify(e.message, 'Error'); } }
+async function deleteSite(id) {
+  if (!confirm('Permanently delete this AI website and its offers? This frees your Free published-link slot. Your source-code generation does NOT reset.')) return;
+  try {
+    const current = S.sitesInfo && S.sitesInfo.currentId === id;
+    let rootSession = null;
+    if (current && S.sitesInfo && S.sitesInfo.rootId) rootSession = await api('/api/my-sites/' + S.sitesInfo.rootId + '/token', { method:'POST' });
+    await api('/api/my-sites/' + id, { method: 'DELETE' });
+    if (current && rootSession) { localStorage.setItem('token', rootSession.token); location.href = '/ai-sites'; return; }
+    notify('Website deleted. You can now generate a different public link.');
+    await loadSites();
+  } catch (e) { notify(e.message, 'Error'); }
+}
 </script>
 <script>
   const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
@@ -2568,6 +2673,7 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
   const goPrivatePages = new Set(['dashboard','messages','settings','build','aisites','pro','studio','business','analytics','orders','calendar','customers','system','releases','reviews']);
 
   function navigate(path, push) {
+    closeSiteQr();
     const clean = (String(path).split('?')[0].split('#')[0].replace(/\/+$/, '')) || '/';
     const name = ROUTES[clean] || 'home';
     const finalPath = ROUTES[clean] ? clean : '/';
@@ -3306,6 +3412,76 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
     renderPreview(); goStep(4);
   }
   function copyUrl() { navigator.clipboard.writeText(S.user.siteUrl).then(() => notify('Link copied.')); }
+  let goQrLoading = null;
+  let goQrLastFocus = null;
+  function closeSiteQr() {
+    const modal = document.getElementById('goQrModal');
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    document.body.style.removeProperty('overflow');
+    if (goQrLastFocus && document.contains(goQrLastFocus)) goQrLastFocus.focus();
+    goQrLastFocus = null;
+  }
+  function loadGoQrLibrary() {
+    if (typeof QRCode !== 'undefined') return Promise.resolve();
+    if (goQrLoading) return goQrLoading;
+    const cdns = [
+      'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+      'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'
+    ];
+    goQrLoading = new Promise((resolve,reject)=>{
+      let idx=0;
+      const next=()=>{
+        if(idx>=cdns.length){reject(new Error('QR library unavailable'));return;}
+        const script=document.createElement('script');
+        script.src=cdns[idx++];
+        script.async=true;
+        script.onload=()=>typeof QRCode!=='undefined'?resolve():next();
+        script.onerror=next;
+        document.head.appendChild(script);
+      };
+      next();
+    }).catch(e=>{goQrLoading=null;throw e;});
+    return goQrLoading;
+  }
+  async function openSiteQr() {
+    const url=S.user?.siteUrl;
+    if (!url || !/^https?:\/\//i.test(url)) return notify('Publish your website first to get a QR code.');
+    const modal=document.getElementById('goQrModal');
+    const box=document.getElementById('goQrCanvas');
+    goQrLastFocus=document.activeElement;
+    document.getElementById('goQrLink').textContent=url;
+    box.replaceChildren();
+    box.textContent='Generating QR code…';
+    modal.hidden=false;
+    document.body.style.overflow='hidden';
+    modal.querySelector('.go-qr-close').focus();
+    try {
+      await loadGoQrLibrary();
+      if(modal.hidden || document.getElementById('goQrLink').textContent!==url)return;
+      box.replaceChildren();
+      new QRCode(box,{text:url,width:218,height:218,colorDark:'#163452',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+    } catch(e) {
+      if(modal.hidden)return;
+      // Image-based fallback when a CDN blocks the script. No server-side changes needed.
+      box.replaceChildren();
+      const fallback=new Image(218,218);
+      fallback.alt='Scannable QR code for '+url;
+      fallback.referrerPolicy='no-referrer';
+      fallback.src='https://api.qrserver.com/v1/create-qr-code/?size=218x218&margin=8&data='+encodeURIComponent(url);
+      fallback.onerror=()=>{box.textContent='QR unavailable. Please copy the website link instead.';};
+      box.appendChild(fallback);
+    }
+  }
+  function copySiteQrLink(){
+    const url=S.user?.siteUrl;
+    if(!url)return;
+    navigator.clipboard.writeText(url).then(()=>notify('Website link copied.')).catch(()=>notify('Please copy the link shown below the QR code.'));
+  }
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSiteQr();});
+  window.addEventListener('pagehide',closeSiteQr);
+  window.addEventListener('beforeunload',closeSiteQr);
+
   async function changeSlug() {
     const slug = $('slugInput').value.trim();
     if (!slug) return notify('Please enter a name.');

@@ -526,7 +526,7 @@ async function sendMail({ to, subject, html, text }) {
 // Free plan: up to 3 offers, no card, no trial clock. Paid (active subscription): effectively unlimited.
 const FREE_OFFER_LIMIT = 3;
 const PLANS = {
-  free:   { name: 'Free',   price: 0,  offers: 3,    sites: 2,  aiGen: 1,  aiGenPeriod: 'month', proModules: false, whiteLabel: false, customDomain: false, templateSites: false },
+  free:   { name: 'Free',   price: 0,  offers: 3,    sites: 2,  aiGen: 1,  aiGenPeriod: 'lifetime-code / replaceable-link', proModules: false, whiteLabel: false, customDomain: false, templateSites: false },
   pro:    { name: 'Pro',    price: 19.99, offers: 500,  sites: 3,  aiGen: 3,  aiGenPeriod: 'month', proModules: true, whiteLabel: false, customDomain: false, templateSites: false },
   agency: { name: 'Agency', price: 99, offers: 2000, sites: 20, aiGen: 50, aiGenPeriod: 'month', proModules: true, whiteLabel: true,  customDomain: true,  templateSites: true }
 };
@@ -3288,6 +3288,65 @@ const GX_SITE_CSS = `
 `;
 const GX_SITE_JS = `(function(){try{var fine=matchMedia('(pointer:fine)').matches,rm=matchMedia('(prefers-reduced-motion:reduce)').matches;if(rm)return;if(fine){var g=document.createElement('div');g.className='gx-cur';document.body.appendChild(g);addEventListener('pointermove',function(e){g.style.transform='translate('+e.clientX+'px,'+e.clientY+'px)'},{passive:true});}
 document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.cta,.more,button,[type=submit]');if(!t)return;for(var i=0;i<10;i++){var s=document.createElement('i');s.className='gx-spk';var a=Math.PI*2*i/10,d=26+Math.random()*34;s.style.left=e.clientX+'px';s.style.top=e.clientY+'px';s.style.setProperty('--dx',Math.cos(a)*d+'px');s.style.setProperty('--dy',Math.sin(a)*d+'px');document.body.appendChild(s);setTimeout(function(x){x.remove()}.bind(null,s),850);}});}catch(e){}})();`;
+/* Contrast repair for public websites. Unlike index.html, these views are rendered by the server. */
+const GO_PUBLIC_LIGHT_FIX_CSS = `<style id="go-public-light-contrast">
+/* Treat the public storefront as a deliberately light interface, not the old dark theme. */
+body{--bg:#f7faff!important;--panel:#fff!important;--line:rgba(31,67,110,.16)!important;--mute:#546985!important;--soft:#405674!important;--a:#2769df!important;--b:#49c6d0!important;--on:#fff!important;background:#f7faff!important;color:#142541!important}
+body .bar{background:rgba(255,255,255,.95)!important;color:#1d3554!important;border:1px solid #d9e4f2!important;box-shadow:0 12px 36px rgba(30,56,92,.10)!important}
+body .bar b,body .bar a,body .bar nav a{color:#1d3554!important}
+body .bar nav a{border-color:#d8e3f0!important;background:#fff!important}
+body .bar nav a:hover{background:#ecf4ff!important;border-color:#87aeea!important}
+body .hero,body .mast,body .intro{background:linear-gradient(120deg,#f8fbff 0%,#eaf4ff 52%,#e6f8f5 100%)!important;color:#172943!important}
+body .herobg{opacity:.11!important;filter:blur(54px) saturate(.8)!important}
+body .blob{opacity:.12!important;filter:blur(110px)!important}
+body .gridbg{opacity:.35!important}
+body .hero h1,body .mast h1,body .intro h1,body .hero h1 *,body .mast h1 *,body .intro h1 *{color:#172943!important;-webkit-text-fill-color:#172943!important;background-image:none!important;text-shadow:none!important}
+body .hero .lead,body .hero p,body .mast p,body .intro p,body .hero .chip{color:#435b7a!important}
+body .hero .chip{background:rgba(255,255,255,.83)!important;border:1px solid #cfdbeb!important}
+body .hero .cta,body a.cta,body button.cta{background:linear-gradient(120deg,#2769df,#41b9c7)!important;color:#fff!important;border:0!important;box-shadow:0 12px 30px rgba(39,105,223,.20)!important}
+body .strip{background:#f1f6ff!important;border-color:#e0e8f4!important}
+body .strip span{color:#223d5d!important}
+body .wrap,body .info,body .sp-wrap,body .sp-section,body .sp-intro,body .mwrap{color:#192c48!important}
+body .wrap h1,body .wrap h2,body .wrap h3,body .info h1,body .sp-wrap h1,body .sp-wrap h2,body .sp-wrap h3,body .sp-intro h1,body .about h3{color:#192c48!important;-webkit-text-fill-color:#192c48!important}
+body .sub,body .short,body .long,body .about .cat,body .sp-subtle,body .sp-about p,body .sp-about small,body .sp-review-list,body .sp-review-item p,body .seller small,body .in p{color:#536984!important}
+body .card,body .glass,body .info .seller,body .info .req,body .sp-hero,body .sp-about,body .sp-review-summary,body .sp-review-list,body .sp-dialog{background:#fff!important;color:#192c48!important;border:1px solid #d9e4f0!important;box-shadow:0 14px 36px rgba(28,67,112,.09)!important}
+body .card .in,body .card .in h3,body .card .in p,body .card .more{color:#1d3554!important}
+body .card .in p{color:#596d87!important}
+body .card::before,body .card::after{display:none!important}
+body .card:hover{box-shadow:0 20px 45px rgba(28,67,112,.14)!important}
+body .glass .row,body .sp-about .row{border-color:#e2eaf4!important}
+body .glass .row small,body .sp-about .row small,body .row small{color:#637792!important}
+body .glass .row div,body .glass .row a,body .row a,body .row div{color:#253c5b!important}
+body .info .price,body .tag{background:#edf5ff!important;color:#235ab9!important;border:1px solid #cadff7!important;box-shadow:none!important}
+body .info .seller,body .seller b,body .seller em,body .sp-intro p{color:#253c5b!important}
+body .crumb,body .sp-back{color:#375a86!important}
+body .about .map,body .main{background:#edf3fb!important;border-color:#dce7f4!important;box-shadow:0 18px 35px rgba(26,61,108,.11)!important}
+body .about .map iframe{filter:none!important}
+body .abtn,body .sp-btn,body .sp-tabs a,body .sp-proof span,body .seller-pill{color:#28425f!important;background:#f7faff!important;border-color:#d9e4f0!important}
+body .abtn.pri,body .sp-primary,body .sp-btn.sp-primary{background:#2769df!important;color:#fff!important;border-color:#2769df!important}
+body input:not([type=checkbox]):not([type=radio]),body textarea,body select{background:#fff!important;color:#1a3150!important;border-color:#cbd9eb!important;caret-color:#2866da!important}
+body input::placeholder,body textarea::placeholder{color:#687d9a!important;opacity:1!important}
+body .sp-review-summary strong,body .sp-review-item strong,body .sp-about strong{color:#193456!important}
+body .sp-review-item,body .sp-review-list{border-color:#dbe5f2!important}
+body .sp-bar{background:#e9eff8!important}
+body .sp-dialog label{color:#244361!important}
+body .sp-modal-head button{background:#eff5fd!important;color:#244361!important;border-color:#cad8e9!important}
+body .sp-tabs{background:rgba(248,251,255,.96)!important;color:#294567!important;border-color:#dde7f2!important}
+body .sp-tabs button,body .sp-tabs a{color:#385475!important}
+body .sp-mobile-actions{background:#fff!important;border-color:#d9e4f0!important;box-shadow:0 -8px 26px rgba(30,56,92,.10)!important}
+body .go-owner-banner{background:rgba(255,255,255,.97)!important;color:#223955!important;border:1px solid #d9e4ef!important;box-shadow:0 12px 30px rgba(29,57,98,.13)!important}
+body .go-owner-banner a{color:#2467d6!important}
+body .go-owner-landing,body .go-owner-landing h1,body .go-owner-landing p{color:#25405f!important}
+body .go-owner-landing iframe{background:#fff!important;border-color:#d9e4f0!important}
+body .go-stock-badge{position:absolute;z-index:5;left:12px;bottom:12px;top:auto!important;display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:100px!important;background:#e8f9f0!important;color:#087b45!important;border:1px solid #a9e5c4!important;box-shadow:0 5px 15px rgba(8,123,69,.10)!important;font:800 11px/1.2 system-ui;letter-spacing:.06em!important;white-space:nowrap}
+body .go-stock-badge::before{content:'';width:7px;height:7px;background:#19ad65;border-radius:50%}
+body .go-stock-badge.is-out{background:#fff0f0!important;color:#bd3144!important;border-color:#f3bdc4!important}
+body .go-stock-badge.is-out::before{background:#e5455d}
+body .go-detail-stock{display:inline-flex;align-items:center;gap:7px;background:#e8f9f0!important;color:#087b45!important;border:1px solid #a9e5c4;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:800;margin-bottom:15px}
+body .go-detail-stock.is-out{background:#fff0f0!important;color:#bd3144!important;border-color:#f3bdc4!important}
+@media(max-width:680px){body .bar{left:8px!important;right:8px!important;top:8px!important}body .bar nav a{padding:7px 10px!important}}
+</style>`;
+
 function pageShell(user, { title, desc, body, cls, page }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
@@ -3323,6 +3382,7 @@ body #goOfferGrid{gap:22px!important}
 </style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
+${GO_PUBLIC_LIGHT_FIX_CSS}
 ${GD.freeHtml(D, page)}
 <script type="application/json" id="go-design">${JSON.stringify(D || {}).replace(/</g, '\\u003c')}</script><script>${GO_APPLY_JS}</script>${studio ? `<script>(${goStudioClient.toString()})(${goDesignCore.toString()})</script>` : ''}
 ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
@@ -3390,7 +3450,7 @@ function offerCard(user, o, i) {
   const stock=tracked?Number(user._stockMap[String(o._id)]):null;
   return `<a class="card rv" style="--d:${(i % 6) * 70}ms" href="/site/${esc(user.slug)}/offer/${o._id}">
   <div class="pic">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : artPlaceholder(o.title, user.categoryLabel || user.category || user.siteName)}
-    <span class="tag">${eur(o.salePrice > 0 ? o.salePrice : o.price)}</span>${stock===0?'<span class="count" style="top:auto;bottom:12px;background:#b52f40;color:#fff">OUT OF STOCK</span>':stock!==null?'<span class="count" style="top:auto;bottom:12px;background:#187f5a;color:#fff">IN STOCK</span>':''}${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
+    <span class="tag">${eur(o.salePrice > 0 ? o.salePrice : o.price)}</span>${stock===0?'<span class="go-stock-badge is-out" role="status">OUT OF STOCK</span>':'<span class="go-stock-badge" role="status">IN STOCK</span>'}${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
   <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p><span class="more">View details</span></div>
 </a>`;
 }
@@ -3632,7 +3692,7 @@ function renderOfferPage(user, offer, others, sent) {
   <div class="gal">${main}</div>
   <div class="info">
     <h1>${esc(offer.title)}</h1>
-    <div class="price">${eur(offer.price)}</div>${stockRemaining!==null?`<p role="status" style="color:${soldOut?'#c73344':'#18835a'};font-weight:700;margin-bottom:15px">${soldOut?'Out of stock':stockRemaining+' in stock'}</p>`:''}
+    <div class="price">${eur(offer.price)}</div><p class="go-detail-stock${soldOut?' is-out':''}" role="status">${soldOut?'OUT OF STOCK':'IN STOCK'}${!soldOut&&stockRemaining!==null?' · '+stockRemaining+' remaining':''}</p>
     <div class="actions">
       <a class="abtn pri" href="/site/${esc(user.slug)}/messages?offer=${offer._id}">${MSG_SVG}Message</a>
       ${phoneRaw ? `<a class="abtn" href="tel:${esc(phoneRaw)}">${PHONE_SVG}<span class="t2">Call</span></a>` : ''}
@@ -4447,7 +4507,7 @@ function aiBaseCss(user) {
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.55;-webkit-text-size-adjust:100%}
 img{max-width:100%;height:auto}a{color:inherit}
 .ai-offers{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}.ai-offer{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-.ai-offer-img{aspect-ratio:4/3;width:100%;object-fit:cover;display:block;background:linear-gradient(135deg,var(--a),var(--b))}.ai-offer-body{padding:16px}.ai-offer-title{margin:0 0 6px;font-size:1.1rem}.ai-offer-desc{margin:0 0 10px;opacity:.8;font-size:.92rem}.ai-offer-price{font-weight:800;color:var(--a)}
+.ai-offer-img{aspect-ratio:4/3;width:100%;object-fit:cover;display:block;background:linear-gradient(135deg,var(--a),var(--b))}.go-ai-stock{display:inline-block;background:#e8f9f0;color:#087b45;border:1px solid #a9e5c4;font-size:12px;letter-spacing:.06em;border-radius:999px;padding:6px 11px;margin:10px 0 0 12px;font-weight:800}.go-ai-stock.is-out{background:#fff0f0;color:#bd3144;border-color:#f3bdc4}.ai-offer-body{padding:16px}.ai-offer-title{margin:0 0 6px;font-size:1.1rem}.ai-offer-desc{margin:0 0 10px;opacity:.8;font-size:.92rem}.ai-offer-price{font-weight:800;color:var(--a)}
 .ai-faq details{border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin:8px 0;background:var(--panel)}.ai-faq summary{cursor:pointer;font-weight:700}.ai-contact{display:grid;gap:8px}.ai-contact a{text-decoration:underline}
 .ai-float{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:80}.ai-float a{display:inline-block;padding:11px 18px;border-radius:999px;background:var(--a);color:var(--on);font-weight:800;text-decoration:none;box-shadow:0 8px 24px #0005}
 .go-public-announcement{margin:12px auto!important;max-width:1100px}`;
@@ -4457,7 +4517,7 @@ function renderAiSite(user, offers, sent) {
   const offersHtml = offers.length ? `<div class="ai-offers">${offers.map(o => {
     const g = galleryOf(o);
     const st = user._stockMap && Object.prototype.hasOwnProperty.call(user._stockMap,String(o._id)) ? Number(user._stockMap[String(o._id)]) : null;
-    return `<a class="ai-offer" href="/site/${slug}/offer/${o._id}">${g.length ? `<img class="ai-offer-img" src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : '<div class="ai-offer-img"></div>'}${st!==null?`<div style="padding:6px 12px;color:${st===0?'#bf233e':'#168258'};font-weight:700">${st===0?'OUT OF STOCK':'IN STOCK'}</div>`:''}<div class="ai-offer-body"><h3 class="ai-offer-title">${esc(o.title)}</h3>${o.description ? `<p class="ai-offer-desc">${esc(String(o.description).slice(0, 140))}</p>` : ''}${Number(o.price) > 0 ? `<span class="ai-offer-price">${eur(o.price)}</span>` : ''}</div></a>`;
+    return `<a class="ai-offer" href="/site/${slug}/offer/${o._id}">${g.length ? `<img class="ai-offer-img" src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : '<div class="ai-offer-img"></div>'}<div class="go-ai-stock${st===0?' is-out':''}" role="status">${st===0?'OUT OF STOCK':'IN STOCK'}</div><div class="ai-offer-body"><h3 class="ai-offer-title">${esc(o.title)}</h3>${o.description ? `<p class="ai-offer-desc">${esc(String(o.description).slice(0, 140))}</p>` : ''}${Number(o.price) > 0 ? `<span class="ai-offer-price">${eur(o.price)}</span>` : ''}</div></a>`;
   }).join('')}</div>` : '<p>No offers yet. Please check back soon.</p>';
   const faqs = (user.faqItems || []).filter(f => f.question && f.answer);
   const faqHtml = faqs.length ? `<div class="ai-faq">${faqs.map(f => `<details><summary>${esc(f.question)}</summary><p>${esc(f.answer)}</p></details>`).join('')}</div>` : '';
@@ -4560,8 +4620,10 @@ app.get('/api/my-sites', authenticateToken, async (req, res) => {
     if (!root) return res.status(404).json({ message: 'Account not found.' });
     const subs = await User.find({ ownerId: root._id }).sort({ _id: 1 });
     const all = [root, ...subs];
+    const freeCodeUsed = planOf(root) === 'free' ? !!(await GOFreeCodeExport.exists({ sellerId: root._id })) : null;
+    const freeLinkUsed = subs.filter(x => x.aiGenerated).length;
     res.json({
-      currentId: String(req.user.id), rootId: String(root._id), cap: SITE_CAP(root), plan: planOf(root), planLimits: limitsOf(root), canTemplate: hasFeature(root, 'templateSites'), aiReady: !!process.env.OPENROUTER_API_KEY,
+      freeCodeUsed, freeLinkUsed, freeLinkLimit: 1, currentId: String(req.user.id), rootId: String(root._id), cap: SITE_CAP(root), plan: planOf(root), planLimits: limitsOf(root), canTemplate: hasFeature(root, 'templateSites'), aiReady: !!process.env.OPENROUTER_API_KEY,
       sites: all.map(u => ({ id: String(u._id), siteName: u.siteName || 'Untitled', slug: u.slug, published: !!u.published, aiGenerated: !!u.aiGenerated, isMain: String(u._id) === String(root._id), siteUrl: u.slug ? `${PUBLIC_BASE}/site/${u.slug}` : null }))
     });
   } catch (e) { res.status(500).json({ message: 'Could not load your sites.' }); }
@@ -4583,7 +4645,7 @@ app.delete('/api/my-sites/:id', authenticateToken, async (req, res) => {
     if (!root || !target || !target.ownerId || String(target.ownerId) !== String(root._id)) return res.status(403).json({ message: 'Only extra sites can be deleted.' });
     await Offer.deleteMany({ userId: target._id });
     await User.deleteOne({ _id: target._id });
-    res.json({ ok: true });
+    res.json({ ok: true, rootId: String(root._id) });
   } catch (e) { res.status(500).json({ message: 'Could not delete the site.' }); }
 });
 
@@ -4593,16 +4655,26 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     if (!key) return res.status(503).json({ message: 'AI is not set up yet. Add OPENROUTER_API_KEY on the server.' });
     const root = await familyOf(req.user.id);
     if (!root) return res.status(404).json({ message: 'Account not found.' });
+    const isCode = req.body.output === 'code';
+    const isFree = planOf(root) === 'free';
     const count = await User.countDocuments({ ownerId: root._id });
-    if (req.body.output !== 'code' && count + 1 >= SITE_CAP(root)) return res.status(402).json({ message: `Your ${limitsOf(root).name} plan allows ${SITE_CAP(root)} website${SITE_CAP(root) === 1 ? '' : 's'}. Upgrade to add more.`, upgrade: true });
+    if (!isCode && count + 1 >= SITE_CAP(root)) return res.status(402).json({ message: isFree ? 'Free includes one additional AI website at a time. Delete your current AI site in My websites to create another. Your source-code allowance is separate.' : `Your ${limitsOf(root).name} plan allows ${SITE_CAP(root)} websites.`, upgrade: !isFree });
     const genCap = limitsOf(root).aiGen;
-    if (genCap <= 0) return res.status(402).json({ message: 'AI website generation is unavailable for your account.', upgrade: true });
+    if (!isFree && genCap <= 0) return res.status(402).json({ message: 'AI website generation is unavailable for your account.', upgrade: true });
     const name = cleanStr(req.body.name, 60), desc = cleanStr(req.body.description, 1500);
     const lang = (typeof req.body.lang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(req.body.lang)) ? req.body.lang : 'en';
     const languageName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(lang) || lang; } catch (e) { return lang; } })();
     if (!name || desc.length < 10) return res.status(400).json({ message: 'Give a name and describe the business (at least a sentence).' });
-    if (!(await G.takeQuota(GOAiUsage, root._id, genCap, monthKey()))) return res.status(402).json({ message: `You used all ${genCap} AI generations for this month on the ${limitsOf(root).name} plan.`, upgrade: true });
-    res.on('finish', () => { if (res.statusCode >= 400) G.releaseQuota(GOAiUsage, root._id, monthKey()).catch(() => {}); });
+    if (isFree && isCode) {
+      // Reserve the one-time export atomically so parallel requests cannot bypass it.
+      try { await GOFreeCodeExport.create({ sellerId: root._id }); }
+      catch (e) { if (e.code === 11000) return res.status(402).json({ message: 'Your one free source-code generation has already been used. Deleting a website does not restore it.', upgrade: true }); throw e; }
+      // Failed generations must not consume the one-time credit.
+      res.on('finish', () => { if (res.statusCode >= 400) GOFreeCodeExport.deleteOne({ sellerId: root._id }).catch(() => {}); });
+    } else if (!isFree) {
+      if (!(await G.takeQuota(GOAiUsage, root._id, genCap, monthKey()))) return res.status(402).json({ message: `You used all ${genCap} AI generations for this month on the ${limitsOf(root).name} plan.`, upgrade: true });
+      res.on('finish', () => { if (res.statusCode >= 400) G.releaseQuota(GOAiUsage, root._id, monthKey()).catch(() => {}); });
+    }
     const sys = `You are a senior web designer. Create a UNIQUE, modern, mobile-first one-page website for a small business. Reply with ONE JSON object only, no markdown fences. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), palette {a,b,bg,panel,text} (hex colors with strong contrast: a=accent, b=second accent, bg=page background, panel=card background, text=text color), offers (array of 3-6 {title, price (number, 0 if unknown), description}), faq (array of 3 {question, answer}), css (string), html (string).
 Rules for html: a body fragment only. No html/head/body/script/style/iframe/form tags, no inline event handlers, no external images: make visuals with CSS gradients, emoji or inline SVG. Structure: a hero with a big headline and a call-to-action link href="#offers"; an about/story section; 3 benefit cards; then <section id="offers"> with a heading and exactly the text {{OFFERS}}; a FAQ section containing exactly {{FAQ}}; a section id="contact" containing exactly {{CONTACT}}; a short footer. Never write the offer cards, FAQ items or contact details yourself, the server replaces the placeholders.
 Rules for css: plain CSS for that html, mobile-first with media queries, bold distinctive typography and layout (not a generic template). Use var(--a), var(--b), var(--bg), var(--panel), var(--text) for colors (they come from your palette). Also style the classes .ai-offers .ai-offer .ai-offer-img .ai-offer-title .ai-offer-desc .ai-offer-price .ai-faq .ai-contact if you want to change their look.
@@ -4629,12 +4701,38 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
       const safeHex = (v,f)=>/^#[0-9a-f]{6}$/i.test(v||'')?v:f;
       const staticCss = (aiPage && aiPage.css)||'';
       const file='<!doctype html><html lang="'+esc(lang)+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(name)+'</title><style>:root{--a:'+safeHex(palette.a,'#355cbd')+';--b:'+safeHex(palette.b,'#0e8490')+';--bg:'+safeHex(palette.bg,'#ffffff')+';--panel:'+safeHex(palette.panel,'#f1f4f8')+';--text:'+safeHex(palette.text,'#182339')+'}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}main{max-width:1080px;margin:auto;padding:32px}section{padding:32px 0}.product{background:var(--panel);padding:16px;border-radius:10px;margin:12px 0}'+staticCss+'</style></head><body>'+page+'</body></html>';
-      if(req.body.codeLanguage === 'react') {
-        const safeJs = value => JSON.stringify(String(value)).replace(/</g,'\\u003c');
-        const react = 'import React from "react";\n\nexport default function GoldOfferWebsite(){\n  const content = '+safeJs(page)+';\n  const css = '+safeJs('body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}.product{padding:16px;margin:12px 0;border-radius:10px;background:var(--panel)}'+staticCss)+';\n  return <><style>{`:root { --a:'+safeHex(palette.a,'#355cbd')+'; --b:'+safeHex(palette.b,'#0e8490')+'; --bg:'+safeHex(palette.bg,'#ffffff')+'; --panel:'+safeHex(palette.panel,'#f1f4f8')+'; --text:'+safeHex(palette.text,'#182339')+'; }` + css}</style><div dangerouslySetInnerHTML={{__html: content}} /></>;\n}';
-        return res.json({output:'code',codeLanguage:'react',html:react,language:lang});
+      // Export one source file for the requested target. These contain the generated
+      // static page, not the hosted GoldOffer commerce / messaging backend.
+      const format = String(req.body.codeLanguage || 'html').toLowerCase();
+      const jsString = v => JSON.stringify(String(v)).replace(/</g, '\\u003c');
+      const cssVars = ':root{--a:'+safeHex(palette.a,'#355cbd')+';--b:'+safeHex(palette.b,'#0e8490')+';--bg:'+safeHex(palette.bg,'#ffffff')+';--panel:'+safeHex(palette.panel,'#f1f4f8')+';--text:'+safeHex(palette.text,'#182339')+'}';
+      const pageCss = cssVars+'body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}main{max-width:1080px;margin:auto;padding:32px}section{padding:32px 0}.product{background:var(--panel);padding:16px;border-radius:10px;margin:12px 0}'+staticCss;
+      const b64 = Buffer.from(file,'utf8').toString('base64');
+      const snip = (s, prefix) => ({ output:'code', codeLanguage:format, html:s, language:lang, fileName:prefix });
+      const component = 'import React from "react";\n\nexport default function GoldOfferWebsite() {\n  const page = '+jsString(page)+';\n  const css = '+jsString(pageCss)+';\n  return <><style>{css}</style><main dangerouslySetInnerHTML={{ __html: page }} /></>;\n}\n';
+      switch(format) {
+        case 'react': return res.json(snip(component,'GoldOfferWebsite.jsx'));
+        case 'react-ts': return res.json(snip(component.replace('export default function GoldOfferWebsite() {','export default function GoldOfferWebsite(): React.JSX.Element {'),'GoldOfferWebsite.tsx'));
+        case 'vue': {
+          const vue = '<script setup>\nconst page = '+jsString(page)+';\n</script>\n\n<template>\n  <main v-html="page"></main>\n</template>\n\n<style>\n'+pageCss+'\n</style>\n';
+          return res.json(snip(vue,'GoldOfferWebsite.vue'));
+        }
+        case 'svelte': {
+          const svelte = '<script>\n  import { onMount } from "svelte";\n  const page = '+jsString(page)+';\n  const css = '+jsString(pageCss)+';\n  onMount(() => {\n    const style = document.createElement("style");\n    style.textContent = css;\n    document.head.appendChild(style);\n    return () => style.remove();\n  });\n</script>\n\n<main>{@html page}</main>\n';
+          return res.json(snip(svelte,'GoldOfferWebsite.svelte'));
+        }
+        case 'astro': {
+          const astro = '---\nconst page = '+jsString(page)+';\n---\n<!doctype html>\n<html lang="'+esc(lang)+'">\n<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>'+esc(name)+'</title><style is:global>'+pageCss+'</style></head>\n<body><Fragment set:html={page} /></body>\n</html>\n';
+          return res.json(snip(astro,'index.astro'));
+        }
+        case 'php': return res.json(snip('<?php\n// Serve this file with: php -S localhost:8000\nheader("Content-Type: text/html; charset=utf-8");\necho base64_decode("'+b64+'");\n','index.php'));
+        case 'python': return res.json(snip('from flask import Flask, Response\nimport base64\n\napp = Flask(__name__)\nPAGE = base64.b64decode("'+b64+'").decode("utf-8")\n\n@app.get("/")\ndef home():\n    return Response(PAGE, mimetype="text/html")\n\nif __name__ == "__main__":\n    app.run(debug=False, port=8000)\n','app.py'));
+        case 'node': return res.json(snip('const http = require("node:http");\nconst page = Buffer.from("'+b64+'", "base64");\nhttp.createServer((req, res) => {\n  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });\n  res.end(page);\n}).listen(8000, () => console.log("GoldOffer page: http://localhost:8000"));\n','goldoffer-site.js'));
+        case 'go': return res.json(snip('package main\n\nimport (\n "encoding/base64"\n "log"\n "net/http"\n)\n\nfunc main() {\n data, err := base64.StdEncoding.DecodeString("'+b64+'")\n if err != nil { log.Fatal(err) }\n http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {\n  w.Header().Set("Content-Type", "text/html; charset=utf-8")\n  _, _ = w.Write(data)\n })\n log.Fatal(http.ListenAndServe(":8000", nil))\n}\n','main.go'));
+        case 'java': return res.json(snip('import com.sun.net.httpserver.HttpServer;\nimport java.net.InetSocketAddress;\nimport java.util.Base64;\n\npublic class GoldOfferSite {\n  public static void main(String[] args) throws Exception {\n    byte[] page = Base64.getDecoder().decode("'+b64+'");\n    HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);\n    server.createContext("/", exchange -> {\n      exchange.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");\n      exchange.sendResponseHeaders(200, page.length);\n      try (var out = exchange.getResponseBody()) { out.write(page); }\n    });\n    server.start();\n    System.out.println("GoldOffer page: http://localhost:8000");\n  }\n}\n','GoldOfferSite.java'));
+        case 'csharp': return res.json(snip('// Put this file in a .NET web project as Program.cs\n// Create it with: dotnet new web\nusing System.Text;\nvar builder = WebApplication.CreateBuilder(args);\nvar app = builder.Build();\nvar html = Encoding.UTF8.GetString(Convert.FromBase64String("'+b64+'"));\napp.MapGet("/", () => Results.Content(html, "text/html; charset=utf-8"));\napp.Run();\n','Program.cs'));
+        case 'html': default: return res.json({ output:'code',codeLanguage:'html',html:file,language:lang,fileName:'index.html' });
       }
-      return res.json({ output:'code',codeLanguage:'html',html:file,language:lang });
     }
     const email = `site-${root._id}-${Date.now().toString(36)}@sites.goldoffer.local`;
     const pick = (v, obj, d) => (Object.keys(obj).includes(v) ? v : d);
@@ -4684,6 +4782,12 @@ const GOAutoRun = mongoose.model('GOAutoRun', new mongoose.Schema({
   status: { type: String, default: 'running' }, failures: { type: [{ step: Number, type: { type: String }, message: String, _id: false }], default: [] },
   at: { type: Date, default: Date.now, expires: 2592000 }
 }).index({ autoId: 1, ref: 1 }, { unique: true }));
+// One-time source export on Free plan. Separate from hosted AI sites.
+// Intentionally no expiry: deleting a website never restores this export.
+const GOFreeCodeExport = mongoose.model('GOFreeCodeExport', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, required: true, unique: true, index: true },
+  createdAt: { type: Date, default: Date.now }
+}));
 const GOAiUsage = mongoose.model('GOAiUsage', new mongoose.Schema({
   sellerId: mongoose.Schema.Types.ObjectId, day: String, count: { type: Number, default: 0 }, tokens: { type: Number, default: 0 }, handoffs: { type: Number, default: 0 }, blocked: { type: Number, default: 0 },
   at: { type: Date, default: Date.now, expires: 7776000 }
@@ -4909,7 +5013,8 @@ app.get('/api/plan', authenticateToken, async (req, res) => {
     const L = limitsOf(root);
     const ids = [root._id, ...(await User.find({ ownerId: root._id }).select('_id').lean()).map(x => x._id)];
     const [offers, usage] = await Promise.all([Offer.countDocuments({ userId: req.user.id }), GOAiUsage.findOne({ sellerId: root._id, day: monthKey() }).lean()]);
-    res.json({ plan: planOf(root), limits: L, plans: PLANS, usage: { offers, sites: ids.length, aiGen: usage ? usage.count : 0 } });
+    const freeCodeUsed = planOf(root) === 'free' ? !!(await GOFreeCodeExport.exists({ sellerId: root._id })) : null;
+    res.json({ plan: planOf(root), limits: L, plans: PLANS, usage: { offers, sites: ids.length, aiGen: usage ? usage.count : 0, freeCodeUsed }, freeBenefits: { sourceCodeGenerations: 1, simultaneousAiLinks: 1, deleteLinkToCreateAnother: true } });
   } catch (e) { res.status(500).json({ message: 'Could not load plan.' }); }
 });
 
