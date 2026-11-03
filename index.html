@@ -2204,7 +2204,7 @@ async function loadSites() {
       if (d.plan === 'free') {
         $('goFreeCodeStatus').textContent = d.freeCodeUsed ? 'Used · 0 of 1 remaining' : 'Available · 1 of 1';
         $('goFreeCodeStatus').classList.toggle('go-used', !!d.freeCodeUsed);
-        $('goFreeLinkStatus').textContent = d.freeLinkUsed ? '1 of 1 AI links active' : 'Available · 0 of 1 active';
+        $('goFreeLinkStatus').textContent = d.freeLinkUsed ? 'Occupied by: ' + (d.freeActiveSite?.siteName || 'AI website') + ' · Open or Delete below' : 'Available · 0 of 1 active';
       }
     }
     box.innerHTML = d.sites.map(x => '<div class="site-card' + (x.id === d.currentId ? ' cur' : '') + '"><div><b>' + esc(x.siteName) + '</b>' + (x.isMain ? ' · <span>Main site</span>' : '') + (x.aiGenerated ? ' · AI' : '') + '<br><small style="opacity:.7">' + esc(x.siteUrl || '—') + '</small></div><div class="acts">' + (x.siteUrl ? '<a class="btn-ghost" target="_blank" rel="noopener" href="' + esc(x.siteUrl) + '">Open</a>' : '') + (x.id === d.currentId ? '<span class="btn-ghost" data-notr>✓ Current</span>' : '<button class="btn-ghost" onclick="switchSite(\'' + x.id + '\')">Switch to this site</button>') + (!x.isMain ? '<button class="btn-ghost" onclick="deleteSite(\'' + x.id + '\')">Delete</button>' : '') + '</div></div>').join('');
@@ -2214,9 +2214,15 @@ async function loadSites() {
 async function generateSite() {
   const name = $('aiName').value.trim(), desc = $('aiDesc').value.trim(), btn = $('aiGo');
   if (!name || desc.length < 10) return notify('Add a name and describe the business.');
-  btn.disabled = true; $('aiMsg').textContent = 'Generating… this takes up to a minute.';
+  const selectedMode = (document.querySelector('[name=goExportMode]:checked')||{}).value || 'link';
+  const selectedFormat = $('goCodeLanguage').value;
+  // Output cannot silently change in the middle of the same generation.
+  const outputControls = [...document.querySelectorAll('[name=goExportMode]'), $('goCodeLanguage')].filter(Boolean);
+  outputControls.forEach(el => el.disabled = true);
+  btn.disabled = true;
+  $('aiMsg').textContent = (selectedMode === 'code' ? 'Generating source code' : 'Creating a published website') + '… This request uses the selected mode. Switching is available after it finishes.';
   try {
-    const d = await api('/api/ai/site-generate', { method: 'POST', body: JSON.stringify({ name, description: desc, lang: $('aiLang').value, output: (document.querySelector('[name=goExportMode]:checked')||{}).value || 'link', codeLanguage: $('goCodeLanguage').value }) });
+    const d = await api('/api/ai/site-generate', { method: 'POST', body: JSON.stringify({ name, description: desc, lang: $('aiLang').value, output: selectedMode, codeLanguage: selectedFormat }) });
     if (d.output === 'code' && d.html) {
       const ext = {html:'.html',react:'.jsx','react-ts':'.tsx',vue:'.vue',svelte:'.svelte',astro:'.astro',php:'.php',python:'.py',node:'.js',go:'.go',java:'.java',csharp:'.cs'};
       const suffix = ext[d.codeLanguage] || '.html';
@@ -2231,8 +2237,15 @@ async function generateSite() {
     if (!S.mainToken) S.mainToken = S.token;
     try { sessionStorage.setItem('mainToken', S.mainToken); } catch (e) {}
     S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user; renderAuth();
-    notify('Created: ' + d.site.siteUrl); navigate('/studio');
-  } catch (e) { $('aiMsg').innerHTML = e.status === 402 ? esc(e.message) + ' <a href="#" onclick="payNow(\'agency\');return false">See plans</a>' : esc('Could not generate website: ' + e.message + (e.status ? ' [HTTP '+e.status+']' : '') + '. Your existing sites were not changed.'); } finally { btn.disabled = false; }
+    notify('Website created: ' + d.site.siteUrl + '. Find it in My websites to open, edit or delete.');
+    await loadSites();
+  } catch (e) {
+    $('aiMsg').textContent = 'Generation not completed here: ' + e.message + '. Your sites list below will show whether a link was saved.';
+  } finally {
+    btn.disabled = false;
+    outputControls.forEach(el => el.disabled = false);
+    await loadSites();
+  }
 }
 async function switchSite(id) {
   try { const d = await api('/api/my-sites/' + id + '/token', { method: 'POST' }); localStorage.setItem('token', d.token); location.reload(); } catch (e) { notify(e.message, 'Error'); }

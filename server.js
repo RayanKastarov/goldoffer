@@ -3344,6 +3344,66 @@ body .go-stock-badge.is-out{background:#fff0f0!important;color:#bd3144!important
 body .go-stock-badge.is-out::before{background:#e5455d}
 body .go-detail-stock{display:inline-flex;align-items:center;gap:7px;background:#e8f9f0!important;color:#087b45!important;border:1px solid #a9e5c4;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:800;margin-bottom:15px}
 body .go-detail-stock.is-out{background:#fff0f0!important;color:#bd3144!important;border-color:#f3bdc4!important}
+
+/* Final storefront typography contrast: cinematic areas were still using light text on light backgrounds
+   and dark text on dark cards. Keep all existing layout, features and animations. */
+body .cine-hero .cine-copy,
+body .cine-hero .cine-copy h1,
+body .cine-hero .cine-copy h1 *,
+body .cine-hero .cine-copy .cine-sub {
+  color:#182b47!important;-webkit-text-fill-color:#182b47!important;text-shadow:none!important;
+}
+body .cine-hero .cine-copy .cine-sub{color:#48617f!important;-webkit-text-fill-color:#48617f!important}
+body .cine-hero .cine-eyebrow,
+body .cine-feature .cine-eyebrow,
+body .story-panel .cine-eyebrow{color:#2566cc!important;-webkit-text-fill-color:#2566cc!important}
+body .cine-hero .cine-meta span,
+body .cine-hero .offer-pills a{background:#ffffffec!important;color:#284460!important;border-color:#cdddf0!important}
+body .cine-hero .offer-pills a:hover{color:#195ec9!important;border-color:#4a8ce8!important}
+body .hero-fade{background:linear-gradient(180deg,transparent 60%,#f7faff 100%)!important}
+body .story-canvas{
+  background:#ffffff!important;border-color:#d7e3f2!important;
+  color:#182b47!important;box-shadow:0 24px 70px rgba(25,63,113,.13)!important;
+}
+body .story-panel,
+body .story-panel h2,
+body .story-panel h2 *{
+  color:#182b47!important;-webkit-text-fill-color:#182b47!important;
+  text-shadow:none!important;opacity:1!important;
+}
+body .story-panel p{color:#526a86!important;opacity:1!important}
+body .story-stats div{background:#f0f6fe!important;border:1px solid #dce8f6!important}
+body .story-stats b{color:#1b3555!important;-webkit-text-fill-color:#1b3555!important}
+body .story-stats span{color:#5d7490!important}
+body .reveal-band .copyline{color:#697c96!important;opacity:1!important;text-shadow:none!important}
+body .reveal-band .copyline.on{color:#142a49!important;text-shadow:none!important}
+body .feature-card.dark{
+  background:#f1f6fc!important;border:1px solid #d9e5f2!important;color:#172d4b!important
+}
+body .feature-card.dark h3,
+body .feature-card.dark p,
+body .feature-card.dark .feature-link{
+  color:#183351!important;-webkit-text-fill-color:#183351!important;opacity:1!important
+}
+body .feature-card.light{background:#ffffff!important;border:1px solid #d8e4f1!important;color:#1c3553!important}
+body .feature-card.light h3,
+body .feature-card.light p,
+body .feature-card.light .feature-link{color:#1c3553!important;-webkit-text-fill-color:#1c3553!important;opacity:1!important}
+body .feature-card .cine-eyebrow{color:#2566cc!important}
+body .sec-head h2,body .sec-head span,body .sec-head a{color:#203957!important}
+body .go-shop-search span{color:#59718e!important}
+body .go-shop-search input{background:#fff!important;color:#182d4a!important}
+body .go-shop-search input::placeholder{color:#677c96!important}
+body .bar,body .bar nav{background-color:rgba(255,255,255,.96)!important}
+body .bar a,body .bar b,body .bar nav a{color:#203a5b!important;-webkit-text-fill-color:#203a5b!important}
+body .bar nav a:hover{background-color:#e9f2ff!important;color:#195dba!important}
+body .wrap > a[style*="background:#161c25"]{background:#fff!important;border-color:#d8e4f1!important}
+body .wrap > a[style*="background:#161c25"] b{color:#193556!important}
+body .wrap > a[style*="background:#161c25"] small{color:#5b718d!important}
+body .wrap > a[style*="background:#161c25"] strong{color:#235fbd!important}
+/* Keep captions on darkened image overlays white for readability. */
+body .screen-caption,body .screen-caption strong{color:#fff!important}
+body .screen-caption span{color:#d9ebff!important}
 @media(max-width:680px){body .bar{left:8px!important;right:8px!important;top:8px!important}body .bar nav a{padding:7px 10px!important}}
 </style>`;
 
@@ -4623,7 +4683,9 @@ app.get('/api/my-sites', authenticateToken, async (req, res) => {
     const freeCodeUsed = planOf(root) === 'free' ? !!(await GOFreeCodeExport.exists({ sellerId: root._id })) : null;
     const freeLinkUsed = subs.filter(x => x.aiGenerated).length;
     res.json({
-      freeCodeUsed, freeLinkUsed, freeLinkLimit: 1, currentId: String(req.user.id), rootId: String(root._id), cap: SITE_CAP(root), plan: planOf(root), planLimits: limitsOf(root), canTemplate: hasFeature(root, 'templateSites'), aiReady: !!process.env.OPENROUTER_API_KEY,
+      freeCodeUsed, freeLinkUsed, freeLinkLimit: 1,
+      freeActiveSite: subs.find(x => x.aiGenerated) ? { id: String(subs.find(x => x.aiGenerated)._id), siteName: subs.find(x => x.aiGenerated).siteName || 'AI website', slug: subs.find(x => x.aiGenerated).slug, siteUrl: subs.find(x => x.aiGenerated).slug ? `${PUBLIC_BASE}/site/${subs.find(x => x.aiGenerated).slug}` : null } : null,
+      currentId: String(req.user.id), rootId: String(root._id), cap: SITE_CAP(root), plan: planOf(root), planLimits: limitsOf(root), canTemplate: hasFeature(root, 'templateSites'), aiReady: !!process.env.OPENROUTER_API_KEY,
       sites: all.map(u => ({ id: String(u._id), siteName: u.siteName || 'Untitled', slug: u.slug, published: !!u.published, aiGenerated: !!u.aiGenerated, isMain: String(u._id) === String(root._id), siteUrl: u.slug ? `${PUBLIC_BASE}/site/${u.slug}` : null }))
     });
   } catch (e) { res.status(500).json({ message: 'Could not load your sites.' }); }
@@ -4650,6 +4712,10 @@ app.delete('/api/my-sites/:id', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
+  // If the browser cancels a generation, never consume its link slot at the end.
+  // A completed site remains accessible in My websites even if its response was missed.
+  let clientGone = false;
+  res.on('close', () => { if (!res.writableEnded) clientGone = true; });
   try {
     const key = process.env.OPENROUTER_API_KEY;
     if (!key) return res.status(503).json({ message: 'AI is not set up yet. Add OPENROUTER_API_KEY on the server.' });
@@ -4657,8 +4723,17 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     if (!root) return res.status(404).json({ message: 'Account not found.' });
     const isCode = req.body.output === 'code';
     const isFree = planOf(root) === 'free';
-    const count = await User.countDocuments({ ownerId: root._id });
-    if (!isCode && count + 1 >= SITE_CAP(root)) return res.status(402).json({ message: isFree ? 'Free includes one additional AI website at a time. Delete your current AI site in My websites to create another. Your source-code allowance is separate.' : `Your ${limitsOf(root).name} plan allows ${SITE_CAP(root)} websites.`, upgrade: !isFree });
+    // Free link allowance counts only real AI websites, not unrelated child/template records.
+    const count = await User.countDocuments(isFree ? { ownerId: root._id, aiGenerated: true } : { ownerId: root._id });
+    if (!isCode && (isFree ? count >= 1 : count + 1 >= SITE_CAP(root))) {
+      const active = isFree ? await User.findOne({ ownerId: root._id, aiGenerated: true }).select('siteName slug').lean() : null;
+      return res.status(402).json({
+        message: isFree ? 'You already have an AI website saved' + (active && active.siteName ? ' (' + active.siteName + ')' : '') + '. Open My websites to view or delete it; deleting frees the link slot. Code generation is separate.' : `Your ${limitsOf(root).name} plan allows ${SITE_CAP(root)} websites.`,
+        existingSiteUrl: active && active.slug ? `${PUBLIC_BASE}/site/${active.slug}` : null,
+        existingSiteName: active && active.siteName || null,
+        upgrade: !isFree
+      });
+    }
     const genCap = limitsOf(root).aiGen;
     if (!isFree && genCap <= 0) return res.status(402).json({ message: 'AI website generation is unavailable for your account.', upgrade: true });
     const name = cleanStr(req.body.name, 60), desc = cleanStr(req.body.description, 1500);
@@ -4734,6 +4809,12 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
         case 'html': default: return res.json({ output:'code',codeLanguage:'html',html:file,language:lang,fileName:'index.html' });
       }
     }
+    // The AI call can finish after the user navigated away or canceled the request.
+    if (clientGone) return;
+    // Recheck quota after the long AI request (another tab may have published meanwhile).
+    if (isFree && await User.exists({ ownerId: root._id, aiGenerated: true })) {
+      return res.status(409).json({ message: 'An AI website was published during this generation. Check My websites to open or delete it.' });
+    }
     const email = `site-${root._id}-${Date.now().toString(36)}@sites.goldoffer.local`;
     const pick = (v, obj, d) => (Object.keys(obj).includes(v) ? v : d);
     const sub = new User({
@@ -4747,13 +4828,26 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
     });
     sub.slug = await uniqueSlug(req.body.slug || name, sub._id);
     await sub.save();
-    const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
-    for (let i = 0; i < offers.length; i++) {
-      const o = offers[i] || {};
-      if (!cleanStr(o.title, 120)) continue;
-      await Offer.create({ userId: sub._id, title: cleanStr(o.title, 120), price: Math.max(0, Number(o.price) || 0), description: cleanStr(o.description, 400), order: i });
+    try {
+      const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
+      for (let i = 0; i < offers.length; i++) {
+        if (clientGone) break;
+        const o = offers[i] || {};
+        if (!cleanStr(o.title, 120)) continue;
+        await Offer.create({ userId: sub._id, title: cleanStr(o.title, 120), price: Math.max(0, Number(o.price) || 0), description: cleanStr(o.description, 400), order: i });
+      }
+      if (clientGone) {
+        // Canceled before the response: undo only this newly-created AI website.
+        await Offer.deleteMany({ userId: sub._id });
+        await User.deleteOne({ _id: sub._id, ownerId: root._id, aiGenerated: true });
+        return;
+      }
+      res.json({ site: { id: String(sub._id), slug: sub.slug, siteName: sub.siteName, siteUrl: `${PUBLIC_BASE}/site/${sub.slug}` }, token: signToken(sub), user: publicUser(sub) });
+    } catch (saveError) {
+      await Offer.deleteMany({ userId: sub._id }).catch(() => {});
+      await User.deleteOne({ _id: sub._id, ownerId: root._id, aiGenerated: true }).catch(() => {});
+      throw saveError;
     }
-    res.json({ site: { id: String(sub._id), slug: sub.slug, siteName: sub.siteName, siteUrl: `${PUBLIC_BASE}/site/${sub.slug}` }, token: signToken(sub), user: publicUser(sub) });
   } catch (e) {
     console.error('AI generate error', e.response ? JSON.stringify(e.response.data) : e.message);
     if (e.response) {
