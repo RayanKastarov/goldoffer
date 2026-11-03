@@ -526,7 +526,7 @@ async function sendMail({ to, subject, html, text }) {
 // Free plan: up to 3 offers, no card, no trial clock. Paid (active subscription): effectively unlimited.
 const FREE_OFFER_LIMIT = 3;
 const PLANS = {
-  free:   { name: 'Free',   price: 0,  offers: 3,    sites: 1,  aiGen: 0,  aiGenPeriod: 'month', proModules: false, whiteLabel: false, customDomain: false, templateSites: false },
+  free:   { name: 'Free',   price: 0,  offers: 3,    sites: 2,  aiGen: 1,  aiGenPeriod: 'month', proModules: false, whiteLabel: false, customDomain: false, templateSites: false },
   pro:    { name: 'Pro',    price: 19.99, offers: 500,  sites: 3,  aiGen: 3,  aiGenPeriod: 'month', proModules: true, whiteLabel: false, customDomain: false, templateSites: false },
   agency: { name: 'Agency', price: 99, offers: 2000, sites: 20, aiGen: 50, aiGenPeriod: 'month', proModules: true, whiteLabel: true,  customDomain: true,  templateSites: true }
 };
@@ -3267,6 +3267,27 @@ ${layoutLookCss(layout)}`;
 }
 
 const sentTrack = (u) => u._track ? ` <a href="/track/${u._track}" style="color:var(--a);font-weight:700">Track your request &rarr;</a>` : '';
+
+const GX_SITE_CSS = `
+.bar{top:12px!important;left:14px!important;right:14px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:20px!important;background:rgba(14,11,28,.58)!important;backdrop-filter:blur(18px) saturate(1.4)!important;-webkit-backdrop-filter:blur(18px) saturate(1.4)!important;box-shadow:0 10px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)!important}
+.bar nav a{border-radius:12px!important;border-color:rgba(255,255,255,.14)!important;background:rgba(255,255,255,.04)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(700px 420px at 50% 0,color-mix(in srgb,var(--a) 30%,transparent),transparent 65%),radial-gradient(520px 320px at 85% 70%,color-mix(in srgb,var(--b) 22%,transparent),transparent 70%);pointer-events:none;z-index:0}
+.hero h1{background:linear-gradient(180deg,#fff 35%,color-mix(in srgb,var(--a) 35%,#d8d2ff));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800;letter-spacing:-.04em}
+.chip{border-radius:99px;background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.16)!important}
+.cta{border-radius:16px!important;box-shadow:0 10px 40px color-mix(in srgb,var(--a) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.35)!important;position:relative;overflow:hidden}
+.cta::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:gxShine 3.6s ease-in-out infinite}
+@keyframes gxShine{0%,60%{left:-60%}100%{left:130%}}
+.card{border-radius:26px!important;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025))!important}
+.card .tag{border-radius:12px!important}
+.glass{border-radius:26px!important}
+.gx-cur{position:fixed;left:0;top:0;width:460px;height:460px;margin:-230px 0 0 -230px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--a) 16%,transparent),transparent 65%);pointer-events:none;z-index:1}
+.gx-spk{position:fixed;width:7px;height:7px;border-radius:50%;pointer-events:none;z-index:99;background:var(--a);box-shadow:0 0 12px var(--a);animation:gxSpk .8s ease-out forwards}
+@keyframes gxSpk{to{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+@media(max-width:700px){.bar{top:8px!important;left:8px!important;right:8px!important;padding:10px 14px!important}}
+@media(prefers-reduced-motion:reduce){.cta::after,.gx-spk{animation:none!important}}
+`;
+const GX_SITE_JS = `(function(){try{var fine=matchMedia('(pointer:fine)').matches,rm=matchMedia('(prefers-reduced-motion:reduce)').matches;if(rm)return;if(fine){var g=document.createElement('div');g.className='gx-cur';document.body.appendChild(g);addEventListener('pointermove',function(e){g.style.transform='translate('+e.clientX+'px,'+e.clientY+'px)'},{passive:true});}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.cta,.more,button,[type=submit]');if(!t)return;for(var i=0;i<10;i++){var s=document.createElement('i');s.className='gx-spk';var a=Math.PI*2*i/10,d=26+Math.random()*34;s.style.left=e.clientX+'px';s.style.top=e.clientY+'px';s.style.setProperty('--dx',Math.cos(a)*d+'px');s.style.setProperty('--dy',Math.sin(a)*d+'px');document.body.appendChild(s);setTimeout(function(x){x.remove()}.bind(null,s),850);}});}catch(e){}})();`;
 function pageShell(user, { title, desc, body, cls, page }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
@@ -3281,7 +3302,25 @@ function pageShell(user, { title, desc, body, cls, page }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-${dFonts}${(page === 'home' && user.aiGenerated && user.aiPage && user.aiPage.html) ? `<style>${aiBaseCss(user)}</style><style>${user.aiPage.css || ''}</style>` : `<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style>`}<style id="go-design-css">${GD.css(D, page)}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+${dFonts}
+
+${(page === 'home' && user.aiGenerated && user.aiPage && user.aiPage.html) ? `<style>${aiBaseCss(user)}</style><style>${user.aiPage.css || ''}</style>` : `<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style><style id="gx-site">${GX_SITE_CSS}</style>`}<style id="go-design-css">${GD.css(D, page)}</style><style id="nv-storefront-rework">
+:root{--nv2:#294da9;--nv2-ink:#17233a}
+body:not(.go-site-owner){font-family:'Inter',system-ui,sans-serif;letter-spacing:-.012em}
+body .bar,body .bar nav{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+body .bar{border-radius:0!important;border-bottom:1px solid rgba(29,46,75,.12)!important;box-shadow:0 8px 26px #152a4a14!important}
+body .hero,body .mast,body .intro{isolation:isolate}
+body .hero h1,body .mast h1,body .intro h1{letter-spacing:-.07em!important;font-weight:800!important;line-height:1.05!important}
+body .hero p,body .mast p,body .intro p{line-height:1.65}
+body .card{border-radius:10px!important;box-shadow:0 12px 40px rgba(16,27,42,.1)!important;transition:transform .3s cubic-bezier(.2,.7,.3,1),box-shadow .3s!important;overflow:hidden}
+body .card:hover{transform:translateY(-5px)!important;box-shadow:0 20px 55px rgba(16,27,42,.16)!important}
+body .card .ph,body .card img{transition:transform .8s cubic-bezier(.2,.6,.2,1)}body .card:hover .ph,body .card:hover img{transform:scale(1.035)}
+body a.cta,body button.cta{border-radius:8px!important;letter-spacing:0!important;box-shadow:0 10px 28px #0d182b24}
+body #goOfferSearch{border-radius:8px!important;min-height:48px;box-shadow:0 12px 25px #12274712}
+body .count{border-radius:5px!important;font-weight:800!important;letter-spacing:.035em!important}
+body #goOfferGrid{gap:22px!important}
+@media(prefers-reduced-motion:reduce){body .card,body .card .ph,body .card img{transition:none!important}}
+</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
 ${GD.freeHtml(D, page)}
@@ -3289,7 +3328,7 @@ ${GD.freeHtml(D, page)}
 ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
 <script>(function(){var d=document.getElementById('bkDate');if(!d)return;var slug=document.body.getAttribute('data-slug'),box=document.getElementById('bkSlots'),hid=document.getElementById('bkStart'),off=document.getElementById('bkOffer');var t=new Date();d.min=t.toISOString().slice(0,10);function load(){hid.value='';if(!d.value)return;box.textContent='Loading...';fetch('/site/'+encodeURIComponent(slug)+'/slots?date='+d.value+(off&&off.value?'&offerId='+off.value:''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){box.textContent='';if(!j.slots||!j.slots.length){box.textContent='No free times on this day. Try another day.';return}j.slots.forEach(function(s){var b=document.createElement('button');b.type='button';b.textContent=s.time;b.style.cssText='padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font-weight:700;cursor:pointer';b.onclick=function(){hid.value=s.iso;[].forEach.call(box.children,function(x){x.style.background='transparent';x.style.color='inherit'});b.style.background='var(--a)';b.style.color='var(--on)'};box.appendChild(b)})}).catch(function(){box.textContent='Could not load times.'})}d.addEventListener('change',load);if(off)off.addEventListener('change',load);var f=d.form;if(f)f.addEventListener('submit',function(e){if(!hid.value){e.preventDefault();box.textContent='Please pick a time first.'}})})();</script>
 <script>(function(){var form=document.querySelector('#book form');if(form)form.addEventListener('submit',function(){var x=form.querySelector('[name="startsAt"]');if(x){var d=new Date(x.value);if(Number.isFinite(d.getTime())){x.type='hidden';x.value=d.toISOString()}}})})();</script>
-<script>${SITE_JS}</script>
+<script>${SITE_JS}</script>${studio ? '' : `<script>${GX_SITE_JS}</script>`}
 ${!user._studio && user.receptionist && user.receptionist.enabled && hasFeature(user, 'proModules') ? `<script>${aiWidgetJs(user.slug, user.receptionist.greeting)}</script>` : ''}${!user._studio && user.siteLang === 'bg' ? `<script>${SITE_I18N_JS}</script>` : ''}${!user._studio && user.siteLang && !/^(en|bg)(-|$)/.test(user.siteLang) ? `<script>${SITE_I18N_LOADER}</script>` : ''}
 ${studio ? '' : `<script>(function(){
   var slug = document.body.getAttribute('data-slug');
@@ -3351,7 +3390,7 @@ function offerCard(user, o, i) {
   const stock=tracked?Number(user._stockMap[String(o._id)]):null;
   return `<a class="card rv" style="--d:${(i % 6) * 70}ms" href="/site/${esc(user.slug)}/offer/${o._id}">
   <div class="pic">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : artPlaceholder(o.title, user.categoryLabel || user.category || user.siteName)}
-    <span class="tag">${eur(o.salePrice > 0 ? o.salePrice : o.price)}</span>${stock===0?'<span class="count" style="top:auto;bottom:12px;background:#6b1723">Sold out</span>':''}${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
+    <span class="tag">${eur(o.salePrice > 0 ? o.salePrice : o.price)}</span>${stock===0?'<span class="count" style="top:auto;bottom:12px;background:#b52f40;color:#fff">OUT OF STOCK</span>':stock!==null?'<span class="count" style="top:auto;bottom:12px;background:#187f5a;color:#fff">IN STOCK</span>':''}${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
   <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p><span class="more">View details</span></div>
 </a>`;
 }
@@ -3571,20 +3610,21 @@ ${user.bookingEnabled ? `<section class="wrap" style="padding-top:35px" id="book
 var lines=[].slice.call(document.querySelectorAll('.copyline'));if(lines.length&&'IntersectionObserver' in window){var io=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting)entry.target.classList.add('on');})},{threshold:.45});lines.forEach(function(el){io.observe(el)})}else{lines.forEach(function(el){el.classList.add('on')})}
 var shell=document.querySelector('[data-story-shell]'),canvas=document.querySelector('[data-story-canvas]');if(shell&&canvas&&window.matchMedia('(min-width: 801px)').matches&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){var ticking=false;var run=function(){ticking=false;var rect=shell.getBoundingClientRect(),vh=window.innerHeight||1,total=Math.max(1,shell.offsetHeight-vh),p=Math.min(1,Math.max(0,-rect.top/total));var scale=1-p*.12,shift=p*26;canvas.style.transform='translate3d(0,'+shift+'px,0) scale('+scale+')';canvas.style.borderRadius=(34+p*14)+'px';};addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(run)}},{passive:true});run();}
 var stack=document.querySelector('[data-cine-stack]');if(stack&&matchMedia('(pointer:fine)').matches&&!matchMedia('(prefers-reduced-motion: reduce)').matches){stack.addEventListener('pointermove',function(e){var r=stack.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;stack.style.transform='rotateY('+(x*7)+'deg) rotateX('+(-y*5)+'deg)'});stack.addEventListener('pointerleave',function(){stack.style.transform=''})}})()</script>`;
-  const extraHtml = `<style>.go-stick{display:none}@media(max-width:720px){.go-stick{display:flex;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:80;gap:8px}.go-stick a{flex:1;text-align:center;padding:13px;border-radius:999px;font-weight:800;text-decoration:none;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);box-shadow:0 8px 24px #0006}.go-stick a.sec{background:var(--panel);color:inherit;border:1px solid var(--line)}body{padding-bottom:80px}}</style><nav class="go-stick">${phoneRaw ? `<a class="sec" href="tel:${esc(phoneRaw)}">Call</a>` : ''}${user.bookingEnabled ? '<a href="#book">Request an appointment</a>' : ''}</nav>`;
+  const extraHtml = `<script>(function(){var input=document.getElementById('goOfferSearch'),grid=document.getElementById('goOfferGrid');if(!input||!grid)return;var timer=0,seq=0;input.addEventListener('input',function(){clearTimeout(timer);var q=input.value.trim(),id=++seq;if(!q)return;timer=setTimeout(async function(){try{var slug=document.body.dataset.slug;if(!slug)return;var r=await fetch('/site/'+encodeURIComponent(slug)+'/search.json?q='+encodeURIComponent(q));if(!r.ok)return;var d=await r.json();if(id!==seq||input.value.trim()!==q)return;var ids=new Set(d.ids);var shown=0;grid.querySelectorAll('.card').forEach(function(card){var a=card.getAttribute('href')||'';var match=ids.has(a.split('/').pop());card.style.display=match?'':'none';if(match)shown++});var n=document.getElementById('goFound'),empty=document.getElementById('goNoResults');if(n)n.textContent=shown+' offers';if(empty)empty.style.display=shown?'none':'block';}catch(e){}},520);});})();</script><style>.go-stick{display:none}@media(max-width:720px){.go-stick{display:flex;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:80;gap:8px}.go-stick a{flex:1;text-align:center;padding:13px;border-radius:999px;font-weight:800;text-decoration:none;background:linear-gradient(135deg,var(--a),var(--b));color:var(--on);box-shadow:0 8px 24px #0006}.go-stick a.sec{background:var(--panel);color:inherit;border:1px solid var(--line)}body{padding-bottom:80px}}</style><nav class="go-stick">${phoneRaw ? `<a class="sec" href="tel:${esc(phoneRaw)}">Call</a>` : ''}${user.bookingEnabled ? '<a href="#book">Request an appointment</a>' : ''}</nav>`;
   return pageShell(user, { title: user.siteName, desc: `${user.siteName} - ${user.category || ''} in ${user.city || ''}`, body: user._studio ? body : body + extraHtml, page: 'home' });
 }
 
 function renderOfferPage(user, offer, others, sent) {
   const g = galleryOf(offer);
-  const soldOut=!!(user._stockMap&&Object.prototype.hasOwnProperty.call(user._stockMap,String(offer._id))&&Number(user._stockMap[String(offer._id)])===0);
+  const stockRemaining=(user._stockMap&&Object.prototype.hasOwnProperty.call(user._stockMap,String(offer._id)))?Number(user._stockMap[String(offer._id)]):null;
+  const soldOut=stockRemaining===0;
   const thumbs = g.length > 1 ? `<div class="thumbs">${g.map((u, i) => `<button type="button" class="${i === 0 ? 'on' : ''}" aria-label="Photo ${i + 1}"><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('')}</div>` : '';
   const main = g.length
     ? `<div class="main" id="mainPic" data-imgs="${esc(JSON.stringify(g))}"><img id="mainImg" src="${esc(g[0])}" alt="${esc(offer.title)}">${g.length > 1 ? '<button class="nav p" id="prev" aria-label="Previous photo">&#8249;</button><button class="nav n" id="next" aria-label="Next photo">&#8250;</button>' : ''}</div>${thumbs}`
     : `<div class="main">${artPlaceholder(offer.title, user.categoryLabel || user.category || 'Offer preview')}</div>`;
   const more = others.length ? `<h2 class="rv" style="font-size:1.8rem;margin:70px 0 26px">More from ${esc(sellerName(user))}</h2><div class="grid">${others.map((o, i) => offerCard(user, o, i)).join('')}</div>` : '';
   const phoneRaw = String(user.phone || '').replace(/[^\d+]/g, '');
-  const ld = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: offer.title, description: String(offer.description || offer.title), image: g, offers: { '@type': 'Offer', price: Number(offer.price || 0).toFixed(2), priceCurrency: 'EUR', availability: 'https://schema.org/InStock', seller: { '@type': 'Organization', name: user.siteName } } }).replace(/</g, '\\u003c');
+  const ld = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: offer.title, description: String(offer.description || offer.title), image: g, offers: { '@type': 'Offer', price: Number(offer.price || 0).toFixed(2), priceCurrency: 'EUR', availability: soldOut ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock', seller: { '@type': 'Organization', name: user.siteName } } }).replace(/</g, '\\u003c');
   const body = `<script type="application/ld+json">${ld}</script><div class="prog" id="prog"></div>${siteBar(user, 'offer')}
 <main class="wrap">
 <a class="crumb" href="/site/${esc(user.slug)}#offers">&larr; Back to all offers</a>
@@ -3592,7 +3632,7 @@ function renderOfferPage(user, offer, others, sent) {
   <div class="gal">${main}</div>
   <div class="info">
     <h1>${esc(offer.title)}</h1>
-    <div class="price">${eur(offer.price)}</div>${soldOut?'<p role="status" style="color:#ff9292;font-weight:700;margin-bottom:15px">Currently sold out — contact the seller for details.</p>':''}
+    <div class="price">${eur(offer.price)}</div>${stockRemaining!==null?`<p role="status" style="color:${soldOut?'#c73344':'#18835a'};font-weight:700;margin-bottom:15px">${soldOut?'Out of stock':stockRemaining+' in stock'}</p>`:''}
     <div class="actions">
       <a class="abtn pri" href="/site/${esc(user.slug)}/messages?offer=${offer._id}">${MSG_SVG}Message</a>
       ${phoneRaw ? `<a class="abtn" href="tel:${esc(phoneRaw)}">${PHONE_SVG}<span class="t2">Call</span></a>` : ''}
@@ -4211,6 +4251,35 @@ app.get('/site/:slug/favorites', async (req, res) => {
   } catch (err) { res.status(500).send('Server error'); }
 });
 
+
+// Multilingual product search: translate query to website language, then match server-side.
+const searchLimit = rateLimit({ windowMs: 60000, max: 20 });
+app.get('/site/:slug/search.json', searchLimit, async (req,res) => {
+  try {
+    const user=await User.findOne({slug:req.params.slug,published:true}).lean();
+    if(!user)return res.status(404).json({ids:[], translated:''});
+    const input=String(req.query.q||'').trim().slice(0,90);
+    if(!input)return res.json({ids:[],translated:''});
+    const offers=await Offer.find({userId:user._id}).select('_id title description').lean();
+    let translated=input;
+    const key=process.env.OPENROUTER_API_KEY;
+    if(key && offers.length && !offers.some(o=>(String(o.title)+' '+String(o.description||'')).toLocaleLowerCase().includes(input.toLocaleLowerCase()))) {
+      try {
+        const r=await axios.post('https://openrouter.ai/api/v1/chat/completions',{
+          model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+          messages:[{role:'system',content:'Translate this product search keyword into '+langName(user.siteLang||'en')+'. Return ONLY the translated search phrase. No explanation.'},{role:'user',content:input}],
+          max_tokens:60,temperature:0
+        },{headers:{Authorization:'Bearer '+key},timeout:8000});
+        translated=String(r.data?.choices?.[0]?.message?.content||input).trim().replace(/^["']|["']$/g,'').slice(0,90)||input;
+      }catch(e){translated=input;}
+    }
+    const norm=t=>String(t||'').normalize('NFKD').toLocaleLowerCase().replace(/[\u0300-\u036f]/g,'').trim();
+    const tests=[norm(input),norm(translated)].filter(Boolean);
+    const found=offers.filter(o=>tests.some(q=>norm(o.title+' '+(o.description||'')).includes(q)));
+    res.json({ids:found.map(o=>String(o._id)),translated,unavailableTranslation:!key});
+  }catch(e){res.status(500).json({message:'Search unavailable'})}
+});
+
 // One page per offer: opened by the offer ID from the card link
 app.get('/site/:slug/offer/:id', async (req, res) => {
   try {
@@ -4387,7 +4456,8 @@ function renderAiSite(user, offers, sent) {
   const slug = esc(user.slug);
   const offersHtml = offers.length ? `<div class="ai-offers">${offers.map(o => {
     const g = galleryOf(o);
-    return `<a class="ai-offer" href="/site/${slug}/offer/${o._id}">${g.length ? `<img class="ai-offer-img" src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : '<div class="ai-offer-img"></div>'}<div class="ai-offer-body"><h3 class="ai-offer-title">${esc(o.title)}</h3>${o.description ? `<p class="ai-offer-desc">${esc(String(o.description).slice(0, 140))}</p>` : ''}${Number(o.price) > 0 ? `<span class="ai-offer-price">${eur(o.price)}</span>` : ''}</div></a>`;
+    const st = user._stockMap && Object.prototype.hasOwnProperty.call(user._stockMap,String(o._id)) ? Number(user._stockMap[String(o._id)]) : null;
+    return `<a class="ai-offer" href="/site/${slug}/offer/${o._id}">${g.length ? `<img class="ai-offer-img" src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : '<div class="ai-offer-img"></div>'}${st!==null?`<div style="padding:6px 12px;color:${st===0?'#bf233e':'#168258'};font-weight:700">${st===0?'OUT OF STOCK':'IN STOCK'}</div>`:''}<div class="ai-offer-body"><h3 class="ai-offer-title">${esc(o.title)}</h3>${o.description ? `<p class="ai-offer-desc">${esc(String(o.description).slice(0, 140))}</p>` : ''}${Number(o.price) > 0 ? `<span class="ai-offer-price">${eur(o.price)}</span>` : ''}</div></a>`;
   }).join('')}</div>` : '<p>No offers yet. Please check back soon.</p>';
   const faqs = (user.faqItems || []).filter(f => f.question && f.answer);
   const faqHtml = faqs.length ? `<div class="ai-faq">${faqs.map(f => `<details><summary>${esc(f.question)}</summary><p>${esc(f.answer)}</p></details>`).join('')}</div>` : '';
@@ -4403,7 +4473,8 @@ function renderAiSite(user, offers, sent) {
   const hadOffers = html.includes('{{OFFERS}}');
   html = html.replace(/\{\{OFFERS\}\}/g, offersHtml).replace(/\{\{FAQ\}\}/g, faqHtml).replace(/\{\{CONTACT\}\}/g, contactHtml);
   if (!hadOffers) html += `<section id="offers" style="padding:40px 18px;max-width:1100px;margin:auto">${offersHtml}</section>`;
-  const body = `${html}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>`;
+  const aiSearch = `<div style="max-width:1050px;margin:24px auto;padding:12px"><input id="goAISearch" type="search" placeholder="Search products in any language..." aria-label="Search products" style="width:100%;padding:14px;border:1px solid #bac3d1;border-radius:10px"></div><script>(function(){var i=document.getElementById('goAISearch'),cards=[].slice.call(document.querySelectorAll('.ai-offer')),timer,seq=0;if(!i)return;i.addEventListener('input',function(){clearTimeout(timer);var q=i.value.trim(),v=++seq;if(!q){cards.forEach(x=>x.style.display='');return}timer=setTimeout(async function(){try{var r=await fetch('/site/'+encodeURIComponent(document.body.dataset.slug)+'/search.json?q='+encodeURIComponent(q)),d=await r.json();if(v!==seq)return;var ids=new Set(d.ids);cards.forEach(x=>x.style.display=ids.has(x.getAttribute('href').split('/').pop())?'':'none')}catch(e){}},500)})})();</script>`;
+  const body = `${aiSearch}${html}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>`;
   return pageShell(user, { title: user.siteName, desc: String(user.sellerBio || user.siteName).slice(0, 160), body, page: 'home' });
 }
 
@@ -4523,9 +4594,9 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     const root = await familyOf(req.user.id);
     if (!root) return res.status(404).json({ message: 'Account not found.' });
     const count = await User.countDocuments({ ownerId: root._id });
-    if (count + 1 >= SITE_CAP(root)) return res.status(402).json({ message: `Your ${limitsOf(root).name} plan allows ${SITE_CAP(root)} website${SITE_CAP(root) === 1 ? '' : 's'}. Upgrade to add more.`, upgrade: true });
+    if (req.body.output !== 'code' && count + 1 >= SITE_CAP(root)) return res.status(402).json({ message: `Your ${limitsOf(root).name} plan allows ${SITE_CAP(root)} website${SITE_CAP(root) === 1 ? '' : 's'}. Upgrade to add more.`, upgrade: true });
     const genCap = limitsOf(root).aiGen;
-    if (genCap <= 0) return res.status(402).json({ message: 'AI website generation is available on Pro and Agency plans.', upgrade: true });
+    if (genCap <= 0) return res.status(402).json({ message: 'AI website generation is unavailable for your account.', upgrade: true });
     const name = cleanStr(req.body.name, 60), desc = cleanStr(req.body.description, 1500);
     const lang = (typeof req.body.lang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(req.body.lang)) ? req.body.lang : 'en';
     const languageName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(lang) || lang; } catch (e) { return lang; } })();
@@ -4545,6 +4616,26 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
     if (!j) return res.status(502).json({ message: 'AI answered in an unexpected way. Please try again.' });
     const cleanHtml = aiCleanHtml(j.html);
     const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
+    // Export choice: create an offline standalone file, without storing another website.
+    if (req.body.output === 'code') {
+      const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
+      const cards = offers.map(o => `<article class="product"><h3>${esc(cleanStr(o.title,120))}</h3><p>${esc(cleanStr(o.description,400))}</p>${Number(o.price)>0?`<strong>€${Number(o.price).toFixed(2)}</strong>`:''}</article>`).join('');
+      const faqs = (Array.isArray(j.faq)?j.faq:[]).slice(0,6).map(f=>`<details><summary>${esc(cleanStr(f.question,160))}</summary><p>${esc(cleanStr(f.answer,500))}</p></details>`).join('');
+      const page = (cleanHtml || '<main><h1>'+esc(name)+'</h1>{{OFFERS}}</main>')
+        .replace(/\{\{OFFERS\}\}/g,'<section id="offers"><h2>Offers</h2>'+cards+'</section>')
+        .replace(/\{\{FAQ\}\}/g,faqs)
+        .replace(/\{\{CONTACT\}\}/g,'<p>Contact the business for more information.</p>');
+      const palette = (aiPage && aiPage.palette) || {};
+      const safeHex = (v,f)=>/^#[0-9a-f]{6}$/i.test(v||'')?v:f;
+      const staticCss = (aiPage && aiPage.css)||'';
+      const file='<!doctype html><html lang="'+esc(lang)+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(name)+'</title><style>:root{--a:'+safeHex(palette.a,'#355cbd')+';--b:'+safeHex(palette.b,'#0e8490')+';--bg:'+safeHex(palette.bg,'#ffffff')+';--panel:'+safeHex(palette.panel,'#f1f4f8')+';--text:'+safeHex(palette.text,'#182339')+'}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}main{max-width:1080px;margin:auto;padding:32px}section{padding:32px 0}.product{background:var(--panel);padding:16px;border-radius:10px;margin:12px 0}'+staticCss+'</style></head><body>'+page+'</body></html>';
+      if(req.body.codeLanguage === 'react') {
+        const safeJs = value => JSON.stringify(String(value)).replace(/</g,'\\u003c');
+        const react = 'import React from "react";\n\nexport default function GoldOfferWebsite(){\n  const content = '+safeJs(page)+';\n  const css = '+safeJs('body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}.product{padding:16px;margin:12px 0;border-radius:10px;background:var(--panel)}'+staticCss)+';\n  return <><style>{`:root { --a:'+safeHex(palette.a,'#355cbd')+'; --b:'+safeHex(palette.b,'#0e8490')+'; --bg:'+safeHex(palette.bg,'#ffffff')+'; --panel:'+safeHex(palette.panel,'#f1f4f8')+'; --text:'+safeHex(palette.text,'#182339')+'; }` + css}</style><div dangerouslySetInnerHTML={{__html: content}} /></>;\n}';
+        return res.json({output:'code',codeLanguage:'react',html:react,language:lang});
+      }
+      return res.json({ output:'code',codeLanguage:'html',html:file,language:lang });
+    }
     const email = `site-${root._id}-${Date.now().toString(36)}@sites.goldoffer.local`;
     const pick = (v, obj, d) => (Object.keys(obj).includes(v) ? v : d);
     const sub = new User({
@@ -4914,7 +5005,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases', '/ai-sites', '/pro'];
+const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases', '/ai-sites', '/pro', '/login', '/signup'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
@@ -4926,6 +5017,7 @@ app.get(PAGE_ROUTES, (req, res) => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
+    "media-src 'self'",
     "connect-src 'self' https://cdn.jsdelivr.net https://en.wikipedia.org",
     "form-action 'self'"
   ].join('; '));
@@ -4942,6 +5034,8 @@ app.get('/favicon.svg', (req, res) => {
   res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(FAVICON_SVG);
 });
 app.get('/favicon.ico', (req, res) => res.redirect(301, '/favicon.svg'));
+
+app.get('/goldoffer-demo.mp4',(req,res)=>{const file=findFile('goldoffer-demo.mp4');if(!file)return res.sendStatus(404);res.type('video/mp4').set('Cache-Control','public, max-age=86400');res.sendFile(file)});
 
 app.get('/logo.jpg', (req, res) => {
   const file = findFile('logo.jpg');
