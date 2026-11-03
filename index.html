@@ -884,6 +884,100 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--gx-glow)!im
 @media(max-width:600px){.gx-hero{padding:120px 14px 24px}.gx-prompt{flex-direction:column;align-items:stretch}.gx-fg{grid-template-columns:1fr}.gx-mock{margin-top:40px;border-radius:22px}.gx-app{min-height:0;grid-template-columns:1fr}.gx-rail{display:none}.nav{top:8px!important;left:8px!important;right:8px!important}}
 @media(prefers-reduced-motion:reduce){.gx-hero *{animation:none!important}}
 </style>
+<style>
+/* GoldOffer 2026 — editorial light-first redesign, all studio pages */
+:root{--ink:#f6f7f9;--deep:#eff1f5;--panel:#fff;--raise:#edf0f5;--line:rgba(12,27,54,.11);--line2:rgba(12,27,54,.17);--paper:#172237;--soft:#516076;--mute:#68788c;--iris:#3b58c8;--lagoon:#167f82;--amber:#a06519;--danger:#ba3b42;--display:'Inter',sans-serif}
+body{background:#f6f7f9;color:#172237}h1,h2,h3{letter-spacing:-.043em}
+.nav,.nav.solid,.nav.open,.nav.menu-open,.nav.light,.nav.light.solid{color:#14203a!important;background:rgba(255,255,255,.92)!important;backdrop-filter:blur(18px);border:1px solid #e1e6ef;border-radius:14px;box-shadow:0 8px 30px #13274d12}
+.nav:not(.solid):not(.menu-open):not(.open){background:rgba(255,255,255,.92)!important}
+.nav .mega,.nav.light .mega{background:rgba(255,255,255,.98)!important;color:#18243a!important;border:1px solid #dfe6ed;box-shadow:0 20px 35px #14203a16}
+.nav .mcard{background:#f7f9fc;border-color:#e4e8ef}
+.nav .nav-end .btn-ghost,.nav .btn-ghost{color:#172237;border-color:#d6deea}
+.gx-hero{padding-top:160px;background:linear-gradient(180deg,#f8fafc,#eef2ff 82%,#f6f7f9);color:#122037}
+.gx-hero::before{background:radial-gradient(900px 420px at 52% 100%,#d9e3ff,transparent 80%)}.gx-hero::after{opacity:.14}
+.gx-badge{color:#41516b!important;background:#fff!important;border:1px solid #e0e7f3!important;box-shadow:none!important}
+.gx-hero h1{color:#102039!important;background:none!important;font-weight:750;max-width:15ch;line-height:1.06}
+.gx-hero h1 em,.gx-feat h2 em{background:linear-gradient(100deg,#345bc9,#5a72c9)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important}
+.gx-lead,.gx-note,.gx-try,.gx-try span{color:#526179!important}
+.gx-prompt{background:#fff!important;border:1px solid #d7dfed!important;box-shadow:0 16px 32px #1a326019!important;border-radius:14px!important}
+.gx-prompt input{color:#15243d!important}.gx-prompt input::placeholder{color:#758398}
+.gx-try button{background:#fff!important;border-color:#dfe4ee!important;color:#2e3c50!important;border-radius:9px!important}
+.btn,.gx-prompt .btn,.gx-cta2 .btn{background:#2d51ca!important;color:#fff!important;border-radius:9px!important;box-shadow:none!important}
+.btn:hover,.gx-prompt .btn:hover{background:#1e3b9c!important}
+.btn-ghost,.gx-cta2 .btn-ghost{background:#fff!important;color:#253249!important;border:1px solid #d5ddea!important;border-radius:9px!important}
+.go-film{padding:0!important;max-width:1100px!important;background:#fff!important;border:1px solid #d9e1ef!important;box-shadow:0 35px 65px #19326218!important;border-radius:15px!important;overflow:hidden}
+.go-film-head,.go-film-foot{display:flex;align-items:center;gap:12px;text-align:left;padding:12px 18px;color:#26344b;background:#fff;font-size:13px;font-weight:650}
+.go-film-head span:last-child,.go-film-foot span{margin-left:auto;color:#778297;font-weight:450}.go-live-dot{height:8px;width:8px;background:#168767;border-radius:50%}
+.go-demo-video{display:block;width:100%;aspect-ratio:16/9;background:#101a33;object-fit:cover}
+.gx-feat{color:#172237}.gx-feat>p{color:#58677b}.gx-fc{background:#fff!important;color:#25334a!important;border:1px solid #e1e7ef!important;box-shadow:none!important;border-radius:12px!important}.gx-fc p{color:#5b687a!important}.gx-fc b{color:#345bc9!important}
+.go-workspace,.go-workhead{color:#16243b}.panel,.site-card,.go-suite-card{border-radius:12px!important}
+.go-output-choice{display:flex;flex-wrap:wrap;align-items:center;gap:16px;padding:14px;background:#f4f6fb;border:1px solid #dce2ec;border-radius:10px;color:#293951}
+.go-output-choice label{display:flex;gap:7px;align-items:center;cursor:pointer}.go-output-choice input{accent-color:#345bc9}.go-code-language{display:block;font-size:13px;margin:12px 0}.go-code-language select{border:1px solid #d3dce9;border-radius:8px;padding:9px;background:#fff;color:#243858;margin-left:10px}.go-small-help{font-size:12px;color:#65768c;margin:8px 0 12px}
+/* Keep dark professional workspace panels readable until fully migrated */
+.view:not(#v-home) .go-workspace{background:transparent}
+@media(max-width:700px){.nav,.nav.solid{border-radius:10px}.go-film-head,.go-film-foot{font-size:11px;padding:9px}.go-film-head span:last-child,.go-film-foot span{display:none}.gx-hero{padding-top:125px}}
+@media(prefers-reduced-motion:reduce){.go-demo-video{animation:none}}
+</style><style>
+#v-home > section:not(.gx-hero):not(.gx-feat):not(.go-new-section){display:none!important}
+.go-new-section{width:min(1160px,calc(100% - 40px));margin:70px auto 0;color:#172237}.go-section-top{max-width:720px;margin:0 0 36px}.go-section-top>span,.go-showcase-copy>span,.go-join span{font-size:12px;font-weight:750;letter-spacing:.15em;color:#4361a5}.go-section-top h2,.go-showcase-copy h2,.go-join h2{font-size:clamp(32px,4.4vw,54px);line-height:1.14;letter-spacing:-.05em;margin:16px 0}.go-section-top p,.go-showcase-copy p,.go-join p{font-size:17px;color:#59677d;line-height:1.65}.go-process-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.go-process-grid article{background:#fff;border:1px solid #dbe2eb;border-radius:12px;padding:30px;min-height:220px}.go-process-grid h3{font-size:22px;margin:20px 0 12px}.go-process-grid p{color:#667487}.go-step{font-weight:800;color:#3555b1}.go-showcase{display:grid;grid-template-columns:1fr 1.12fr;align-items:center;gap:60px;padding:70px 0}.go-showcase-actions{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-top:30px}.go-cb{display:inline-block;padding:14px 22px;background:#2e50c4;color:#fff!important;text-decoration:none;border-radius:8px;font-weight:650}.go-text-link{color:#2e50c4!important;text-decoration:none;font-weight:650}.go-showcase-ui{border:1px solid #dce3ed;border-radius:12px;padding:20px;background:#fff;box-shadow:0 20px 50px #19305612;min-height:320px}.go-ui-top{display:flex;justify-content:space-between;font-weight:750;border-bottom:1px solid #e2e7ee;padding:8px 0 20px}.go-ui-top small{font-weight:450;color:#8491a5}.go-ui-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}.go-ui-metrics div{border:1px solid #e1e6ef;padding:17px;border-radius:8px;display:flex;flex-direction:column;gap:8px}.go-ui-metrics b{font-size:12px;font-weight:600;color:#65738a}.go-ui-metrics strong{font-size:32px}.go-ui-metrics small{font-size:10px;color:#9ba5b6}.go-ui-timeline{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:26px 0 5px;align-items:end}.go-ui-timeline span{font-size:12px;color:#69778d}.go-ui-timeline i{display:block;background:linear-gradient(#5476db,#ccd7f8);height:55px;border-radius:5px}.go-ui-timeline i:nth-last-child(4){height:105px}.go-ui-timeline i:nth-last-child(3){height:75px}.go-ui-timeline i:nth-last-child(2){height:125px}.go-business-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.go-business-tiles a{padding:26px;border:1px solid #dfe4ed;border-radius:12px;background:#fff;text-decoration:none;min-height:145px;display:flex;flex-direction:column;justify-content:space-between}.go-business-tiles strong{font-size:23px;color:#21304c}.go-business-tiles span{color:#64738b;font-size:14px}.go-join{margin:90px auto 0;max-width:none;width:100%;background:#142446;color:#fff;text-align:center;padding:90px 22px}.go-join>div{max-width:780px;margin:auto}.go-join span{color:#b4c5ff}.go-join h2{color:#fff}.go-join p{color:#d5dcef}.go-join a{display:inline-block;padding:14px 26px;border-radius:8px;background:#f7faff;color:#132644;font-weight:750;text-decoration:none;margin-top:25px}@media(max-width:800px){.go-process-grid,.go-business-tiles,.go-showcase{grid-template-columns:1fr}.go-showcase{gap:30px}.go-new-section{margin-top:50px}.go-ui-metrics{gap:5px}.go-ui-metrics div{padding:10px}.go-ui-metrics strong{font-size:23px}}
+</style><style id="go-auth-menu-fixes">
+/* Desktop product dropdown: clean three-column navigation */
+@media(min-width:901px){.mega-in.go-product-cols{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:38px!important;padding:28px 38px 32px!important;max-width:1100px}.go-product-cols .mcol a{font-size:1.08rem!important;padding:8px 0!important}.go-product-cols .mcol a small{font-size:.76rem!important}.go-product-cols .mcol h4{margin-bottom:9px!important}.go-product-cols .go-product-last{display:block!important}.go-product-cols .mcol{min-width:0}}
+@media(max-width:900px){.go-product-cols .go-product-last{display:block!important}}
+.go-film{position:relative}.go-video-retry{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border:0;border-radius:9px;padding:12px 24px;font-weight:700;cursor:pointer;color:#152846}.go-video-retry[hidden]{display:none}
+/* Full-screen account page inspired by split editorial layouts, without copying a brand */
+#authModal.go-auth-screen{position:fixed;inset:0;padding:0;z-index:1500;background:#fff!important;backdrop-filter:none!important;align-items:stretch!important;justify-content:stretch!important;color:#12213b;overflow-y:auto}
+.go-auth-side{flex:0 0 52%;position:relative;display:flex;flex-direction:column;background:radial-gradient(ellipse at 96% 96%,#196e82 0%,transparent 43%),linear-gradient(145deg,#062e39,#064338 66%,#096551);color:#fff;padding:38px clamp(24px,5vw,80px);min-height:100vh;overflow:hidden}
+.go-auth-brand{display:flex;gap:12px;align-items:center;color:#fff;text-decoration:none;font-weight:800;font-size:22px;letter-spacing:-.04em}.go-auth-mark{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,#c1dcff,#72dcd0);color:#0e3343;display:grid;place-items:center}
+.go-auth-art{margin:auto 0;max-width:580px;padding:55px 0}.go-auth-overline{font-size:11px;letter-spacing:.2em;font-weight:700;color:#a6eddf}.go-auth-art h2{font-size:clamp(36px,4.8vw,72px);letter-spacing:-.06em;line-height:1.06;margin:19px 0}.go-auth-art>p{font-size:17px;line-height:1.7;max-width:480px;color:#cce5df}.go-auth-side-foot{font-size:13px;color:#b9e4d9}
+.go-auth-preview{margin-top:32px;width:min(440px,100%);background:#fff;border:1px solid #e2edf2;border-radius:12px;box-shadow:0 28px 60px #001f2670;color:#1a2a43;overflow:hidden;transform:rotate(-2deg)}.go-auth-browser{display:flex;justify-content:space-between;background:#f2f7fa;border-bottom:1px solid #dde8ef;padding:10px 18px;color:#7790a5;font-size:11px}.go-auth-browser b{font-weight:500}.go-auth-preview-body{display:flex;flex-direction:column;align-items:start;gap:16px;padding:30px;min-height:205px;background:linear-gradient(130deg,#fff,#eef9f5)}.go-auth-preview-body small{font-size:11px;font-weight:750;color:#168468;letter-spacing:.16em}.go-auth-preview-body strong{font-size:30px;line-height:1.1;letter-spacing:-.04em}.go-auth-preview-body span{font-size:12px;color:#667789}.go-auth-preview-body i{font-style:normal;background:#125e4d;color:#fff;padding:10px 16px;border-radius:7px;font-size:12px;font-weight:750}
+.go-auth-right{flex:1;display:flex;flex-direction:column;min-width:0;background:#fff;padding:22px clamp(22px,3.6vw,60px)}.go-auth-top{text-align:right}.go-auth-top a{font-size:13px;color:#385675;text-decoration:none}
+#authModal .modal-box{margin:auto;max-width:435px;width:100%;max-height:none!important;overflow:visible;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:36px 0 65px!important;color:#14253c!important}#authModal .modal-box h3{font-size:clamp(30px,3vw,42px);letter-spacing:-.055em;font-weight:800;margin-bottom:25px;color:#14253c}#authModal .modal-box .close{display:none}#authModal .field label,#authModal .check{color:#314562!important}#authModal .field input{background:#fff!important;color:#14253c!important;border:1px solid #cdd8e6!important;border-radius:8px!important}#authModal .field input:focus{border-color:#3162ce!important;outline:2px solid #3162ce25}#authModal #authSubmit{background:#2855ca!important;color:#fff!important;border-radius:8px!important}#authModal .link-btn{color:#2757bb!important}#authModal .check a{color:#2757bb!important}
+@media(max-width:850px){.go-auth-side{display:none}.go-auth-right{min-height:100vh;padding:25px 28px}#authModal .modal-box{max-width:460px}}
+</style>
+<style>
+
+/* GoldOffer Motion Edition: restrained editorial product motion */
+:root{--motion-ink:#172338;--motion-blue:#3554cd;--motion-line:#dce4f1}
+.gx-hero::before{animation:goAmbient 17s ease-in-out infinite alternate}
+@keyframes goAmbient{0%{transform:translate3d(-1%,0,0) scale(1)}100%{transform:translate3d(1%,2%,0) scale(1.045)}}
+.go-film{transform-origin:center 65%;transition:box-shadow .45s ease,border-color .45s ease}
+.go-film:hover{box-shadow:0 35px 80px #25439530!important;border-color:#b5c8eb!important}
+.gx-fc{position:relative;overflow:hidden;transition:transform .35s ease,border-color .35s ease,box-shadow .35s ease!important}
+.gx-fc::after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.10) 47%,transparent 75%);transform:translateX(-160%);pointer-events:none;transition:transform .75s ease}
+.gx-fc:hover::after{transform:translateX(150%)}
+.go-motion{max-width:1170px;margin:48px auto 120px;padding:0 24px;color:#152238;font-family:Inter,sans-serif}
+.go-motion-eyebrow{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;font-weight:750;color:#4762b1;margin-bottom:16px}
+.go-motion h2{font-family:var(--display);font-size:clamp(2.2rem,5vw,4.3rem);font-weight:700;letter-spacing:-.055em;line-height:1.08;max-width:16ch}
+.go-motion .go-motion-lead{color:#5a667a;max-width:58ch;line-height:1.7;margin:20px 0 35px;font-size:1rem}
+.go-motion-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(290px,.85fr);gap:18px}
+.go-motion-stage{position:relative;min-height:410px;overflow:hidden;border-radius:17px;border:1px solid #d7dfeb;background:linear-gradient(130deg,#ecf4ff,#fafcff 58%,#edf1ff);padding:28px}
+.go-motion-stage:before{content:'';position:absolute;right:-130px;top:-160px;width:430px;height:430px;border-radius:50%;background:radial-gradient(circle,#b9d0fa70 0%,transparent 67%);animation:goOrb 12s ease-in-out infinite alternate;pointer-events:none}
+@keyframes goOrb{to{transform:translate(-45px,60px) scale(1.12)}}
+.go-motion-stage .go-window{position:relative;max-width:555px;margin:32px auto;background:white;border:1px solid #d5deea;box-shadow:0 34px 76px #28417325;border-radius:12px;overflow:hidden;transform:perspective(1100px) rotateX(3deg) rotateY(-5deg);transition:transform .5s ease;will-change:transform}
+.go-motion-stage:hover .go-window{transform:perspective(1100px) rotateX(0) rotateY(0)}
+.go-window-top{height:38px;background:#fafbfd;border-bottom:1px solid #e6eaf2;display:flex;align-items:center;gap:6px;padding:0 13px}
+.go-window-top i{height:8px;width:8px;border-radius:50%;background:#cbd3df}.go-window-top span{margin-left:auto;color:#7a8699;font:600 10px Inter,sans-serif}
+.go-window-main{display:grid;grid-template-columns:95px 1fr;min-height:226px}
+.go-window-side{background:#f7f9fd;border-right:1px solid #e6eaf2;padding:18px 12px}.go-window-side b{display:block;height:10px;margin:8px 0 20px;border-radius:3px;background:#4263d7;width:80%}.go-window-side i{display:block;background:#e0e7f2;height:7px;border-radius:3px;margin:15px 0}
+.go-window-page{padding:23px 22px}.go-window-kicker{font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.12em;color:#5874c0}.go-window-page h3{font:750 clamp(19px,2.4vw,29px)/1.12 Inter,sans-serif;letter-spacing:-.05em;color:#1c2840;max-width:13ch;margin:9px 0}.go-window-lines{width:70%;margin:18px 0}.go-window-lines i{display:block;height:7px;background:#e2e9f3;border-radius:4px;margin:7px 0}.go-window-lines i:last-child{width:65%}
+.go-window-cta{display:inline-block;padding:9px 15px;background:#3054d5;color:white;font-size:11px;font-weight:700;border-radius:6px}
+.go-ai-cursor{position:absolute;left:54%;top:58%;border:1px solid #c1cdfb;background:#ffffffed;border-radius:7px;padding:8px 12px;box-shadow:0 12px 24px #1c3c7b2e;color:#2a4cc8;font-size:11px;font-weight:700;animation:goCursor 5.8s ease-in-out infinite;pointer-events:none}
+@keyframes goCursor{0%,100%{transform:translate(0,0)}40%{transform:translate(56px,-33px)}70%{transform:translate(-6px,11px)}}
+.go-motion-side{display:grid;grid-template-rows:1fr 1fr;gap:18px}
+.go-motion-mini{border:1px solid #dbe3ee;border-radius:16px;padding:26px;background:#fff;position:relative;overflow:hidden;min-height:190px}
+.go-motion-mini h3{font-size:18px;font-weight:750;letter-spacing:-.035em;color:#1f2d42}.go-motion-mini p{color:#657187;font-size:13px;line-height:1.6;margin-top:8px;max-width:28ch}
+.go-mini-track{display:flex;gap:7px;margin-top:24px;align-items:end;height:48px}.go-mini-track i{flex:1;background:linear-gradient(180deg,#7f95f4,#3156d7);height:var(--b);border-radius:4px 4px 0 0;transform-origin:bottom;animation:goBar 2.6s ease-in-out infinite alternate;animation-delay:var(--delay)}
+@keyframes goBar{from{transform:scaleY(.42)}to{transform:scaleY(1)}}
+.go-mini-search{display:flex;align-items:center;gap:9px;padding:13px 14px;border:1px solid #dbe4ee;border-radius:8px;background:#f8faff;margin-top:22px;font-size:12px;color:#52657e}.go-mini-search strong{font-weight:600;overflow:hidden;white-space:nowrap;border-right:2px solid #385edb;width:0;animation:goTyping 5s steps(19,end) infinite alternate}@keyframes goTyping{0%,18%{width:0}65%,100%{width:180px}}
+.go-motion-caption{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-top:18px;color:#7a8697;font-size:12px}.go-motion-caption strong{color:#3e56a3}.go-motion-line{height:2px;flex:1;background:linear-gradient(90deg,#4e71e6,#cdd9f7)}
+.go-appear{opacity:0;transform:translateY(26px);transition:opacity .75s ease,transform .75s cubic-bezier(.2,.75,.18,1)}.go-appear.go-visible{opacity:1;transform:translateY(0)}
+.go-motion-mini:nth-child(2){transition-delay:.13s}
+@media(max-width:800px){.go-motion-grid{grid-template-columns:1fr}.go-motion-side{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}.go-motion-stage{min-height:340px}.go-motion{margin:30px auto 80px}}
+@media(max-width:550px){.go-motion-side{grid-template-columns:1fr}.go-motion-stage{padding:10px;min-height:315px}.go-motion-stage .go-window{margin:28px auto}.go-ai-cursor{left:40%;top:60%}.go-motion{padding:0 16px}.go-motion-mini{min-height:160px}}
+@media(prefers-reduced-motion:reduce){.gx-hero::before,.go-motion-stage:before,.go-ai-cursor,.go-mini-track i,.go-mini-search strong{animation:none!important}.go-appear{opacity:1;transform:none}.go-motion-stage .go-window{transform:none}}
+
+</style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
 <nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/pro" data-link data-t="pro"><i>⚡</i>Pro</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
@@ -898,21 +992,22 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--gx-glow)!im
     <nav class="menu" id="menu" aria-label="Main">
       <div class="mi" data-menu>
         <button class="mb" type="button" aria-expanded="false" aria-haspopup="true">Product</button>
-        <div class="mega"><div class="mega-in">
-          <div class="mcol"><h4>Product</h4>
-            <a href="/how-it-works" data-link>How it works<small>Four steps to a live site</small></a>
-            <a href="/features" data-link>Features<small>Offers, photos, requests</small></a>
-            <a href="/pricing" data-link>Pricing<small>Free to start</small></a>
+        <div class="mega"><div class="mega-in go-product-cols">
+          <div class="mcol"><h4>Explore</h4>
+            <a href="/how-it-works" data-link>How it works<small>From idea to live website</small></a>
+            <a href="/features" data-link>Features<small>Discover what GoldOffer can do</small></a>
+            <a href="/professions" data-link>Industries<small>Find your business category</small></a>
           </div>
-          <div class="mcol"><h4>Tools</h4>
-            <a href="/build" data-link>Website builder<small>Build and publish</small></a>
-            <a href="/pro" data-link>Pro tools<small>Automations, CRM, calendar, AI receptionist</small></a>
-            <a href="/ai-sites" data-link>AI Link Builder<small>Create and manage more websites</small></a>
-            <a href="/dashboard" data-link>Dashboard<small>Requests and revenue</small></a>
-            <a href="/professions" data-link>Professions<small>50 to start from</small></a>
+          <div class="mcol"><h4>Create</h4>
+            <a href="/build" data-link>Website builder<small>Create and publish a site</small></a>
+            <a href="/ai-sites" data-link>AI Website Studio<small>Generate a site or export code</small></a>
+            <a href="/studio" data-link>Design Studio<small>Customize the look and layout</small></a>
           </div>
-          <a class="mcard" href="/how-it-works" data-link><div class="ph" data-photo="Bakery"></div><span>See how a site gets built</span></a>
-          <a class="mcard" href="/professions" data-link><div class="ph" data-photo="Barber"></div><span>Find your profession</span></a>
+          <div class="mcol go-product-last"><h4>Manage</h4>
+            <a href="/dashboard" data-link>Dashboard<small>Track activity and requests</small></a>
+            <a href="/business" data-link>Business Hub<small>Manage orders and bookings</small></a>
+            <a href="/pro" data-link>Pro tools<small>CRM, automations and insights</small></a>
+          </div>
         </div></div>
       </div>
 
@@ -958,23 +1053,22 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--gx-glow)!im
 <main class="view active" id="v-home">
   <section class="gx-hero" data-nav="dark" id="gxHero" aria-label="Introduction">
     <div class="gx-in">
-      <span class="gx-badge"><i>&#10022;</i> More than a website builder</span>
-      <h1>Your site should do <em>more</em> than look good</h1>
-      <p class="gx-lead">Describe your business and AI builds your website in seconds. Orders, bookings, chat, CRM and tracking links are already inside. Free to start.</p>
+      <span class="gx-badge"><i>&#10022;</i> Websites that work for your business</span>
+      <h1>Your business deserves a <em>better website.</em></h1>
+      <p class="gx-lead">Describe your business, publish your site, and manage requests, bookings and customers in one place. Start with a free website.</p>
       <div class="gx-prompt"><input id="gxPrompt" maxlength="300" placeholder="Describe your business, e.g. Barbershop in Sofia with online booking" aria-label="Describe your business" onkeydown="if(event.key==='Enter')gxGo()"><button class="btn" type="button" onclick="gxGo()">&#10022; Generate</button></div>
       <div class="gx-try"><span>Try:</span><button type="button" onclick="gxFill('Barbershop with haircuts, beard trims and online booking')">Barbershop</button><button type="button" onclick="gxFill('Cozy coffee shop with a small menu and pastries')">Cafe</button><button type="button" onclick="gxFill('Wedding photographer with packages and a portfolio')">Photographer</button><button type="button" onclick="gxFill('Online shop selling handmade candles')">Online shop</button></div>
       <div class="gx-cta2"><button class="btn" type="button" onclick="cta()">Start building free</button><button class="btn-ghost" type="button" onclick="navigate('/pricing')">See pricing</button></div>
       <p class="gx-note">No credit card. Free plan starts immediately.</p>
     </div>
-    <div class="gx-mock" aria-hidden="true"><div class="gx-app">
-      <div class="gx-rail"><span>+</span><span>&#9707;</span><span>&#10148;</span><span>&#128193;</span><span>&#9881;</span></div>
-      <div class="gx-pan"><h4>Create website</h4><div class="gx-fake">Describe your company...</div><div class="gx-gen">&#10022; Generate website</div></div>
-      <div class="gx-site"><div class="sn"><b>SUNNY BARBER</b><span>Offers &nbsp; About &nbsp; Contact</span></div><div class="sh"><b>Look sharp. <u>Feel great.</u></b><p>Classic cuts, beard trims and online booking.</p><i>Book a visit</i></div><div class="sg"><div>Haircut<em>20 EUR</em></div><div>Beard trim<em>12 EUR</em></div><div>Full package<em>28 EUR</em></div></div></div>
-      <div class="gx-pan gx-ins"><h4>Selector</h4><div class="row2"><span>Header section</span><span>&#8964;</span></div><h4 style="margin-top:6px">Spacing</h4><div class="row2"><span>Margin</span><span>24</span></div><div class="row2"><span>Padding</span><span>16</span></div><div class="row2"><span>Radius</span><span>22</span></div></div>
-    </div><div class="gx-play" onclick="cta()" title="Start building">&#9654;</div></div>
+    <div class="gx-mock go-film" aria-label="Automatic GoldOffer product demonstration">
+      <div class="go-film-head"><span class="go-live-dot"></span> GoldOffer Studio <span>Product walkthrough · illustrative demo</span></div>
+      <video class="go-demo-video" autoplay muted loop playsinline preload="auto" aria-label="An automatic animated demonstration of building and publishing a business website"><source src="goldoffer-demo.mp4" type="video/mp4">Your browser does not support video.</video><button type="button" class="go-video-retry" onclick="let v=this.previousElementSibling;v.muted=true;v.play().catch(()=>{});this.hidden=true" hidden>▶ Play demo</button>
+      <div class="go-film-foot"><strong>From a business idea to a website.</strong><span>AI creation · Products · Appointments · Publish</span></div>
+    </div>
   </section>
   <section class="gx-feat" data-nav="dark">
-    <h2>A whole business, <em>one link</em></h2>
+    <h2>Build beautifully. <em>Run everything.</em></h2>
     <p>Not just a page. Every site comes with the tools you need to get customers and serve them.</p>
     <div class="gx-fg">
       <div class="gx-fc"><b>&#10022;</b><h3>AI website generator</h3><p>Tell AI what you do. Get a unique, editable website with offers, FAQ and your own link.</p></div>
@@ -985,7 +1079,30 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--gx-glow)!im
       <div class="gx-fc"><b>&#128200;</b><h3>Intelligence and CRM</h3><p>Revenue, visits and AI tips, plus automations and customer notes.</p></div>
     </div>
   </section>
+  <!-- Motion product story: animated UI illustration (not a fake screen recording) -->
+  <section class="go-motion" aria-label="Explore GoldOffer in motion">
+    <div class="go-appear"><div class="go-motion-eyebrow">Built for real businesses</div><h2>From first idea to your next customer.</h2><p class="go-motion-lead">A calm workspace for websites, products and the people behind them. Watch the interface come to life as you explore.</p></div>
+    <div class="go-motion-grid">
+      <div class="go-motion-stage go-appear" aria-label="Animated illustration of an editable website">
+        <div class="go-window"><div class="go-window-top"><i></i><i></i><i></i><span>GoldOffer Design Studio</span></div><div class="go-window-main"><div class="go-window-side"><b></b><i></i><i></i><i></i><i></i></div><div class="go-window-page"><div class="go-window-kicker">Your brand, online</div><h3>A website built around you.</h3><div class="go-window-lines"><i></i><i></i><i></i></div><span class="go-window-cta">Explore offers</span></div></div></div>
+        <div class="go-ai-cursor" aria-hidden="true">✦ Edit with AI</div>
+      </div>
+      <div class="go-motion-side">
+        <div class="go-motion-mini go-appear"><h3>See what's working.</h3><p>Business insights, without the complexity.</p><div class="go-mini-track" aria-hidden="true"><i style="--b:30%;--delay:-.1s"></i><i style="--b:57%;--delay:-.4s"></i><i style="--b:46%;--delay:-.8s"></i><i style="--b:83%;--delay:-1.3s"></i><i style="--b:67%;--delay:-.7s"></i><i style="--b:95%;--delay:-1.1s"></i><i style="--b:77%;--delay:-1.5s"></i></div></div>
+        <div class="go-motion-mini go-appear"><h3>Help customers find you.</h3><p>Search products and discover what matters.</p><div class="go-mini-search" aria-hidden="true">⌕ <strong>Search your products</strong></div></div>
+      </div>
+    </div>
+    <div class="go-motion-caption"><span>Illustrative interface animation</span><div class="go-motion-line"></div><strong>Websites · Commerce · Intelligence</strong></div>
+  </section>
 
+
+  <section class="go-new-section go-process" data-nav="light">
+    <div class="go-section-top"><span>01 / SIMPLE FROM DAY ONE</span><h2>Everything starts with an idea.</h2><p>Turn a description into an editable website. Then keep your customer conversations, sales, and appointments together.</p></div>
+    <div class="go-process-grid"><article><span class="go-step">01</span><h3>Describe your business</h3><p>Tell GoldOffer what you offer, in your own words.</p></article><article><span class="go-step">02</span><h3>Make it your own</h3><p>Adjust the text, layout, images and style in Design Studio.</p></article><article><span class="go-step">03</span><h3>Publish or export</h3><p>Share a hosted website, or download a standalone HTML page.</p></article></div>
+  </section>
+  <section class="go-new-section go-showcase" data-nav="light"><div class="go-showcase-copy"><span>02 / BUILT FOR REAL BUSINESSES</span><h2>One place to run the work behind your website.</h2><p>Take orders, respond to messages, manage availability and see how your business is doing. Skip the stack of disconnected tools.</p><div class="go-showcase-actions"><a href="/business" class="go-cb" data-link>Explore Business Hub</a><a href="/studio" data-link class="go-text-link">Explore Design Studio →</a></div></div><div class="go-showcase-ui"><div class="go-ui-top">Business overview <small>GoldOffer Studio</small></div><div class="go-ui-metrics"><div><b>Requests</b><strong>12</strong><small>Demo data</small></div><div><b>Appointments</b><strong>8</strong><small>Demo data</small></div><div><b>Messages</b><strong>5</strong><small>Demo data</small></div></div><div class="go-ui-timeline"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><i></i><i></i><i></i><i></i><i></i></div></div></section>
+  <section class="go-new-section go-business-types" data-nav="light"><div class="go-section-top"><span>03 / MADE FOR YOUR INDUSTRY</span><h2>One platform. Different businesses.</h2><p>Start with a profession and personalize your site around the way you work.</p></div><div class="go-business-tiles"><a href="/professions" data-link><strong>Local services</strong><span>Appointments, customer profiles, and reminders →</span></a><a href="/professions" data-link><strong>Shops & products</strong><span>Product offers, inventory, and order tracking →</span></a><a href="/professions" data-link><strong>Creative professionals</strong><span>Portfolio-style websites and direct messaging →</span></a></div></section>
+  <section class="go-new-section go-join" data-nav="dark"><div><span>START BUILDING</span><h2>Make your next step a real website.</h2><p>Create your first website for free. No credit card needed.</p><a href="/build" data-link>Start free →</a></div></section>
   <section class="stage-track" id="stageTrack" data-nav="dark" aria-label="Introduction">
     <div class="stage-sticky" id="stageSticky">
       <div class="ghost"></div><div class="ghost g2"></div>
@@ -1050,7 +1167,7 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--gx-glow)!im
         <div class="counter"><b><span data-to="50">0</span></b><span>professions to start from</span></div>
         <div class="counter"><b><span data-to="8">0</span></b><span>color themes</span></div>
         <div class="counter"><b><span data-to="7">0</span></b><span>font styles</span></div>
-        <div class="counter"><b><span data-to="10">0</span></b><span>offers on the free plan</span></div>
+        <div class="counter"><b><span data-to="3">0</span></b><span>offers on the free plan</span></div>
       </div>
       <div class="lcards">
         <a class="lcard rv" href="/how-it-works" data-link><div class="ph" data-photo="Bakery"></div><div class="t"><h3>How it works</h3><p>Four steps from nothing to a live site.</p></div></a>
@@ -1486,7 +1603,7 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--gx-glow)!im
   <div class="panel" id="aiFormPanel"><h2>Create a new website</h2>
     <div class="ai-form"><input id="aiName" maxlength="60" placeholder="Website name (e.g. Sunny Barber)"><textarea id="aiDesc" rows="5" maxlength="1500" placeholder="Describe the business: what you do, services, prices, city, style you like..."></textarea>
     <select id="aiLang" onchange="this.dataset.chosen='1'" aria-label="Language for AI generated site"><option value="en">English</option><option value="bg">Bulgarian</option><option value="es">Spanish</option><option value="de">German</option><option value="fr">French</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="tr">Turkish</option><option value="ro">Romanian</option><option value="el">Greek</option><option value="ar">Arabic</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="hi">Hindi</option><option value="uk">Ukrainian</option><option value="pl">Polish</option><option value="nl">Dutch</option><option value="sv">Swedish</option><option value="sq">Albanian</option><option value="ab">Abkhazian</option><option value="aa">Afar</option><option value="af">Afrikaans</option><option value="ak">Akan</option><option value="am">Amharic</option><option value="an">Aragonese</option><option value="hy">Armenian</option><option value="as">Assamese</option><option value="av">Avaric</option><option value="ae">Avestan</option><option value="ay">Aymara</option><option value="az">Azerbaijani</option><option value="bm">Bambara</option><option value="bn">Bangla</option><option value="ba">Bashkir</option><option value="eu">Basque</option><option value="be">Belarusian</option><option value="bi">Bislama</option><option value="bs">Bosnian</option><option value="br">Breton</option><option value="my">Burmese</option><option value="ca">Catalan</option><option value="ch">Chamorro</option><option value="ce">Chechen</option><option value="zh-Hans">Chinese (Simplified)</option><option value="zh-Hant">Chinese (Traditional)</option><option value="cu">Church Slavic</option><option value="cv">Chuvash</option><option value="kw">Cornish</option><option value="co">Corsican</option><option value="cr">Cree</option><option value="hr">Croatian</option><option value="cs">Czech</option><option value="da">Danish</option><option value="dv">Divehi</option><option value="dz">Dzongkha</option><option value="en-GB">English (United Kingdom)</option><option value="en-US">English (United States)</option><option value="eo">Esperanto</option><option value="et">Estonian</option><option value="ee">Ewe</option><option value="fo">Faroese</option><option value="fj">Fijian</option><option value="fi">Finnish</option><option value="fr-CA">French (Canada)</option><option value="ff">Fula</option><option value="gl">Galician</option><option value="lg">Ganda</option><option value="ka">Georgian</option><option value="gn">Guarani</option><option value="gu">Gujarati</option><option value="ht">Haitian Creole</option><option value="ha">Hausa</option><option value="he">Hebrew</option><option value="hz">Herero</option><option value="ho">Hiri Motu</option><option value="hu">Hungarian</option><option value="is">Icelandic</option><option value="io">Ido</option><option value="ig">Igbo</option><option value="id">Indonesian</option><option value="ia">Interlingua</option><option value="ie">Interlingue</option><option value="iu">Inuktitut</option><option value="ik">Inupiaq</option><option value="ga">Irish</option><option value="jv">Javanese</option><option value="kl">Kalaallisut</option><option value="kn">Kannada</option><option value="kr">Kanuri</option><option value="ks">Kashmiri</option><option value="kk">Kazakh</option><option value="km">Khmer</option><option value="ki">Kikuyu</option><option value="rw">Kinyarwanda</option><option value="kv">Komi</option><option value="kg">Kongo</option><option value="kj">Kuanyama</option><option value="ku">Kurdish</option><option value="ky">Kyrgyz</option><option value="lo">Lao</option><option value="la">Latin</option><option value="lv">Latvian</option><option value="li">Limburgish</option><option value="ln">Lingala</option><option value="lt">Lithuanian</option><option value="lu">Luba-Katanga</option><option value="lb">Luxembourgish</option><option value="mk">Macedonian</option><option value="mg">Malagasy</option><option value="ms">Malay</option><option value="ml">Malayalam</option><option value="mt">Maltese</option><option value="gv">Manx</option><option value="mr">Marathi</option><option value="mh">Marshallese</option><option value="mn">Mongolian</option><option value="mi">Māori</option><option value="na">Nauru</option><option value="nv">Navajo</option><option value="ng">Ndonga</option><option value="ne">Nepali</option><option value="nd">North Ndebele</option><option value="se">Northern Sami</option><option value="no">Norwegian</option><option value="nb">Norwegian Bokmål</option><option value="nn">Norwegian Nynorsk</option><option value="ny">Nyanja</option><option value="oc">Occitan</option><option value="or">Odia</option><option value="oj">Ojibwa</option><option value="om">Oromo</option><option value="os">Ossetic</option><option value="pi">Pali</option><option value="ps">Pashto</option><option value="fa">Persian</option><option value="pt-BR">Portuguese (Brazil)</option><option value="pt-PT">Portuguese (Portugal)</option><option value="pa">Punjabi</option><option value="qu">Quechua</option><option value="rm">Romansh</option><option value="rn">Rundi</option><option value="sm">Samoan</option><option value="sg">Sango</option><option value="sa">Sanskrit</option><option value="sc">Sardinian</option><option value="gd">Scottish Gaelic</option><option value="sr">Serbian</option><option value="sr-Latn">Serbian (Latin)</option><option value="sh">Serbo-Croatian</option><option value="sn">Shona</option><option value="ii">Sichuan Yi</option><option value="sd">Sindhi</option><option value="si">Sinhala</option><option value="sk">Slovak</option><option value="sl">Slovenian</option><option value="so">Somali</option><option value="nr">South Ndebele</option><option value="st">Southern Sotho</option><option value="es-MX">Spanish (Mexico)</option><option value="su">Sundanese</option><option value="sw">Swahili</option><option value="ss">Swati</option><option value="tl">Tagalog</option><option value="ty">Tahitian</option><option value="tg">Tajik</option><option value="ta">Tamil</option><option value="tt">Tatar</option><option value="te">Telugu</option><option value="th">Thai</option><option value="bo">Tibetan</option><option value="ti">Tigrinya</option><option value="to">Tongan</option><option value="ts">Tsonga</option><option value="tn">Tswana</option><option value="tk">Turkmen</option><option value="tw">Twi</option><option value="ur">Urdu</option><option value="ug">Uyghur</option><option value="uz">Uzbek</option><option value="ve">Venda</option><option value="vi">Vietnamese</option><option value="vo">Volapük</option><option value="wa">Walloon</option><option value="cy">Welsh</option><option value="fy">Western Frisian</option><option value="wo">Wolof</option><option value="xh">Xhosa</option><option value="yi">Yiddish</option><option value="yo">Yoruba</option><option value="za">Zhuang</option><option value="zu">Zulu</option></select>
-    <button class="btn" id="aiGo" onclick="generateSite()">Generate website</button><div id="aiMsg" aria-live="polite" style="opacity:.8"></div></div></div>
+    <div class="go-output-choice"><span>Choose your result</span><label><input name="goExportMode" type="radio" value="link" checked> Publish a link</label><label><input name="goExportMode" type="radio" value="code"> Download code (HTML)</label></div><label class="go-code-language">Code format <select id="goCodeLanguage"><option value="html">HTML + CSS</option><option value="react">React (JSX component)</option></select></label><p class="go-small-help">Code is an export for your own hosting. Features requiring GoldOffer servers, such as orders or messaging, only work on a hosted GoldOffer link.</p><button class="btn" id="aiGo" onclick="generateSite()">Generate website</button><div id="aiMsg" aria-live="polite" style="opacity:.8"></div></div></div>
   <div class="panel"><h2>Your websites</h2><div id="sitesList">Loading...</div></div>
 </div></main>
 
@@ -1567,7 +1684,9 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
   <div class="foot-end">&copy; 2026 GoldOffer Studio. Founded by Rayan Katsarov.</div>
 </footer>
 
-<div id="authModal" class="modal">
+<div id="authModal" class="modal go-auth-screen" role="main" aria-label="GoldOffer account page">
+  <div class="go-auth-side"><a href="/" data-link class="go-auth-brand"><span class="go-auth-mark">G</span> GoldOffer Studio</a><div class="go-auth-art"><span class="go-auth-overline">ONE PLACE FOR YOUR BUSINESS</span><h2>Build your website.<br>Grow your business.</h2><p>Start with a beautiful website, then manage orders, bookings and customers from one workspace.</p><div class="go-auth-preview"><div class="go-auth-browser"><span>● &nbsp; ● &nbsp; ●</span><b>studio.goldoffer</b></div><div class="go-auth-preview-body"><small>YOUR NEW WEBSITE</small><strong>Everything your business needs.</strong><span>Website · Products · Bookings · Customers</span><i>Start building →</i></div></div></div><div class="go-auth-side-foot">Designed for businesses of every size.</div></div>
+  <div class="go-auth-right"><div class="go-auth-top"><a href="/" data-link>← Back to GoldOffer</a></div>
   <div class="modal-box">
     <button class="close" onclick="closeAuth()" aria-label="Close">&times;</button>
     <h3 id="authTitle">Sign up</h3>
@@ -1585,7 +1704,7 @@ I'll get back to you shortly."></textarea></label><button type="button" onclick=
       <button class="btn btn-block" type="submit" id="authSubmit">Create account</button>
     </form>
     <button class="link-btn" id="authSwitch" onclick="toggleAuthMode()">I already have an account</button>
-  </div>
+  </div></div>
 </div>
 
 <div id="verifyModal" class="modal">
@@ -1683,7 +1802,7 @@ function gxGo(){const i=document.getElementById('gxPrompt');const v=i?i.value.tr
 async function loadSites() {
   const box = $('sitesList'); if (!box) return;
   try { const gp = sessionStorage.getItem('gxPrompt'); if (gp && $('aiDesc') && !$('aiDesc').value) { $('aiDesc').value = gp; sessionStorage.removeItem('gxPrompt'); } } catch (e) {}
-  { const lock = !!(S.user && S.user.planLimits && S.user.planLimits.aiGen === 0); if ($('aiPaywall')) $('aiPaywall').style.display = lock ? 'block' : 'none'; if ($('aiFormPanel')) $('aiFormPanel').style.display = lock ? 'none' : ''; }
+  { const lock = false; if ($('aiPaywall')) $('aiPaywall').style.display = lock ? 'block' : 'none'; if ($('aiFormPanel')) $('aiFormPanel').style.display = lock ? 'none' : ''; }
   try { const d = await api('/api/my-sites'); S.sitesInfo = d;
     box.innerHTML = d.sites.map(x => '<div class="site-card' + (x.id === d.currentId ? ' cur' : '') + '"><div><b>' + esc(x.siteName) + '</b>' + (x.isMain ? ' · <span>Main site</span>' : '') + (x.aiGenerated ? ' · AI' : '') + '<br><small style="opacity:.7">' + esc(x.siteUrl || '—') + '</small></div><div class="acts">' + (x.siteUrl ? '<a class="btn-ghost" target="_blank" rel="noopener" href="' + esc(x.siteUrl) + '">Open</a>' : '') + (x.id === d.currentId ? '<span class="btn-ghost" data-notr>✓ Current</span>' : '<button class="btn-ghost" onclick="switchSite(\'' + x.id + '\')">Switch to this site</button>') + (!x.isMain ? '<button class="btn-ghost" onclick="deleteSite(\'' + x.id + '\')">Delete</button>' : '') + '</div></div>').join('');
     if (!d.aiReady && $('aiMsg')) $('aiMsg').textContent = 'AI key is not set on the server yet (OPENROUTER_API_KEY).';
@@ -1694,7 +1813,15 @@ async function generateSite() {
   if (!name || desc.length < 10) return notify('Add a name and describe the business.');
   btn.disabled = true; $('aiMsg').textContent = 'Generating… this takes up to a minute.';
   try {
-    const d = await api('/api/ai/site-generate', { method: 'POST', body: JSON.stringify({ name, description: desc, lang: $('aiLang').value }) });
+    const d = await api('/api/ai/site-generate', { method: 'POST', body: JSON.stringify({ name, description: desc, lang: $('aiLang').value, output: (document.querySelector('[name=goExportMode]:checked')||{}).value || 'link', codeLanguage: $('goCodeLanguage').value }) });
+    if (d.output === 'code' && d.html) {
+      const blob = new Blob([d.html], { type: d.codeLanguage==='react' ? 'text/javascript;charset=utf-8' : 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href = url; a.download = (name.toLowerCase().replace(/[^a-z0-9]+/g,'-') || 'goldoffer') + (d.codeLanguage==='react'?'.jsx':'.html');
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),30000);
+      $('aiMsg').textContent = 'Code downloaded. A hosted GoldOffer site is not created in code-export mode.';
+      return;
+    }
     if (!S.mainToken) S.mainToken = S.token;
     try { sessionStorage.setItem('mainToken', S.mainToken); } catch (e) {}
     S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user; renderAuth();
@@ -1721,6 +1848,14 @@ async function createTemplateSite() {
   const btn = $('tplBtn'); btn.disabled = true;
   try {
     const d = await api('/api/my-sites/create', { method: 'POST', body: JSON.stringify({ name, template: $('tplKind').value }) });
+    if (d.output === 'code' && d.html) {
+      const blob = new Blob([d.html], { type: d.codeLanguage==='react' ? 'text/javascript;charset=utf-8' : 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href = url; a.download = (name.toLowerCase().replace(/[^a-z0-9]+/g,'-') || 'goldoffer') + (d.codeLanguage==='react'?'.jsx':'.html');
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),30000);
+      $('aiMsg').textContent = 'Code downloaded. A hosted GoldOffer site is not created in code-export mode.';
+      return;
+    }
     if (!S.mainToken) S.mainToken = S.token;
     try { sessionStorage.setItem('mainToken', S.mainToken); } catch (e) {}
     S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user; renderAuth();
@@ -2125,11 +2260,16 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
     contact: 'Contact - GoldOffer Studio', build: 'Website builder - GoldOffer Studio', dashboard: 'Dashboard - GoldOffer Studio', messages: 'Messages - GoldOffer Studio', reviews: 'Customer reviews - GoldOffer Studio'
   };
   let currentPage = 'home';
+  let goRequestedPage = '/dashboard';
+  const goPrivatePages = new Set(['dashboard','messages','settings','build','aisites','pro','studio','business','analytics','orders','calendar','customers','system','releases','reviews']);
 
   function navigate(path, push) {
     const clean = (String(path).split('?')[0].split('#')[0].replace(/\/+$/, '')) || '/';
     const name = ROUTES[clean] || 'home';
     const finalPath = ROUTES[clean] ? clean : '/';
+    if (goPrivatePages.has(name) && !S.user && !S.token) {
+      goRequestedPage = finalPath; openAuth('signup'); return;
+    }
     closeMenus(); $('nav').classList.remove('open'); closeAuth();
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + name));
     if (push !== false && location.pathname !== finalPath) history.pushState({}, '', finalPath);
@@ -2154,7 +2294,7 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
     window.dispatchEvent(new Event('resize'));
     frame();
   }
-  window.addEventListener('popstate', () => navigate(location.pathname, false));
+  window.addEventListener('popstate', () => { if (location.pathname === '/signup' || location.pathname === '/login') openAuth(location.pathname === '/login' ? 'login' : 'signup'); else navigate(location.pathname, false); });
   document.addEventListener('click', (e) => {
     const a = e.target.closest('a[data-link]');
     if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
@@ -2468,9 +2608,16 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
       S.user = d.user; renderAuth();
     } catch (e) { notify(e.message, 'Error'); }
   }
-  function openAuth(mode) { closeMenus(); $('nav').classList.remove('open'); S.mode = mode; applyAuthMode(); $('authErr').textContent = ''; hidePasswords(); $('authModal').style.display = 'flex'; }
-  function closeAuth() { $('authModal').style.display = 'none'; }
-  function toggleAuthMode() { S.mode = S.mode === 'login' ? 'signup' : (S.mode === 'forgot' ? 'login' : 'login'); $('authErr').textContent = ''; applyAuthMode(); }
+  function openAuth(mode) {
+    closeMenus(); $('nav').classList.remove('open');
+    S.mode = mode || 'signup'; applyAuthMode(); $('authErr').textContent = ''; hidePasswords();
+    $('authModal').style.display = 'flex'; document.body.classList.add('go-auth-active');
+    const url = S.mode === 'login' ? '/login' : '/signup';
+    if (location.protocol !== 'file:' && location.pathname !== url) history.pushState({auth:true}, '', url);
+    setTimeout(() => { const email = $('aEmail'); if (email) email.focus({preventScroll:true}); }, 60);
+  }
+  function closeAuth() { $('authModal').style.display = 'none'; document.body.classList.remove('go-auth-active'); }
+  function toggleAuthMode() { S.mode = S.mode === 'login' ? 'signup' : (S.mode === 'forgot' ? 'login' : 'login'); $('authErr').textContent = ''; applyAuthMode(); if (location.protocol !== 'file:') history.replaceState({auth:true},'', S.mode === 'signup' ? '/signup' : '/login'); }
   function openForgot() { S.mode = 'forgot'; $('authErr').textContent = ''; applyAuthMode(); }
   function applyAuthMode() {
     const su = S.mode === 'signup', fg = S.mode === 'forgot';
@@ -2514,6 +2661,7 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
       S.token = data.token; localStorage.setItem('token', data.token); S.user = data.user;
       closeAuth(); $('authForm').reset();
       await afterLogin();
+      navigate(goRequestedPage || '/dashboard'); goRequestedPage = '/dashboard';
     } catch (err) {
       if (err.data && err.data.needsVerification) { closeAuth(); $('authForm').reset(); openVerify(err.data.email || email, err.status === 429); }
       else $('authErr').textContent = err.message;
@@ -2572,6 +2720,7 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
       S.token = d.token; localStorage.setItem('token', d.token); S.user = d.user;
       closeVerify();
       await afterLogin();
+      navigate(goRequestedPage || '/dashboard'); goRequestedPage = '/dashboard';
       notify('Your email is confirmed. Welcome to GoldOffer Studio!', 'Welcome');
     } catch (err) { $('verifyErr').textContent = err.message; $('verifyCode').select(); }
     btn.disabled = false;
@@ -3309,15 +3458,27 @@ async function deleteSite(id) { if (!confirm('Delete this website and its offers
     frameFns.push(setNavTheme);
     initStage(); initScatter(); initReveal();
     buildPickers(); renderProfs(); renderMarquee(); renderGallery(); paintPhotos(); loadProfPhotos(); renderAuth(); renderPreview();
-    navigate(location.pathname, false);
+    const firstPath = location.pathname;
+    if (S.token && goPrivatePages.has(ROUTES[firstPath])) navigate('/', false);
+    else if (!['/login','/signup'].includes(firstPath)) navigate(firstPath, false);
+    else { navigate('/', false); openAuth(firstPath === '/login' ? 'login' : 'signup'); }
     if (S.token) {
-      try { const d = await api('/api/auth/me'); S.user = d.user; await afterLogin(); } catch (e) { renderAuth(); }
+      try { const d = await api('/api/auth/me'); S.user = d.user; await afterLogin(); if (goPrivatePages.has(ROUTES[firstPath])) navigate(firstPath, false); }
+      catch (e) { S.token = null; S.user = null; localStorage.removeItem('token'); renderAuth(); if(goPrivatePages.has(ROUTES[firstPath])) navigate(firstPath, false); }
     }
     if (new URLSearchParams(location.search).get('paid')) notify('Thank you. Your subscription is being activated.', 'Payment received');
     if (new URLSearchParams(location.search).get('forgot') === '1' && !S.token) { openAuth('login'); openForgot(); history.replaceState(null, '', location.pathname); }
   }
 
   init();
+  (function(){
+    const v=document.querySelector('.go-demo-video');if(!v)return;
+    const retry=document.querySelector('.go-video-retry');
+    v.addEventListener('error',()=>{if(retry){retry.hidden=false;retry.textContent='Video unavailable — check goldoffer-demo.mp4';}});
+    v.addEventListener('loadeddata',()=>{if(retry)retry.hidden=true;});
+    const tryPlay=()=>{v.muted=true;const r=v.play();if(r && r.catch)r.catch(()=>{if(retry){retry.hidden=false;retry.textContent='▶ Play demo';}})};
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tryPlay,{once:true});else tryPlay();
+  })();
 </script>
 <script>
 // ======================= Design Studio (parent side) =======================
@@ -3527,7 +3688,7 @@ async function stuExitPublish() {
 }
 async function stuDownload() {
   await stuFlush();
-  try { const r = await fetch(API + '/api/studio/export', { headers: { Authorization: 'Bearer ' + S.token } }); if (!r.ok) throw new Error('Download failed'); const b = await r.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = (ST.slug || 'site') + '.html'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); } catch (e) { notify(e.message, 'Download'); }
+  try { const r = await fetch(API + '/api/studio/export', { headers: { Authorization: 'Bearer ' + S.token } }); if (!r.ok) throw new Error('Download failed'); const b = await r.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = (ST.slug || 'site') + (d.codeLanguage==='react'?'.jsx':'.html'); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); } catch (e) { notify(e.message, 'Download'); }
 }
 async function stuVersions() {
   await stuFlush(); const m = $('stuModal'), body = $('stuModalBody'); m.hidden = false; body.innerHTML = 'Loading...';
@@ -3638,6 +3799,20 @@ function renderBell() {
 async function bellRead() { try { await api('/api/notifications/read', { method: 'POST', body: '{}' }); await pollBell(); } catch (e) {} }
 document.addEventListener('click', (e) => { if (BELL.open && !e.target.closest('#bellP') && !e.target.closest('#bellBtn')) closeBell(); });
 
+</script>
+
+<script>
+/* Presentation-only reveal effects. No login, routing, or business-data changes. */
+(function(){
+  const select=()=>document.querySelectorAll('.go-appear');
+  function reveal(){
+    const list=select();
+    if(!('IntersectionObserver' in window)||matchMedia('(prefers-reduced-motion: reduce)').matches){list.forEach(el=>el.classList.add('go-visible'));return;}
+    const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('go-visible');observer.unobserve(e.target);}})},{rootMargin:'0px 0px -40px 0px',threshold:.08});
+    list.forEach(el=>observer.observe(el));
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',reveal,{once:true});else reveal();
+})();
 </script>
 </body>
 </html>
