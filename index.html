@@ -795,6 +795,95 @@
 #gpHost{position:fixed;inset:0;z-index:1500}
 </style>
 <style>@media(max-width:600px){html{font-size:14.5px}.page-head h1{font-size:2.2rem!important;margin-bottom:14px}.page-head p{font-size:.95rem}.go-workhead h1{font-size:1.6rem!important}.btn,.btn-ghost{padding:9px 14px;font-size:.84rem}.card,.panel{padding:16px 14px!important;border-radius:18px}.plan{padding:22px 18px!important}.plan .price{font-size:2.1rem!important}.plan li{font-size:.88rem}.section{padding-left:14px;padding-right:14px}.go-suite-card{padding:14px!important}.go-suite-card h3{font-size:1rem}.stat,.dash-stat{padding:12px!important}.live-hero h2{font-size:1.4rem}}</style>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style id="gx-design">
+/* ===== GoldOffer redesign layer (Craftify / Framer style) ===== */
+:root{--gx-a:#7c5cff;--gx-b:#4f7dff;--gx-glow:#a78bfa;--gx-bg:#07060f;--gx-glass:rgba(255,255,255,.045);--gx-line:rgba(255,255,255,.1);--display:'Plus Jakarta Sans','Inter',sans-serif;--ink:#07060f;--deep:#0b0916;--panel:#120f22;--raise:#191530;--iris:#8b7bff;--lt2:#f3f1ff;--lt:#ebe8fb}
+body{background:radial-gradient(1100px 600px at 80% -10%,rgba(124,92,255,.22),transparent 60%),radial-gradient(900px 600px at -10% 20%,rgba(79,125,255,.14),transparent 60%),var(--gx-bg);font-family:'Plus Jakarta Sans','Inter',sans-serif}
+h1,h2,h3,.brand{font-family:'Plus Jakarta Sans','Inter',sans-serif!important;letter-spacing:-.035em}
+/* nav: floating glass bar */
+.nav{top:12px!important;left:14px!important;right:14px!important;height:62px!important;border:1px solid var(--gx-line)!important;border-radius:20px;background:rgba(14,11,28,.62)!important;backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);box-shadow:0 10px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
+.nav.light{background:rgba(255,255,255,.7)!important;border-color:rgba(20,10,60,.1)!important;box-shadow:0 10px 40px rgba(80,60,180,.12)}
+.nav-in{padding:0 18px!important}
+/* buttons */
+.btn{background:linear-gradient(135deg,var(--gx-a),var(--gx-b))!important;color:#fff!important;border-radius:14px!important;font-weight:700;box-shadow:0 8px 28px rgba(124,92,255,.38),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .2s,box-shadow .2s,filter .2s!important}
+.btn:hover{transform:translateY(-2px);box-shadow:0 14px 38px rgba(124,92,255,.55),inset 0 1px 0 rgba(255,255,255,.3);filter:brightness(1.08)}
+.btn-dark{background:#0d0a1c!important}
+.btn-ghost{border-radius:14px!important;background:var(--gx-glass);border:1px solid var(--gx-line)!important;backdrop-filter:blur(10px);transition:background .2s,border-color .2s,transform .2s!important}
+.btn-ghost:hover{background:rgba(255,255,255,.09);border-color:rgba(167,139,250,.5)!important;transform:translateY(-1px)}
+.light .btn-ghost{background:rgba(255,255,255,.6);color:#1a1233;border-color:rgba(60,40,140,.18)!important}
+.nav.light .nav-end .btn{background:linear-gradient(135deg,var(--gx-a),var(--gx-b))!important;color:#fff!important}
+/* glass cards across the app */
+.card,.panel,.go-suite-card,.go-setting-grid a,.rcard,.site-card,.stu-v,.dash-grid>div,.stat{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.025))!important;border:1px solid var(--gx-line)!important;border-radius:22px!important;box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .25s,border-color .25s,box-shadow .25s}
+.card:hover,.go-suite-card:hover,.go-setting-grid a:hover,.site-card:hover{border-color:rgba(167,139,250,.45)!important;box-shadow:0 22px 60px rgba(0,0,0,.35),0 0 40px rgba(124,92,255,.18)}
+input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select{background:rgba(255,255,255,.05);border:1px solid var(--gx-line);border-radius:12px;color:inherit;transition:border-color .2s,box-shadow .2s}
+input:focus,textarea:focus,select:focus{outline:0;border-color:var(--gx-glow)!important;box-shadow:0 0 0 3px rgba(124,92,255,.25)}
+.light input:not([type=checkbox]):not([type=radio]),.light textarea,.light select{background:#fff;border-color:rgba(60,40,140,.16)}
+.go-workspace,.go-workhead h1{position:relative}
+.go-kicker{background:linear-gradient(135deg,var(--gx-a),var(--gx-b));-webkit-background-clip:text;background-clip:text;color:transparent!important;font-weight:800;letter-spacing:.14em}
+/* light sections: soft lavender instead of grey */
+.light{background:radial-gradient(900px 500px at 15% 0,#e4dcff 0,transparent 60%),radial-gradient(800px 500px at 90% 30%,#d6e6ff 0,transparent 60%),#f6f4ff!important}
+.plan{border-radius:26px!important;border-color:rgba(60,40,140,.12)!important;box-shadow:0 20px 60px rgba(80,60,180,.1);transition:transform .25s,box-shadow .25s}
+.plan:hover{transform:translateY(-6px);box-shadow:0 30px 80px rgba(80,60,180,.2)}
+.plan.pro{background:radial-gradient(500px 300px at 80% -10%,rgba(124,92,255,.55),transparent 60%),#0f0b22!important;border-color:rgba(167,139,250,.4)!important;box-shadow:0 30px 90px rgba(124,92,255,.35)}
+.plan.pro .btn{background:#fff!important;color:#1a1233!important}
+.cta-band{background:radial-gradient(900px 420px at 50% 100%,rgba(124,92,255,.45),transparent 70%),var(--gx-bg)!important}
+.statement{background:transparent!important}
+/* ===== new hero ===== */
+#stageTrack{display:none!important}
+.gx-hero{position:relative;overflow:hidden;padding:150px 20px 40px;text-align:center}
+.gx-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(700px 420px at 50% 0,rgba(124,92,255,.5),transparent 65%),radial-gradient(500px 300px at 15% 40%,rgba(79,125,255,.22),transparent 70%),radial-gradient(500px 300px at 85% 35%,rgba(255,120,200,.16),transparent 70%);pointer-events:none}
+.gx-hero::after{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.12) 1px,transparent 1.2px);background-size:22px 22px;-webkit-mask-image:radial-gradient(ellipse at 50% 30%,#000 10%,transparent 65%);mask-image:radial-gradient(ellipse at 50% 30%,#000 10%,transparent 65%);pointer-events:none}
+.gx-in{position:relative;z-index:2;max-width:980px;margin:0 auto}
+.gx-badge{display:inline-flex;align-items:center;gap:9px;padding:9px 18px;border-radius:99px;border:1px solid var(--gx-line);background:rgba(255,255,255,.06);backdrop-filter:blur(10px);font-size:.9rem;color:#d9d3ff;animation:gxUp .7s both}
+.gx-badge i{color:#c4b5fd;font-style:normal}
+.gx-hero h1{font-size:clamp(2.5rem,7.4vw,5.6rem);line-height:1.02;margin:26px auto 0;font-weight:800;background:linear-gradient(180deg,#fff 30%,#c8bdff);-webkit-background-clip:text;background-clip:text;color:transparent;animation:gxUp .8s .08s both}
+.gx-hero h1 em{font-style:normal;background:linear-gradient(100deg,#a78bfa,#60a5fa 60%,#5eead4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.gx-lead{max-width:62ch;margin:22px auto 0;color:#aaa6c8;font-size:clamp(1rem,1.6vw,1.2rem);animation:gxUp .8s .16s both}
+.gx-prompt{display:flex;gap:8px;align-items:center;max-width:720px;margin:34px auto 0;padding:8px;border-radius:22px;background:rgba(255,255,255,.07);border:1px solid rgba(167,139,250,.35);backdrop-filter:blur(14px);box-shadow:0 0 0 6px rgba(124,92,255,.08),0 24px 70px rgba(124,92,255,.25);animation:gxUp .8s .24s both}
+.gx-prompt input{flex:1;min-width:0;border:0!important;background:transparent!important;box-shadow:none!important;padding:14px 16px;font-size:1rem;color:#fff}
+.gx-prompt .btn{padding:14px 22px;white-space:nowrap}
+.gx-try{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:16px;color:#8e89b3;font-size:.86rem;animation:gxUp .8s .3s both}
+.gx-try button{border:1px solid var(--gx-line);background:rgba(255,255,255,.05);color:#cfc9f5;border-radius:99px;padding:7px 14px;cursor:pointer;font-size:.84rem;transition:.2s}
+.gx-try button:hover{border-color:rgba(167,139,250,.6);background:rgba(124,92,255,.18)}
+.gx-cta2{display:flex;gap:12px;justify-content:center;margin-top:22px;animation:gxUp .8s .36s both}
+.gx-note{margin-top:14px;color:#7d79a3;font-size:.82rem}
+@keyframes gxUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+/* product mockup */
+.gx-mock{position:relative;z-index:2;max-width:1120px;margin:64px auto 0;padding:10px;border-radius:30px;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(167,139,250,.25));box-shadow:0 0 0 1px rgba(255,255,255,.35),0 0 90px rgba(167,139,250,.55),0 50px 120px rgba(0,0,0,.6);animation:gxUp 1s .45s both}
+.gx-app{display:grid;grid-template-columns:62px 250px minmax(0,1fr) 230px;gap:12px;padding:14px;border-radius:22px;background:linear-gradient(160deg,#3a2a78,#241a52 55%,#1a1340);text-align:left;min-height:440px}
+.gx-rail{display:flex;flex-direction:column;gap:12px;align-items:center;padding-top:6px}
+.gx-rail span{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:1rem}
+.gx-rail span:first-child{background:linear-gradient(135deg,var(--gx-a),var(--gx-b))}
+.gx-pan{border-radius:18px;background:rgba(255,255,255,.08);padding:16px;display:flex;flex-direction:column;gap:12px;color:#e9e5ff;font-size:.85rem}
+.gx-pan h4{font-size:.95rem;font-weight:700}
+.gx-fake{border-radius:12px;background:rgba(0,0,0,.25);padding:12px;color:#9a95c4;min-height:120px;font-size:.8rem}
+.gx-gen{margin-top:auto;border-radius:12px;padding:12px;text-align:center;font-weight:700;background:linear-gradient(135deg,var(--gx-a),var(--gx-b));color:#fff}
+.gx-site{border-radius:16px;background:#0a0818;overflow:hidden;border:1px solid rgba(255,255,255,.15);display:flex;flex-direction:column}
+.gx-site .sn{display:flex;justify-content:space-between;padding:12px 16px;font-size:.72rem;color:#cfc9f5;border-bottom:1px solid rgba(255,255,255,.08)}
+.gx-site .sh{padding:30px 18px;text-align:center;background:radial-gradient(300px 160px at 50% 0,rgba(124,92,255,.5),transparent 70%)}
+.gx-site .sh b{display:block;font-size:1.5rem;letter-spacing:-.03em;color:#fff}.gx-site .sh b u{text-decoration:none;color:#a78bfa}
+.gx-site .sh p{color:#9a95c4;font-size:.74rem;margin:8px 0 14px}.gx-site .sh i{display:inline-block;font-style:normal;background:linear-gradient(135deg,#7c5cff,#4f7dff);color:#fff;font-size:.72rem;font-weight:700;padding:8px 14px;border-radius:99px}
+.gx-site .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 14px 16px}
+.gx-site .sg div{border-radius:12px;padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(167,139,250,.35);box-shadow:0 0 18px rgba(124,92,255,.18);font-size:.7rem;color:#e9e5ff}
+.gx-site .sg div em{display:block;font-style:normal;color:#fbbf24;font-weight:700;margin-top:4px}
+.gx-ins .row2{display:flex;justify-content:space-between;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.07);margin-bottom:8px;font-size:.78rem}
+.gx-play{position:absolute;left:50%;top:52%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;background:rgba(20,10,60,.7);border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 60px rgba(167,139,250,.7);backdrop-filter:blur(8px);color:#fff;font-size:1.6rem;transition:transform .25s}
+.gx-play:hover{transform:scale(1.08)}
+/* feature grid */
+.gx-feat{position:relative;padding:90px 20px 40px;max-width:1180px;margin:0 auto;text-align:center}
+.gx-feat h2{font-size:clamp(2rem,5vw,3.4rem);font-weight:800}.gx-feat h2 em{font-style:normal;background:linear-gradient(100deg,#a78bfa,#60a5fa);-webkit-background-clip:text;background-clip:text;color:transparent}
+.gx-feat>p{color:#9c98c0;margin:12px auto 44px;max-width:56ch}
+.gx-fg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;text-align:left}
+.gx-fc{padding:26px;border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid var(--gx-line);transition:transform .3s,border-color .3s,box-shadow .3s}
+.gx-fc:hover{transform:translateY(-6px);border-color:rgba(167,139,250,.5);box-shadow:0 0 50px rgba(124,92,255,.22)}
+.gx-fc b{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;font-size:1.4rem;background:linear-gradient(135deg,rgba(124,92,255,.5),rgba(79,125,255,.35));margin-bottom:16px;box-shadow:0 0 26px rgba(124,92,255,.35)}
+.gx-fc h3{font-size:1.15rem;margin-bottom:6px}.gx-fc p{color:#9c98c0;font-size:.93rem;line-height:1.55}
+.gx-glowcur{position:fixed;left:0;top:0;width:420px;height:420px;margin:-210px 0 0 -210px;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.16),transparent 65%);pointer-events:none;z-index:1;transition:opacity .3s}
+@media(max-width:980px){.gx-app{grid-template-columns:54px minmax(0,1fr)}.gx-app .gx-pan,.gx-app .gx-ins{display:none}.gx-fg{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.gx-hero{padding:120px 14px 24px}.gx-prompt{flex-direction:column;align-items:stretch}.gx-fg{grid-template-columns:1fr}.gx-mock{margin-top:40px;border-radius:22px}.gx-app{min-height:0;grid-template-columns:1fr}.gx-rail{display:none}.nav{top:8px!important;left:8px!important;right:8px!important}}
+@media(prefers-reduced-motion:reduce){.gx-hero *{animation:none!important}}
+</style>
 </head>
 <body class="theme-gold font-sans" id="top" data-page="home">
 <nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/pro" data-link data-t="pro"><i>⚡</i>Pro</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
@@ -867,6 +956,35 @@
 
 <!-- =================== HOME =================== -->
 <main class="view active" id="v-home">
+  <section class="gx-hero" data-nav="dark" id="gxHero" aria-label="Introduction">
+    <div class="gx-in">
+      <span class="gx-badge"><i>&#10022;</i> More than a website builder</span>
+      <h1>Your site should do <em>more</em> than look good</h1>
+      <p class="gx-lead">Describe your business and AI builds your website in seconds. Orders, bookings, chat, CRM and tracking links are already inside. Free to start.</p>
+      <div class="gx-prompt"><input id="gxPrompt" maxlength="300" placeholder="Describe your business, e.g. Barbershop in Sofia with online booking" aria-label="Describe your business" onkeydown="if(event.key==='Enter')gxGo()"><button class="btn" type="button" onclick="gxGo()">&#10022; Generate</button></div>
+      <div class="gx-try"><span>Try:</span><button type="button" onclick="gxFill('Barbershop with haircuts, beard trims and online booking')">Barbershop</button><button type="button" onclick="gxFill('Cozy coffee shop with a small menu and pastries')">Cafe</button><button type="button" onclick="gxFill('Wedding photographer with packages and a portfolio')">Photographer</button><button type="button" onclick="gxFill('Online shop selling handmade candles')">Online shop</button></div>
+      <div class="gx-cta2"><button class="btn" type="button" onclick="cta()">Start building free</button><button class="btn-ghost" type="button" onclick="navigate('/pricing')">See pricing</button></div>
+      <p class="gx-note">No credit card. Free plan starts immediately.</p>
+    </div>
+    <div class="gx-mock" aria-hidden="true"><div class="gx-app">
+      <div class="gx-rail"><span>+</span><span>&#9707;</span><span>&#10148;</span><span>&#128193;</span><span>&#9881;</span></div>
+      <div class="gx-pan"><h4>Create website</h4><div class="gx-fake">Describe your company...</div><div class="gx-gen">&#10022; Generate website</div></div>
+      <div class="gx-site"><div class="sn"><b>SUNNY BARBER</b><span>Offers &nbsp; About &nbsp; Contact</span></div><div class="sh"><b>Look sharp. <u>Feel great.</u></b><p>Classic cuts, beard trims and online booking.</p><i>Book a visit</i></div><div class="sg"><div>Haircut<em>20 EUR</em></div><div>Beard trim<em>12 EUR</em></div><div>Full package<em>28 EUR</em></div></div></div>
+      <div class="gx-pan gx-ins"><h4>Selector</h4><div class="row2"><span>Header section</span><span>&#8964;</span></div><h4 style="margin-top:6px">Spacing</h4><div class="row2"><span>Margin</span><span>24</span></div><div class="row2"><span>Padding</span><span>16</span></div><div class="row2"><span>Radius</span><span>22</span></div></div>
+    </div><div class="gx-play" onclick="cta()" title="Start building">&#9654;</div></div>
+  </section>
+  <section class="gx-feat" data-nav="dark">
+    <h2>A whole business, <em>one link</em></h2>
+    <p>Not just a page. Every site comes with the tools you need to get customers and serve them.</p>
+    <div class="gx-fg">
+      <div class="gx-fc"><b>&#10022;</b><h3>AI website generator</h3><p>Tell AI what you do. Get a unique, editable website with offers, FAQ and your own link.</p></div>
+      <div class="gx-fc"><b>&#127912;</b><h3>Design Studio</h3><p>Click any text, drag elements, change colors. Works on your phone too.</p></div>
+      <div class="gx-fc"><b>&#128230;</b><h3>Orders with tracking</h3><p>Customers get a tracking link and see Accepted, In progress, Completed in real time.</p></div>
+      <div class="gx-fc"><b>&#128197;</b><h3>Smart calendar</h3><p>Bookings that respect your hours and breaks. No double bookings.</p></div>
+      <div class="gx-fc"><b>&#128172;</b><h3>Inbox and voice calls</h3><p>Chat with visitors, share files and talk by voice right in the browser.</p></div>
+      <div class="gx-fc"><b>&#128200;</b><h3>Intelligence and CRM</h3><p>Revenue, visits and AI tips, plus automations and customer notes.</p></div>
+    </div>
+  </section>
 
   <section class="stage-track" id="stageTrack" data-nav="dark" aria-label="Introduction">
     <div class="stage-sticky" id="stageSticky">
@@ -1364,7 +1482,7 @@
 <!-- =================== AI SITES =================== -->
 <main class="view" id="v-aisites"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">AI WEBSITE GENERATOR</span><h1>My websites</h1><p>Describe a business and AI builds a new website with its own link.</p></div></div>
 
-  <div class="panel" id="aiPaywall" style="display:none;text-align:center"><h2>AI website generator is locked</h2><p style="opacity:.8">You need a paid plan to create websites with AI. Upgrade to unlock it.</p><button class="btn" type="button" onclick="payNow('pro')">Get Pro EUR 19.99 / month / month</button> <button class="btn-ghost" type="button" onclick="payNow('agency')">Get Agency EUR 99 / month</button></div>
+  <div class="panel" id="aiPaywall" style="display:none;text-align:center"><div style="font-size:2rem">\uD83D\uDD12</div><h2>AI website generator is locked</h2><p style="opacity:.8">You need a paid plan to create websites with AI. Upgrade to unlock it.</p><button class="btn" type="button" onclick="payNow('pro')">Get Pro \u00b7 EUR 19.99 / month</button> <button class="btn-ghost" type="button" onclick="payNow('agency')">Get Agency \u00b7 EUR 99 / month</button></div>
   <div class="panel" id="aiFormPanel"><h2>Create a new website</h2>
     <div class="ai-form"><input id="aiName" maxlength="60" placeholder="Website name (e.g. Sunny Barber)"><textarea id="aiDesc" rows="5" maxlength="1500" placeholder="Describe the business: what you do, services, prices, city, style you like..."></textarea>
     <select id="aiLang" onchange="this.dataset.chosen='1'" aria-label="Language for AI generated site"><option value="en">English</option><option value="bg">Bulgarian</option><option value="es">Spanish</option><option value="de">German</option><option value="fr">French</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="tr">Turkish</option><option value="ro">Romanian</option><option value="el">Greek</option><option value="ar">Arabic</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="hi">Hindi</option><option value="uk">Ukrainian</option><option value="pl">Polish</option><option value="nl">Dutch</option><option value="sv">Swedish</option><option value="sq">Albanian</option><option value="ab">Abkhazian</option><option value="aa">Afar</option><option value="af">Afrikaans</option><option value="ak">Akan</option><option value="am">Amharic</option><option value="an">Aragonese</option><option value="hy">Armenian</option><option value="as">Assamese</option><option value="av">Avaric</option><option value="ae">Avestan</option><option value="ay">Aymara</option><option value="az">Azerbaijani</option><option value="bm">Bambara</option><option value="bn">Bangla</option><option value="ba">Bashkir</option><option value="eu">Basque</option><option value="be">Belarusian</option><option value="bi">Bislama</option><option value="bs">Bosnian</option><option value="br">Breton</option><option value="my">Burmese</option><option value="ca">Catalan</option><option value="ch">Chamorro</option><option value="ce">Chechen</option><option value="zh-Hans">Chinese (Simplified)</option><option value="zh-Hant">Chinese (Traditional)</option><option value="cu">Church Slavic</option><option value="cv">Chuvash</option><option value="kw">Cornish</option><option value="co">Corsican</option><option value="cr">Cree</option><option value="hr">Croatian</option><option value="cs">Czech</option><option value="da">Danish</option><option value="dv">Divehi</option><option value="dz">Dzongkha</option><option value="en-GB">English (United Kingdom)</option><option value="en-US">English (United States)</option><option value="eo">Esperanto</option><option value="et">Estonian</option><option value="ee">Ewe</option><option value="fo">Faroese</option><option value="fj">Fijian</option><option value="fi">Finnish</option><option value="fr-CA">French (Canada)</option><option value="ff">Fula</option><option value="gl">Galician</option><option value="lg">Ganda</option><option value="ka">Georgian</option><option value="gn">Guarani</option><option value="gu">Gujarati</option><option value="ht">Haitian Creole</option><option value="ha">Hausa</option><option value="he">Hebrew</option><option value="hz">Herero</option><option value="ho">Hiri Motu</option><option value="hu">Hungarian</option><option value="is">Icelandic</option><option value="io">Ido</option><option value="ig">Igbo</option><option value="id">Indonesian</option><option value="ia">Interlingua</option><option value="ie">Interlingue</option><option value="iu">Inuktitut</option><option value="ik">Inupiaq</option><option value="ga">Irish</option><option value="jv">Javanese</option><option value="kl">Kalaallisut</option><option value="kn">Kannada</option><option value="kr">Kanuri</option><option value="ks">Kashmiri</option><option value="kk">Kazakh</option><option value="km">Khmer</option><option value="ki">Kikuyu</option><option value="rw">Kinyarwanda</option><option value="kv">Komi</option><option value="kg">Kongo</option><option value="kj">Kuanyama</option><option value="ku">Kurdish</option><option value="ky">Kyrgyz</option><option value="lo">Lao</option><option value="la">Latin</option><option value="lv">Latvian</option><option value="li">Limburgish</option><option value="ln">Lingala</option><option value="lt">Lithuanian</option><option value="lu">Luba-Katanga</option><option value="lb">Luxembourgish</option><option value="mk">Macedonian</option><option value="mg">Malagasy</option><option value="ms">Malay</option><option value="ml">Malayalam</option><option value="mt">Maltese</option><option value="gv">Manx</option><option value="mr">Marathi</option><option value="mh">Marshallese</option><option value="mn">Mongolian</option><option value="mi">Māori</option><option value="na">Nauru</option><option value="nv">Navajo</option><option value="ng">Ndonga</option><option value="ne">Nepali</option><option value="nd">North Ndebele</option><option value="se">Northern Sami</option><option value="no">Norwegian</option><option value="nb">Norwegian Bokmål</option><option value="nn">Norwegian Nynorsk</option><option value="ny">Nyanja</option><option value="oc">Occitan</option><option value="or">Odia</option><option value="oj">Ojibwa</option><option value="om">Oromo</option><option value="os">Ossetic</option><option value="pi">Pali</option><option value="ps">Pashto</option><option value="fa">Persian</option><option value="pt-BR">Portuguese (Brazil)</option><option value="pt-PT">Portuguese (Portugal)</option><option value="pa">Punjabi</option><option value="qu">Quechua</option><option value="rm">Romansh</option><option value="rn">Rundi</option><option value="sm">Samoan</option><option value="sg">Sango</option><option value="sa">Sanskrit</option><option value="sc">Sardinian</option><option value="gd">Scottish Gaelic</option><option value="sr">Serbian</option><option value="sr-Latn">Serbian (Latin)</option><option value="sh">Serbo-Croatian</option><option value="sn">Shona</option><option value="ii">Sichuan Yi</option><option value="sd">Sindhi</option><option value="si">Sinhala</option><option value="sk">Slovak</option><option value="sl">Slovenian</option><option value="so">Somali</option><option value="nr">South Ndebele</option><option value="st">Southern Sotho</option><option value="es-MX">Spanish (Mexico)</option><option value="su">Sundanese</option><option value="sw">Swahili</option><option value="ss">Swati</option><option value="tl">Tagalog</option><option value="ty">Tahitian</option><option value="tg">Tajik</option><option value="ta">Tamil</option><option value="tt">Tatar</option><option value="te">Telugu</option><option value="th">Thai</option><option value="bo">Tibetan</option><option value="ti">Tigrinya</option><option value="to">Tongan</option><option value="ts">Tsonga</option><option value="tn">Tswana</option><option value="tk">Turkmen</option><option value="tw">Twi</option><option value="ur">Urdu</option><option value="ug">Uyghur</option><option value="uz">Uzbek</option><option value="ve">Venda</option><option value="vi">Vietnamese</option><option value="vo">Volapük</option><option value="wa">Walloon</option><option value="cy">Welsh</option><option value="fy">Western Frisian</option><option value="wo">Wolof</option><option value="xh">Xhosa</option><option value="yi">Yiddish</option><option value="yo">Yoruba</option><option value="za">Zhuang</option><option value="zu">Zulu</option></select>
@@ -1558,8 +1676,13 @@ const RTL_RE = /^(ar|he|fa|ur|ps|sd|ug|yi|dv)(-|$)/;
 function setPanelLang(l) { PANEL_LANG = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}$/.test(l) ? l : 'en'; try { localStorage.setItem('panelLang', PANEL_LANG); } catch (e) {} document.documentElement.lang = PANEL_LANG; document.documentElement.dir = RTL_RE.test(PANEL_LANG) ? 'rtl' : 'ltr'; document.querySelectorAll('#langPanelSel').forEach(el => el.value = PANEL_LANG); panelTranslate(); }
 async function setSiteLang(l) { try { const d = await api('/api/site', { method: 'PUT', body: JSON.stringify({ siteLang: l }) }); S.user = d.user; notify(PANEL_LANG === 'bg' ? 'Езикът на сайта е запазен.' : 'Website language saved.'); } catch (e) { notify(e.message, 'Error'); } }
 function initLangUi() { ['langPanelSel'].forEach(id => { const el = $(id); if (el) el.value = PANEL_LANG; }); const b = $('langSite'); if (b && S.user) b.value = S.user.siteLang || 'en'; const a = $('aiLang'); if (a && S.user && !a.dataset.chosen) a.value = S.user.siteLang || 'en'; }
+
+function gxFill(t){const i=document.getElementById('gxPrompt');if(i){i.value=t;i.focus();}}
+function gxGo(){const i=document.getElementById('gxPrompt');const v=i?i.value.trim():'';try{sessionStorage.setItem('gxPrompt',v)}catch(e){}if(!S.user){openAuth('signup');return;}navigate('/ai-sites');}
+(function(){try{if(matchMedia('(pointer:fine)').matches){const g=document.createElement('div');g.className='gx-glowcur';document.body.appendChild(g);addEventListener('pointermove',e=>{g.style.transform='translate('+e.clientX+'px,'+e.clientY+'px)'},{passive:true});}}catch(e){}})();
 async function loadSites() {
   const box = $('sitesList'); if (!box) return;
+  try { const gp = sessionStorage.getItem('gxPrompt'); if (gp && $('aiDesc') && !$('aiDesc').value) { $('aiDesc').value = gp; sessionStorage.removeItem('gxPrompt'); } } catch (e) {}
   { const lock = !!(S.user && S.user.planLimits && S.user.planLimits.aiGen === 0); if ($('aiPaywall')) $('aiPaywall').style.display = lock ? 'block' : 'none'; if ($('aiFormPanel')) $('aiFormPanel').style.display = lock ? 'none' : ''; }
   try { const d = await api('/api/my-sites'); S.sitesInfo = d;
     box.innerHTML = d.sites.map(x => '<div class="site-card' + (x.id === d.currentId ? ' cur' : '') + '"><div><b>' + esc(x.siteName) + '</b>' + (x.isMain ? ' · <span>Main site</span>' : '') + (x.aiGenerated ? ' · AI' : '') + '<br><small style="opacity:.7">' + esc(x.siteUrl || '—') + '</small></div><div class="acts">' + (x.siteUrl ? '<a class="btn-ghost" target="_blank" rel="noopener" href="' + esc(x.siteUrl) + '">Open</a>' : '') + (x.id === d.currentId ? '<span class="btn-ghost" data-notr>✓ Current</span>' : '<button class="btn-ghost" onclick="switchSite(\'' + x.id + '\')">Switch to this site</button>') + (!x.isMain ? '<button class="btn-ghost" onclick="deleteSite(\'' + x.id + '\')">Delete</button>' : '') + '</div></div>').join('');
@@ -1587,7 +1710,7 @@ async function loadBuildSites() {
   try { const d = await api('/api/my-sites'); card.style.display = 'block'; S.sitesInfo = d;
     const L = d.planLimits || {};
     $('planLine').innerHTML = 'Plan: <b>' + esc(L.name || d.plan) + '</b> · ' + d.sites.length + ' / ' + d.cap + ' websites' + (d.plan !== 'agency' ? ' · <a href="#" onclick="payNow(\'agency\');return false">Upgrade</a>' : '');
-    const tb = $('tplBtn'); if (tb) { tb.textContent = d.canTemplate ? 'Create new site from template' : 'Create from template (Agency)'; tb.style.opacity = d.canTemplate ? '' : '.75'; }
+    const tb = $('tplBtn'); if (tb) { tb.textContent = d.canTemplate ? 'Create new site from template' : '\uD83D\uDD12 Create from template (Agency)'; tb.style.opacity = d.canTemplate ? '' : '.75'; }
     $('buildSitesBody').innerHTML = d.sites.map(x => '<tr class="' + (x.id === d.currentId ? 'cur' : '') + '"><td><b>' + esc(x.siteName) + '</b></td><td>' + (x.aiGenerated ? 'AI' : 'Template') + '</td><td>' + (x.siteUrl ? '<a target="_blank" rel="noopener" href="' + esc(x.siteUrl) + '">' + esc(x.slug || 'open') + '</a>' : '—') + '</td><td>' + (x.id === d.currentId ? '<small>Selected</small>' : '<button class="btn-ghost" type="button" onclick="switchSite(\'' + x.id + '\')">Open</button>') + '</td></tr>').join('');
   } catch (e) {}
 }
@@ -1689,7 +1812,7 @@ const gErr = (e) => gToast(e.message || 'Error');
 function gToast(t) { const old = GP.root.querySelector('.toast'); if (old) old.remove(); const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; GP.root.append(d); setTimeout(() => d.remove(), 2600); }
 function gpLock() {
   const m = gq('gpMain'); gq('gpSide').innerHTML = '';
-  m.innerHTML = '<div class="lockwrap"><div class="lockcard"><h2>Pro tools are locked</h2><p>You need a paid plan to use these tools. Upgrade to unlock them.</p><button class="btn" data-a="upgrade" data-v="pro">Get Pro EUR 19.99 / month</button><button class="btn g" data-a="upgrade" data-v="agency">Get Agency EUR 99 / month</button><button class="lk" data-a="back">Back to dashboard</button></div></div>';
+  m.innerHTML = '<div class="lockwrap"><div class="lockcard"><div class="li">\uD83D\uDD12</div><h2>Pro tools are locked</h2><p>You need a paid plan to use these tools. Upgrade to unlock them.</p><button class="btn" data-a="upgrade" data-v="pro">Get Pro \u00b7 EUR 19.99 / month</button><button class="btn g" data-a="upgrade" data-v="agency">Get Agency \u00b7 EUR 99 / month</button><button class="lk" data-a="back">Back to dashboard</button></div></div>';
 }
 const gpLocked = () => !!(S.user && S.user.planLimits && S.user.planLimits.proModules === false);
 function proOpen(t) {

@@ -65,11 +65,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
       if (own) {
         const live = ['active', 'trialing', 'past_due'].includes(sub.status);
         const priceId = sub.items && sub.items.data && sub.items.data[0] && sub.items.data[0].price && sub.items.data[0].price.id;
-<<<<<<< Updated upstream
-        const upd = live ? { subscriptionStatus: 'active', plan: planFromPrice(priceId) } : { subscriptionStatus: 'canceled', plan: 'free' };
-=======
         const upd = live ? { subscriptionStatus: 'active', plan: (sub.metadata && PLANS[sub.metadata.plan] ? sub.metadata.plan : planFromPrice(priceId)) } : { subscriptionStatus: 'canceled', plan: 'free' };
->>>>>>> Stashed changes
         await User.updateOne({ _id: own._id }, upd);
         await User.updateMany({ ownerId: own._id }, upd);
       }
@@ -531,11 +527,7 @@ async function sendMail({ to, subject, html, text }) {
 const FREE_OFFER_LIMIT = 3;
 const PLANS = {
   free:   { name: 'Free',   price: 0,  offers: 3,    sites: 1,  aiGen: 0,  aiGenPeriod: 'month', proModules: false, whiteLabel: false, customDomain: false, templateSites: false },
-<<<<<<< Updated upstream
-  pro:    { name: 'Pro',    price: 20, offers: 500,  sites: 3,  aiGen: 3,  aiGenPeriod: 'month', proModules: true, whiteLabel: false, customDomain: false, templateSites: false },
-=======
   pro:    { name: 'Pro',    price: 19.99, offers: 500,  sites: 3,  aiGen: 3,  aiGenPeriod: 'month', proModules: true, whiteLabel: false, customDomain: false, templateSites: false },
->>>>>>> Stashed changes
   agency: { name: 'Agency', price: 99, offers: 2000, sites: 20, aiGen: 50, aiGenPeriod: 'month', proModules: true, whiteLabel: true,  customDomain: true,  templateSites: true }
 };
 // Existing paying users without a plan field are treated as Pro.
@@ -3275,6 +3267,27 @@ ${layoutLookCss(layout)}`;
 }
 
 const sentTrack = (u) => u._track ? ` <a href="/track/${u._track}" style="color:var(--a);font-weight:700">Track your request &rarr;</a>` : '';
+
+const GX_SITE_CSS = `
+.bar{top:12px!important;left:14px!important;right:14px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:20px!important;background:rgba(14,11,28,.58)!important;backdrop-filter:blur(18px) saturate(1.4)!important;-webkit-backdrop-filter:blur(18px) saturate(1.4)!important;box-shadow:0 10px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)!important}
+.bar nav a{border-radius:12px!important;border-color:rgba(255,255,255,.14)!important;background:rgba(255,255,255,.04)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(700px 420px at 50% 0,color-mix(in srgb,var(--a) 30%,transparent),transparent 65%),radial-gradient(520px 320px at 85% 70%,color-mix(in srgb,var(--b) 22%,transparent),transparent 70%);pointer-events:none;z-index:0}
+.hero h1{background:linear-gradient(180deg,#fff 35%,color-mix(in srgb,var(--a) 35%,#d8d2ff));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800;letter-spacing:-.04em}
+.chip{border-radius:99px;background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.16)!important}
+.cta{border-radius:16px!important;box-shadow:0 10px 40px color-mix(in srgb,var(--a) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.35)!important;position:relative;overflow:hidden}
+.cta::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:gxShine 3.6s ease-in-out infinite}
+@keyframes gxShine{0%,60%{left:-60%}100%{left:130%}}
+.card{border-radius:26px!important;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025))!important}
+.card .tag{border-radius:12px!important}
+.glass{border-radius:26px!important}
+.gx-cur{position:fixed;left:0;top:0;width:460px;height:460px;margin:-230px 0 0 -230px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--a) 16%,transparent),transparent 65%);pointer-events:none;z-index:1}
+.gx-spk{position:fixed;width:7px;height:7px;border-radius:50%;pointer-events:none;z-index:99;background:var(--a);box-shadow:0 0 12px var(--a);animation:gxSpk .8s ease-out forwards}
+@keyframes gxSpk{to{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}
+@media(max-width:700px){.bar{top:8px!important;left:8px!important;right:8px!important;padding:10px 14px!important}}
+@media(prefers-reduced-motion:reduce){.cta::after,.gx-spk{animation:none!important}}
+`;
+const GX_SITE_JS = `(function(){try{var fine=matchMedia('(pointer:fine)').matches,rm=matchMedia('(prefers-reduced-motion:reduce)').matches;if(rm)return;if(fine){var g=document.createElement('div');g.className='gx-cur';document.body.appendChild(g);addEventListener('pointermove',function(e){g.style.transform='translate('+e.clientX+'px,'+e.clientY+'px)'},{passive:true});}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.cta,.more,button,[type=submit]');if(!t)return;for(var i=0;i<10;i++){var s=document.createElement('i');s.className='gx-spk';var a=Math.PI*2*i/10,d=26+Math.random()*34;s.style.left=e.clientX+'px';s.style.top=e.clientY+'px';s.style.setProperty('--dx',Math.cos(a)*d+'px');s.style.setProperty('--dy',Math.sin(a)*d+'px');document.body.appendChild(s);setTimeout(function(x){x.remove()}.bind(null,s),850);}});}catch(e){}})();`;
 function pageShell(user, { title, desc, body, cls, page }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
@@ -3289,7 +3302,7 @@ function pageShell(user, { title, desc, body, cls, page }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-${dFonts}${(page === 'home' && user.aiGenerated && user.aiPage && user.aiPage.html) ? `<style>${aiBaseCss(user)}</style><style>${user.aiPage.css || ''}</style>` : `<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style>`}<style id="go-design-css">${GD.css(D, page)}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+${dFonts}${(page === 'home' && user.aiGenerated && user.aiPage && user.aiPage.html) ? `<style>${aiBaseCss(user)}</style><style>${user.aiPage.css || ''}</style>` : `<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style><style id="gx-site">${GX_SITE_CSS}</style>`}<style id="go-design-css">${GD.css(D, page)}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
 ${GD.freeHtml(D, page)}
@@ -3297,7 +3310,7 @@ ${GD.freeHtml(D, page)}
 ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
 <script>(function(){var d=document.getElementById('bkDate');if(!d)return;var slug=document.body.getAttribute('data-slug'),box=document.getElementById('bkSlots'),hid=document.getElementById('bkStart'),off=document.getElementById('bkOffer');var t=new Date();d.min=t.toISOString().slice(0,10);function load(){hid.value='';if(!d.value)return;box.textContent='Loading...';fetch('/site/'+encodeURIComponent(slug)+'/slots?date='+d.value+(off&&off.value?'&offerId='+off.value:''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){box.textContent='';if(!j.slots||!j.slots.length){box.textContent='No free times on this day. Try another day.';return}j.slots.forEach(function(s){var b=document.createElement('button');b.type='button';b.textContent=s.time;b.style.cssText='padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font-weight:700;cursor:pointer';b.onclick=function(){hid.value=s.iso;[].forEach.call(box.children,function(x){x.style.background='transparent';x.style.color='inherit'});b.style.background='var(--a)';b.style.color='var(--on)'};box.appendChild(b)})}).catch(function(){box.textContent='Could not load times.'})}d.addEventListener('change',load);if(off)off.addEventListener('change',load);var f=d.form;if(f)f.addEventListener('submit',function(e){if(!hid.value){e.preventDefault();box.textContent='Please pick a time first.'}})})();</script>
 <script>(function(){var form=document.querySelector('#book form');if(form)form.addEventListener('submit',function(){var x=form.querySelector('[name="startsAt"]');if(x){var d=new Date(x.value);if(Number.isFinite(d.getTime())){x.type='hidden';x.value=d.toISOString()}}})})();</script>
-<script>${SITE_JS}</script>
+<script>${SITE_JS}</script>${studio ? '' : `<script>${GX_SITE_JS}</script>`}
 ${!user._studio && user.receptionist && user.receptionist.enabled && hasFeature(user, 'proModules') ? `<script>${aiWidgetJs(user.slug, user.receptionist.greeting)}</script>` : ''}${!user._studio && user.siteLang === 'bg' ? `<script>${SITE_I18N_JS}</script>` : ''}${!user._studio && user.siteLang && !/^(en|bg)(-|$)/.test(user.siteLang) ? `<script>${SITE_I18N_LOADER}</script>` : ''}
 ${studio ? '' : `<script>(function(){
   var slug = document.body.getAttribute('data-slug');
@@ -4888,17 +4901,12 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
     let user = await User.findById(req.user.id);
     if (user && user.ownerId) user = await User.findById(user.ownerId);
     const plan = (req.body && req.body.plan === 'agency') ? 'agency' : 'pro';
-<<<<<<< Updated upstream
-    const priceId = plan === 'agency' ? process.env.STRIPE_PRICE_AGENCY : process.env.STRIPE_PRICE_ID;
-    if (!priceId) { console.error('Checkout: missing Stripe price env for plan', plan); return res.status(503).json({ message: `The ${PLANS[plan].name} plan is not connected to Stripe yet. The site owner must set ${plan === 'agency' ? 'STRIPE_PRICE_AGENCY' : 'STRIPE_PRICE_ID'} on the server.` }); }
-=======
     if (!user) return res.status(404).json({ message: 'Account not found.' });
     if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ message: 'Payments are not configured. Add STRIPE_SECRET_KEY in Render environment settings.' });
     // Stripe creates the monthly price inside Checkout. No STRIPE_PRICE_ID needed.
     // This also guarantees the charged amount matches the displayed plan price.
     const unitAmount = plan === 'agency' ? 9900 : 1999;
     const planName = plan === 'agency' ? 'GoldOffer Agency' : 'GoldOffer Pro';
->>>>>>> Stashed changes
     if (user.subscriptionStatus === 'active' && user.stripeCustomerId) {
       const portal = await stripe.billingPortal.sessions.create({ customer: user.stripeCustomerId, return_url: `${PUBLIC_BASE}/dashboard` });
       return res.json({ url: portal.url, portal: true });
@@ -4906,11 +4914,7 @@ app.post('/api/stripe/create-checkout', authenticateToken, async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       metadata: { plan },
-<<<<<<< Updated upstream
-      line_items: [{ price: priceId, quantity: 1 }],
-=======
       line_items: [{ price_data: { currency: 'eur', unit_amount: unitAmount, recurring: { interval: 'month' }, product_data: { name: planName } }, quantity: 1 }],
->>>>>>> Stashed changes
       allow_promotion_codes: true,
       client_reference_id: String(user._id),
       customer_email: user.email,
