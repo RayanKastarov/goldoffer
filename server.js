@@ -3302,7 +3302,25 @@ function pageShell(user, { title, desc, body, cls, page }) {
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=${f.gf}&display=swap" rel="stylesheet">
-${dFonts}${(page === 'home' && user.aiGenerated && user.aiPage && user.aiPage.html) ? `<style>${aiBaseCss(user)}</style><style>${user.aiPage.css || ''}</style>` : `<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style><style id="gx-site">${GX_SITE_CSS}</style>`}<style id="go-design-css">${GD.css(D, page)}</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
+${dFonts}
+
+${(page === 'home' && user.aiGenerated && user.aiPage && user.aiPage.html) ? `<style>${aiBaseCss(user)}</style><style>${user.aiPage.css || ''}</style>` : `<style>${siteCss(t, f)}</style><style>${layoutGlobalCss(safeLayout(user.layout))}</style><style id="gx-site">${GX_SITE_CSS}</style>`}<style id="go-design-css">${GD.css(D, page)}</style><style id="nv-storefront-rework">
+:root{--nv2:#294da9;--nv2-ink:#17233a}
+body:not(.go-site-owner){font-family:'Inter',system-ui,sans-serif;letter-spacing:-.012em}
+body .bar,body .bar nav{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+body .bar{border-radius:0!important;border-bottom:1px solid rgba(29,46,75,.12)!important;box-shadow:0 8px 26px #152a4a14!important}
+body .hero,body .mast,body .intro{isolation:isolate}
+body .hero h1,body .mast h1,body .intro h1{letter-spacing:-.07em!important;font-weight:800!important;line-height:1.05!important}
+body .hero p,body .mast p,body .intro p{line-height:1.65}
+body .card{border-radius:10px!important;box-shadow:0 12px 40px rgba(16,27,42,.1)!important;transition:transform .3s cubic-bezier(.2,.7,.3,1),box-shadow .3s!important;overflow:hidden}
+body .card:hover{transform:translateY(-5px)!important;box-shadow:0 20px 55px rgba(16,27,42,.16)!important}
+body .card .ph,body .card img{transition:transform .8s cubic-bezier(.2,.6,.2,1)}body .card:hover .ph,body .card:hover img{transform:scale(1.035)}
+body a.cta,body button.cta{border-radius:8px!important;letter-spacing:0!important;box-shadow:0 10px 28px #0d182b24}
+body #goOfferSearch{border-radius:8px!important;min-height:48px;box-shadow:0 12px 25px #12274712}
+body .count{border-radius:5px!important;font-weight:800!important;letter-spacing:.035em!important}
+body #goOfferGrid{gap:22px!important}
+@media(prefers-reduced-motion:reduce){body .card,body .card .ph,body .card img{transition:none!important}}
+</style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
 ${GD.freeHtml(D, page)}
