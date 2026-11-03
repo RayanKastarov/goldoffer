@@ -218,6 +218,13 @@ const ImageSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', UserSchema);
 const Image = mongoose.model('Image', ImageSchema);
+OfferSchema.pre('save', async function () { this.$locals.goNew = this.isNew; });
+OfferSchema.post('save', function (doc) {
+  if (doc.$locals && doc.$locals.goNew) {
+    const k = 'stock.' + String(doc._id);
+    ShopSetting.updateOne({ sellerId: doc.userId }, { $set: { [k]: 10, updatedAt: new Date() } }, { upsert: true }).catch(() => {});
+  }
+});
 const Offer = mongoose.model('Offer', OfferSchema);
 const Order = mongoose.model('Order', OrderSchema);
 const Review = mongoose.model('Review', ReviewSchema);
@@ -3338,9 +3345,11 @@ body .go-owner-banner{background:rgba(255,255,255,.97)!important;color:#223955!i
 body .go-owner-banner a{color:#2467d6!important}
 body .go-owner-landing,body .go-owner-landing h1,body .go-owner-landing p{color:#25405f!important}
 body .go-owner-landing iframe{background:#fff!important;border-color:#d9e4f0!important}
-body .go-stock-badge{position:absolute;z-index:5;left:12px;bottom:12px;top:auto!important;display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:100px!important;background:#e8f9f0!important;color:#087b45!important;border:1px solid #a9e5c4!important;box-shadow:0 5px 15px rgba(8,123,69,.10)!important;font:800 11px/1.2 system-ui;letter-spacing:.06em!important;white-space:nowrap}
+body .go-stock-badge{position:absolute;z-index:5;left:12px;top:12px;bottom:auto!important;display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:100px!important;background:#e8f9f0!important;color:#087b45!important;border:1px solid #a9e5c4!important;box-shadow:0 5px 15px rgba(8,123,69,.10)!important;font:800 11px/1.2 system-ui;letter-spacing:.06em!important;white-space:nowrap}
 body .go-stock-badge::before{content:'';width:7px;height:7px;background:#19ad65;border-radius:50%}
-body .go-stock-badge.is-out{background:#fff0f0!important;color:#bd3144!important;border-color:#f3bdc4!important}
+body .go-stock-badge.is-out{background:#d7263d!important;color:#fff!important;border-color:#d7263d!important}
+body .go-stock-badge.is-out::before{background:#fff!important}
+body .go-stock-badge ~ .count{top:50px!important}
 body .go-stock-badge.is-out::before{background:#e5455d}
 body .go-detail-stock{display:inline-flex;align-items:center;gap:7px;background:#e8f9f0!important;color:#087b45!important;border:1px solid #a9e5c4;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:800;margin-bottom:15px}
 body .go-detail-stock.is-out{background:#fff0f0!important;color:#bd3144!important;border-color:#f3bdc4!important}
@@ -3480,6 +3489,7 @@ ${studio ? '' : `<script>(function(){
       }
     }).catch(function(){});
 })();</script>`}
+<script>(function(){function parse(c){if(!c)return null;var i=c.indexOf('(');if(i<0)return null;var p=c.slice(i+1,c.indexOf(')',i)).split('/').join(',').split(' ').join(',').split(',').filter(Boolean).map(parseFloat);if(p.length<3||isNaN(p[0]))return null;return{r:p[0],g:p[1],b:p[2],a:p.length>3&&!isNaN(p[3])?p[3]:1}}function lum(c){function f(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b)}function ratio(a,b){var x=lum(a),y=lum(b);if(x<y){var t=x;x=y;y=t}return(x+.05)/(y+.05)}function over(t,b){var a=t.a;return{r:t.r*a+b.r*(1-a),g:t.g*a+b.g*(1-a),b:t.b*a+b.b*(1-a),a:1}}var cache,fixed=[];function gradColors(bi){var out=[],i=0;while(true){i=bi.indexOf('rgb',i);if(i<0)break;var j=bi.indexOf(')',i);out.push(parse(bi.slice(i,j+1)));i=j+1}return out.filter(Boolean)}function bgOf(el){if(cache.has(el))return cache.get(el);var layers=[],n=el,img=false;while(n&&n.nodeType===1){var cs=getComputedStyle(n),bi=cs.backgroundImage;if(bi&&bi!=='none'){if(bi.indexOf('url(')>-1){img=true;break}var g=gradColors(bi);if(g.length){var s={r:0,g:0,b:0,a:1};g.forEach(function(c){s.r+=c.r;s.g+=c.g;s.b+=c.b;s.a=Math.min(s.a,c.a)});s.r/=g.length;s.g/=g.length;s.b/=g.length;layers.push(s);if(s.a>=.95)break}}var c=parse(cs.backgroundColor);if(c&&c.a>0){layers.push(c);if(c.a>=.95)break}n=n.parentElement}var res=null;if(!img){var base={r:255,g:255,b:255,a:1};for(var i=layers.length-1;i>=0;i--)base=over(layers[i],base);res=base}cache.set(el,res);return res}function run(){cache=new Map();fixed.forEach(function(e){e.style.removeProperty('color')});fixed=[];var all=document.body.querySelectorAll('*');for(var k=0;k<all.length;k++){var el=all[k],tag=el.tagName;if(tag==='SCRIPT'||tag==='STYLE'||tag==='svg'||tag==='path'||tag==='IMG'||tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.closest('.go-owner-banner'))continue;var has=false;for(var c=el.firstChild;c;c=c.nextSibling){if(c.nodeType===3&&c.nodeValue.trim().length>1){has=true;break}}if(!has)continue;var cs=getComputedStyle(el);if(cs.visibility==='hidden'||cs.display==='none')continue;if(cs.webkitTextFillColor&&cs.webkitTextFillColor.indexOf('rgba(0, 0, 0, 0)')>-1)continue;var fg=parse(cs.color);if(!fg||fg.a<.25)continue;var bg=bgOf(el);if(!bg)continue;if(ratio(over(fg,bg),bg)>=3.2)continue;el.style.setProperty('color',lum(bg)>.42?'#0b1020':'#ffffff','important');fixed.push(el)}}var t,mo=new MutationObserver(function(){clearTimeout(t);t=setTimeout(function(){mo.disconnect();try{run()}catch(e){}obs()},250)});function obs(){mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']})}function init(){try{run()}catch(e){}obs()}if(document.readyState==='complete')setTimeout(init,100);else window.addEventListener('load',function(){setTimeout(init,150)});})();</script>
 <style>.go-owner-banner{position:fixed;z-index:80;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:11px 16px;border-radius:13px;background:rgba(15,21,32,.96);border:1px solid rgba(255,255,255,.15);color:#ecf0f7;box-shadow:0 16px 40px #0008;font:600 13px system-ui}.go-owner-banner a{color:var(--a);text-decoration:none}body.go-site-owner,body.go-site-owner.mpage{overflow-y:auto!important;height:auto!important}.go-owner-landing{padding-bottom:96px!important;max-width:1180px!important;min-height:50vh;margin:115px auto 45px;padding:32px 24px;text-align:center}.go-owner-landing h1{font-size:clamp(30px,5vw,52px)}.go-owner-landing p{color:var(--soft);margin:18px 0 25px}.go-owner-landing iframe{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:1px solid var(--line);border-radius:18px;background:#080c13}.go-owner-landing{max-width:1200px;text-align:left}.go-owner-landing a{display:inline-block;border-radius:12px;padding:13px 22px;background:var(--a);color:var(--on);font-weight:700;text-decoration:none}@media(max-width:650px){.go-owner-banner{font-size:11px;gap:8px;padding:10px}}</style>
 </body></html>`;
 }
@@ -4448,9 +4458,21 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
       orderAmount = Math.max(0, Math.round((orderAmount - discount) * 100) / 100); couponCode = cp.code;
     }
     const trackToken = crypto.randomBytes(12).toString('hex');
+    let stockTaken = false;
+    try {
+      const invS = await ShopSetting.findOne({ sellerId: user._id }).select('stock').lean();
+      const sm = invS && invS.stock ? invS.stock : null, idS = String(offer._id);
+      const trackedS = sm ? (typeof sm.has === 'function' ? sm.has(idS) : Object.prototype.hasOwnProperty.call(sm, idS)) : false;
+      if (trackedS) {
+        const keyS = 'stock.' + idS;
+        const got = await ShopSetting.findOneAndUpdate({ sellerId: user._id, [keyS]: { $gte: 1 } }, { $inc: { [keyS]: -1 } });
+        if (!got) { await rollback(); return res.status(409).send('This offer is currently sold out. Please contact the seller.'); }
+        stockTaken = true;
+      }
+    } catch (stockErr) { await rollback(); throw stockErr; }
     let newOrder;
     try { newOrder = await Order.create({
-      variant: variantName, coupon: couponCode, discount,
+      stockApplied: stockTaken, variant: variantName, coupon: couponCode, discount,
       trackToken, history: [{ status: 'Pending', at: new Date() }],
       userId: user._id, offerId: offer._id, offerTitle: offer.title, amount: orderAmount,
       customerName: String(req.body.customerName || '').slice(0, 80),
@@ -4458,7 +4480,7 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
       contacts: parsed.contacts,
       note: String(req.body.note || '').replace(/\r/g, '').trim().slice(0, 1000),
       status: 'Pending'
-    }); } catch (createErr) { await rollback(); throw createErr; }
+    }); } catch (createErr) { if (stockTaken) { try { await ShopSetting.updateOne({ sellerId: user._id }, { $inc: { ['stock.' + String(offer._id)]: 1 } }); } catch (e9) {} } await rollback(); throw createErr; }
     void runAutomations(user._id, 'order.created', { ref: String(newOrder._id), customer: String(req.body.customerName || '').slice(0, 80), contact: parsed.text, offer: offer.title, offerId: offer._id, amount: orderAmount });
     await pushNote(user._id, 'order', String(newOrder._id), 'New request', `${String(req.body.customerName || 'A customer').slice(0, 60)} · ${offer.title}`, '/orders');
     const mailC = (parsed.contacts || []).find(c => c.type === 'email' && isEmail(c.value));
@@ -4711,6 +4733,183 @@ app.delete('/api/my-sites/:id', authenticateToken, async (req, res) => {
   } catch (e) { res.status(500).json({ message: 'Could not delete the site.' }); }
 });
 
+// ---------- Full-stack code export (frontend + Express backend) ----------
+const GO_FS_SERVER = String.raw`const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const app = express();
+app.use(express.json({ limit: '50kb' }));
+const DATA = path.join(__dirname, 'data.json');
+const ADMIN_KEY = process.env.ADMIN_KEY || crypto.randomBytes(8).toString('hex');
+const SEED = require('./offers.json');
+function save(db) { fs.writeFileSync(DATA, JSON.stringify(db, null, 2)); }
+function load() {
+  try { return JSON.parse(fs.readFileSync(DATA, 'utf8')); }
+  catch (e) {
+    var db = { offers: SEED.map(function (o, i) { return { id: 'o' + (i + 1), title: o.title, description: o.description, price: o.price, stock: 10 }; }), orders: [], messages: [] };
+    save(db); return db;
+  }
+}
+function clean(v, n) { return String(v || '').replace(/[<>]/g, '').trim().slice(0, n); }
+var hits = {};
+function limit(req, res, next) {
+  var k = req.ip + req.path, now = Date.now();
+  hits[k] = (hits[k] || []).filter(function (t) { return now - t < 60000; });
+  if (hits[k].length >= 20) return res.status(429).json({ error: 'Too many requests, try again in a minute.' });
+  hits[k].push(now); next();
+}
+function admin(req, res, next) {
+  if (req.get('x-admin-key') !== ADMIN_KEY) return res.status(401).json({ error: 'Admin key required' });
+  next();
+}
+
+// Public API
+app.get('/api/offers', function (req, res) { res.json(load().offers); });
+
+app.post('/api/orders', limit, function (req, res) {
+  var db = load();
+  var o = db.offers.find(function (x) { return x.id === req.body.offerId; });
+  if (!o) return res.status(404).json({ error: 'Offer not found' });
+  var qty = Math.max(1, Math.min(10, parseInt(req.body.quantity, 10) || 1));
+  var name = clean(req.body.name, 80), contact = clean(req.body.contact, 120);
+  if (!name || !contact) return res.status(400).json({ error: 'Name and contact are required' });
+  if (o.stock < qty) return res.status(409).json({ error: o.stock <= 0 ? 'Out of stock' : 'Only ' + o.stock + ' left', stock: o.stock });
+  o.stock -= qty; // stock drops automatically when someone buys
+  db.orders.push({ id: crypto.randomBytes(5).toString('hex'), offerId: o.id, offer: o.title, quantity: qty, name: name, contact: contact, note: clean(req.body.note, 500), status: 'pending', at: new Date().toISOString() });
+  save(db);
+  res.json({ ok: true, stock: o.stock });
+});
+
+app.post('/api/messages', limit, function (req, res) {
+  var db = load();
+  var name = clean(req.body.name, 80), text = clean(req.body.text, 1500);
+  if (!name || !text) return res.status(400).json({ error: 'Name and message are required' });
+  db.messages.push({ id: crypto.randomBytes(5).toString('hex'), name: name, contact: clean(req.body.contact, 120), text: text, at: new Date().toISOString() });
+  save(db);
+  res.json({ ok: true });
+});
+
+// Owner API (send the header x-admin-key)
+app.get('/api/admin/orders', admin, function (req, res) { res.json(load().orders); });
+app.get('/api/admin/messages', admin, function (req, res) { res.json(load().messages); });
+app.put('/api/admin/offers/:id/stock', admin, function (req, res) {
+  var db = load(), o = db.offers.find(function (x) { return x.id === req.params.id; });
+  if (!o) return res.status(404).json({ error: 'Offer not found' });
+  o.stock = Math.max(0, parseInt(req.body.stock, 10) || 0);
+  save(db); res.json(o);
+});
+app.put('/api/admin/orders/:id', admin, function (req, res) {
+  var db = load(), ord = db.orders.find(function (x) { return x.id === req.params.id; });
+  if (!ord) return res.status(404).json({ error: 'Order not found' });
+  var status = String(req.body.status || '');
+  if (['pending', 'completed', 'cancelled'].indexOf(status) < 0) return res.status(400).json({ error: 'Bad status' });
+  if (status === 'cancelled' && ord.status !== 'cancelled') {
+    var o = db.offers.find(function (x) { return x.id === ord.offerId; });
+    if (o) o.stock += ord.quantity; // a cancelled order puts the items back
+  }
+  ord.status = status; save(db); res.json(ord);
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
+var PORT = process.env.PORT || 3000;
+app.listen(PORT, function () {
+  console.log('Website: http://localhost:' + PORT);
+  console.log('Admin key (header x-admin-key): ' + ADMIN_KEY);
+});
+`;
+const GO_FS_CLIENT = String.raw`(function () {
+  var grid = document.getElementById('offerGrid');
+  var dlg = document.getElementById('orderDialog'), cur = null;
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function render(list) {
+    if (!grid) return;
+    grid.innerHTML = '';
+    list.forEach(function (o) {
+      var out = o.stock <= 0, card = el('article', 'gf-card');
+      card.appendChild(el('span', 'gf-badge' + (out ? ' out' : ''), out ? 'OUT OF STOCK' : 'IN STOCK'));
+      if (o.price > 0) card.appendChild(el('span', 'gf-price', '€' + Number(o.price).toFixed(2)));
+      var body = el('div', 'gf-body');
+      body.appendChild(el('h3', '', o.title));
+      if (o.description) body.appendChild(el('p', '', o.description));
+      body.appendChild(el('small', 'gf-left', out ? 'Currently unavailable' : o.stock + ' left'));
+      var b = el('button', 'gf-btn', out ? 'Sold out' : 'Order');
+      b.type = 'button'; b.disabled = out;
+      b.addEventListener('click', function () { openOrder(o); });
+      body.appendChild(b); card.appendChild(body); grid.appendChild(card);
+    });
+  }
+  function load() { fetch('/api/offers').then(function (r) { return r.json(); }).then(render).catch(function () {}); }
+  function openOrder(o) {
+    cur = o;
+    document.getElementById('orderTitle').textContent = o.title;
+    document.getElementById('orderMsg').textContent = '';
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  document.getElementById('orderForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!cur) return;
+    var f = e.target, msg = document.getElementById('orderMsg');
+    fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offerId: cur.id, quantity: f.elements.quantity.value, name: f.elements.customer.value, contact: f.elements.contact.value, note: f.elements.note.value }) })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (x) {
+        if (x.ok) { msg.textContent = 'Thank you! Your request was sent.'; f.reset(); load(); setTimeout(function () { dlg.close(); }, 1400); }
+        else { msg.textContent = x.d.error || 'Something went wrong'; load(); }
+      })
+      .catch(function () { msg.textContent = 'Network error'; });
+  });
+  document.getElementById('orderClose').addEventListener('click', function () { dlg.close(); });
+  var cf = document.getElementById('contactForm');
+  if (cf) cf.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var m = document.getElementById('contactMsg');
+    fetch('/api/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: cf.elements.who.value, contact: cf.elements.how.value, text: cf.elements.text.value }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { m.textContent = d.ok ? 'Message sent. Thank you!' : (d.error || 'Error'); if (d.ok) cf.reset(); })
+      .catch(function () { m.textContent = 'Network error'; });
+  });
+  load();
+})();
+`;
+const GO_FS_CSS = String.raw`*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.55}
+main,section{max-width:1080px;margin:auto;padding:32px 20px}img{max-width:100%}
+.gf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+.gf-card{position:relative;background:var(--panel);border:1px solid rgba(127,127,127,.25);border-radius:12px;overflow:hidden;padding-top:46px}
+.gf-badge{position:absolute;top:12px;left:12px;font-size:.72rem;font-weight:800;letter-spacing:.04em;padding:5px 10px;border-radius:6px;background:#e8f9f0;color:#087b45;border:1px solid #b6e8cf}
+.gf-badge.out{background:#d7263d;color:#fff;border-color:#d7263d}
+.gf-price{position:absolute;top:12px;right:12px;font-weight:800;color:var(--a)}
+.gf-body{padding:14px 16px 18px}.gf-body h3{margin:0 0 6px}.gf-body p{margin:0 0 10px;opacity:.8}.gf-left{display:block;margin-bottom:12px;opacity:.75}
+.gf-btn{background:var(--a);color:#fff;border:0;border-radius:8px;padding:11px 18px;font-weight:700;cursor:pointer;font-size:1rem}.gf-btn:disabled{opacity:.5;cursor:not-allowed}.gf-btn.alt{background:transparent;color:inherit;border:1px solid rgba(127,127,127,.4)}
+.gf-form,.gf-dialog form{display:grid;gap:10px;max-width:520px}.gf-form input,.gf-form textarea,.gf-dialog input,.gf-dialog textarea{padding:11px;border-radius:8px;border:1px solid rgba(127,127,127,.4);font:inherit;background:#fff;color:#111}
+.gf-dialog{border:0;border-radius:14px;padding:22px;background:var(--panel);color:var(--text);width:min(92vw,460px)}.gf-dialog::backdrop{background:rgba(0,0,0,.55)}
+`;
+function goFullstackFiles(o) {
+  const name = cleanStr(o.name, 80) || 'My website';
+  const faqs = (Array.isArray(o.faq) ? o.faq : []).slice(0, 6).map(f => '<details><summary>' + esc(cleanStr(f && f.question, 160)) + '</summary><p>' + esc(cleanStr(f && f.answer, 500)) + '</p></details>').join('');
+  const offersSec = '<section id="offers"><h2>Offers</h2><div id="offerGrid" class="gf-grid"></div></section>';
+  const contactSec = '<section id="contact"><h2>Contact</h2><form id="contactForm" class="gf-form"><input name="who" placeholder="Your name" required maxlength="80"><input name="how" placeholder="Email or phone" maxlength="120"><textarea name="text" rows="4" placeholder="Your message" required maxlength="1500"></textarea><button class="gf-btn" type="submit">Send message</button><p id="contactMsg" role="status"></p></form></section>';
+  let page = o.page || ('<main><h1>' + esc(name) + '</h1>{{OFFERS}}{{FAQ}}{{CONTACT}}</main>');
+  const hadO = page.includes('{{OFFERS}}'), hadC = page.includes('{{CONTACT}}');
+  page = page.split('{{OFFERS}}').join(offersSec).split('{{FAQ}}').join(faqs).split('{{CONTACT}}').join(contactSec);
+  if (!hadO) page += offersSec;
+  if (!hadC) page += contactSec;
+  const dialog = '<dialog id="orderDialog" class="gf-dialog"><form id="orderForm"><h3 id="orderTitle"></h3><input name="customer" placeholder="Your name" required maxlength="80"><input name="contact" placeholder="Email or phone" required maxlength="120"><input name="quantity" type="number" min="1" max="10" value="1" aria-label="Quantity"><textarea name="note" rows="3" placeholder="Note (optional)" maxlength="500"></textarea><button class="gf-btn" type="submit">Send request</button><button class="gf-btn alt" type="button" id="orderClose">Cancel</button><p id="orderMsg" role="status"></p></form></dialog>';
+  const html = '<!doctype html><html lang="' + esc(o.lang || 'en') + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(name) + '</title><style>' + o.cssVars + GO_FS_CSS + (o.pageCss || '') + '</style></head><body>' + page + dialog + '<script src="/app.js"></script></body></html>';
+  const seed = (Array.isArray(o.offers) ? o.offers : []).slice(0, 6).map(x => ({ title: cleanStr(x && x.title, 120), description: cleanStr(x && x.description, 400), price: Math.max(0, Number(x && x.price) || 0) })).filter(x => x.title);
+  const readme = '# ' + name + '\n\nFull-stack website generated by GoldOffer Studio (frontend + backend).\n\n## Run\n\n1. Install Node.js 18 or newer.\n2. In this folder run: npm install\n3. Start: npm start\n4. Open http://localhost:3000\n\nThe admin key is printed in the terminal. Set your own with the ADMIN_KEY environment variable.\n\n## What is included\n\n- public/index.html + public/app.js: the website (offers, order form, contact form)\n- server.js: Express backend that stores offers, orders and messages in data.json\n- New offers start with 10 in stock. Stock drops automatically when someone orders and a cancelled order puts it back.\n- GET /api/offers, POST /api/orders, POST /api/messages (public)\n- GET /api/admin/orders, GET /api/admin/messages, PUT /api/admin/orders/:id, PUT /api/admin/offers/:id/stock (send header x-admin-key)\n';
+  return [
+    { name: 'package.json', content: JSON.stringify({ name: 'goldoffer-website', version: '1.0.0', private: true, scripts: { start: 'node server.js' }, dependencies: { express: '^4.19.2' } }, null, 2) },
+    { name: 'server.js', content: GO_FS_SERVER },
+    { name: 'offers.json', content: JSON.stringify(seed, null, 2) },
+    { name: 'public/index.html', content: html },
+    { name: 'public/app.js', content: GO_FS_CLIENT },
+    { name: '.gitignore', content: 'node_modules\ndata.json\n' },
+    { name: 'README.md', content: readme }
+  ];
+}
+
 app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
   // If the browser cancels a generation, never consume its link slot at the end.
   // A completed site remains accessible in My websites even if its response was missed.
@@ -4786,6 +4985,7 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
       const snip = (s, prefix) => ({ output:'code', codeLanguage:format, html:s, language:lang, fileName:prefix });
       const component = 'import React from "react";\n\nexport default function GoldOfferWebsite() {\n  const page = '+jsString(page)+';\n  const css = '+jsString(pageCss)+';\n  return <><style>{css}</style><main dangerouslySetInnerHTML={{ __html: page }} /></>;\n}\n';
       switch(format) {
+        case 'fullstack': return res.json({ output: 'code', codeLanguage: 'fullstack', language: lang, fileName: 'goldoffer-fullstack.zip', files: goFullstackFiles({ name, lang, page: cleanHtml, offers, faq: j.faq, cssVars, pageCss: (aiPage && aiPage.css) || '' }) });
         case 'react': return res.json(snip(component,'GoldOfferWebsite.jsx'));
         case 'react-ts': return res.json(snip(component.replace('export default function GoldOfferWebsite() {','export default function GoldOfferWebsite(): React.JSX.Element {'),'GoldOfferWebsite.tsx'));
         case 'vue': {
