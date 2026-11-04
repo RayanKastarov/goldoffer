@@ -1540,6 +1540,37 @@ body[data-page="code"] #v-code .ce{height:100dvh!important;padding:0!important;b
 #v-code .ce-prev{border-left:1px solid #333!important}
 @media(max-width:720px){body[data-page="code"] #v-code .ce{height:100dvh!important}#v-code .ce-side{width:115px!important;min-width:95px!important}#v-code .ce-sidehead{flex-direction:column!important;gap:5px!important;align-items:flex-start!important}#v-code .go-term{flex-basis:120px!important}#v-code .ce-ai{flex-wrap:wrap!important}#v-code .ce-ai input{flex-basis:100%!important}#v-code .ce-editor-empty p{font-size:11px}}
 
+
+/* GOLDOffer 2026-11-04: visible code + dark terminal and AI inputs.
+   The earlier fallback textarea was transparent while its opaque background
+   covered the highlighting layer. Keep readable plain code until Monaco boots. */
+body[data-page="code"] #v-code .ce-editor:not(.go-monaco-ready) .ce-hl{display:none!important}
+body[data-page="code"] #v-code .ce-editor:not(.go-monaco-ready) .ce-ta{
+  background:#111111!important;color:#d4d4d4!important;
+  -webkit-text-fill-color:#d4d4d4!important;caret-color:#fff!important;
+  opacity:1!important;visibility:visible!important;z-index:2!important;
+}
+body[data-page="code"] #v-code .ce-editor:not(.go-monaco-ready) .ce-ta::selection{
+  background:#264f78!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+}
+body[data-page="code"] #v-code .go-term-input input#goTermIn,
+body[data-page="code"] #v-code .ce-ai input#ceAiIn{
+  appearance:none!important;-webkit-appearance:none!important;
+  background-color:#1b1b1b!important;background-image:none!important;
+  color:#ededed!important;-webkit-text-fill-color:#ededed!important;
+  border:1px solid #383838!important;border-radius:5px!important;
+  box-shadow:none!important;opacity:1!important;
+  outline:none!important;padding:9px 12px!important;
+  color-scheme:dark!important;
+}
+body[data-page="code"] #v-code input#goTermIn::placeholder,
+body[data-page="code"] #v-code input#ceAiIn::placeholder{
+  color:#949494!important;-webkit-text-fill-color:#949494!important;opacity:1!important;
+}
+body[data-page="code"] #v-code input#goTermIn:focus,
+body[data-page="code"] #v-code input#ceAiIn:focus{border-color:#1875bb!important;box-shadow:0 0 0 1px #1875bb!important}
+body[data-page="code"] #v-code .ce-ai,
+body[data-page="code"] #v-code .go-term-input{background:#141414!important}
 </style>
 </head>
 <body class="theme-neon-blue font-sans" id="top" data-page="home">
@@ -4832,7 +4863,7 @@ var goAutoSaveTimer=null;window.goPlanCodeSave=function goPlanCodeSave(){clearTi
    const target=document.getElementById('goMonaco');if(!target)return;
    loading=true;state('Monaco loading…');
    const script=document.createElement('script');script.src=BASE+'/loader.js';script.async=true;
-   script.onerror=function(){state('Text editor active · Monaco unavailable');loading=false};
+   script.onerror=function(){state('Text editor ready · Monaco unavailable');loading=false};
    script.onload=function(){
     try{const amd=window.require;if(!amd||!amd.config)throw Error('AMD loader unavailable');
       window.MonacoEnvironment={getWorkerUrl:function(){const txt="self.MonacoEnvironment={baseUrl:'"+BASE.slice(0,-2)+"'};importScripts('"+BASE+"/base/worker/workerMain.js');";return URL.createObjectURL(new Blob([txt],{type:'text/javascript'}))}};
@@ -4843,10 +4874,11 @@ var goAutoSaveTimer=null;window.goPlanCodeSave=function goPlanCodeSave(){clearTi
         editor.onDidChangeModelContent(function(){if(ignore||!CE.active||!CE.files.hasOwnProperty(CE.active))return;const v=editor.getValue();CE.files[CE.active]=v;CE.dirty=true;if(!CE.mod[CE.active]){CE.mod[CE.active]=true;ceTabs()}ceStatus();document.getElementById('ceTa').value=v;if(typeof window.goPlanCodeSave==='function')window.goPlanCodeSave()});
         editor.onDidChangeCursorPosition(function(ev){const el=document.getElementById('ceStat');if(el)el.textContent='Ln '+ev.position.lineNumber+', Col '+ev.position.column});
         editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyS,function(){ceSave()});
-        }catch(e){state('Fallback editor · '+e.message)}} ,function(){state('Fallback editor · Monaco blocked')});
-    }catch(e){state('Text editor active · '+e.message);console.warn(e)}
+        }catch(e){loading=false;state('Text editor ready · '+e.message);console.warn(e)}} ,function(err){loading=false;state('Text editor ready · Monaco blocked');console.warn('Monaco AMD failed',err)});
+    }catch(e){loading=false;state('Text editor ready · '+e.message);console.warn(e)}
    };
    document.head.appendChild(script);
+   setTimeout(function(){if(!ready&&loading){loading=false;state('Text editor ready · Monaco not responding');}},10000);
  }
  // Boot when first opening Code, not on every other page.
  const oldCeOpen=window.ceOpen;

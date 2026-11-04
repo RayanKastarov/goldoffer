@@ -5675,7 +5675,7 @@ app.get(PAGE_ROUTES, (req, res) => {
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
     "worker-src 'self' blob:",
     "script-src-attr 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' data: https: blob:",
     "media-src 'self'",
