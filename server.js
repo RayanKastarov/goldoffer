@@ -5043,6 +5043,12 @@ app.put('/api/brochure', authenticateToken, async (req, res) => {
   } catch (e) { res.status(500).json({ message: 'Could not save the brochure' }); }
 });
 
+// Deployment diagnostic: confirms this server release includes both feature APIs.
+app.get('/api/goldoffer-features', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ service: 'GoldOffer', featureApiVersion: '2026-11-04-fix', brochure: true, codeProjects: true });
+});
+
 // ---------- Code editor: projects (folders of files) saved per account ----------
 function goCleanPath(p) {
   let x = String(p || '').replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+/g, '/');
