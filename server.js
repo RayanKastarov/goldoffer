@@ -160,6 +160,7 @@ const UserSchema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId, index: true }, // set for extra websites created under a main account
   aiGenerated: { type: Boolean, default: false },
   receptionist: { type: mongoose.Schema.Types.Mixed },
+  brochure: { type: mongoose.Schema.Types.Mixed },
   aiPage: { type: mongoose.Schema.Types.Mixed }, // fully AI-written page: { html, css, palette }
   resetTokenHash: String,
   resetExpires: Date,
@@ -218,6 +219,15 @@ const ImageSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', UserSchema);
 const Image = mongoose.model('Image', ImageSchema);
+const CodeProjectSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, index: true },
+  name: { type: String, maxlength: 80, default: 'New project' },
+  files: { type: [{ path: String, content: String, _id: false }], default: [] },
+  source: { type: String, default: 'manual' },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+const CodeProject = mongoose.model('CodeProject', CodeProjectSchema);
 OfferSchema.pre('save', async function () { this.$locals.goNew = this.isNew; });
 OfferSchema.post('save', function (doc) {
   if (doc.$locals && doc.$locals.goNew) {
@@ -3823,7 +3833,7 @@ function siteBar(user, kind) {
   const first = kind === 'home'
     ? '<a class="hide-m" href="#offers">Offers</a><a class="hide-m" href="#about">About</a>'
     : `<a class="hide-m" href="/site/${s}#offers">All offers</a>`;
-  return `<header class="bar"><b>${esc(user.siteName)}</b><nav>${first}<a class="hide-m" href="/site/${s}/profile">Seller profile</a><a class="navi" href="/site/${s}/favorites" aria-label="Saved offers">${HEART_PATH}<span class="lab">Saved</span><span class="nbadge" id="favCount"></span></a><a class="navi" href="/site/${s}/messages" aria-label="Messages">${MSG_SVG}<span class="lab">Messages</span><span class="nbadge" id="msgBadge"></span></a></nav></header>`;
+  return `<header class="bar"><b>${esc(user.siteName)}</b><nav>${first}${(user.brochure && user.brochure.enabled) ? '<a class="hide-m" href="/site/' + s + '/brochure">Brochure</a>' : ''}<a class="hide-m" href="/site/${s}/profile">Seller profile</a><a class="navi" href="/site/${s}/favorites" aria-label="Saved offers">${HEART_PATH}<span class="lab">Saved</span><span class="nbadge" id="favCount"></span></a><a class="navi" href="/site/${s}/messages" aria-label="Messages">${MSG_SVG}<span class="lab">Messages</span><span class="nbadge" id="msgBadge"></span></a></nav></header>`;
 }
 
 // ---------- Messages page (opens from the Messages button): list of chats + the open chat, photos/files and voice calls ----------
@@ -4910,6 +4920,202 @@ function goFullstackFiles(o) {
   ];
 }
 
+// ---------- Brochure: a flip-book of up to 15 promo offers ----------
+function brochureOffers(user, offers) {
+  const cfg = user.brochure || {};
+  const byId = new Map(offers.map(o => [String(o._id), o]));
+  let list = (Array.isArray(cfg.ids) ? cfg.ids : []).map(id => byId.get(String(id))).filter(Boolean);
+  if (!list.length) {
+    const promo = offers.filter(o => Number(o.salePrice) > 0 && Number(o.salePrice) < Number(o.price));
+    list = (promo.length ? promo : offers).slice(0, 15);
+  }
+  return list.slice(0, 15);
+}
+const BROCHURE_CSS = String.raw`.bk-wrap{max-width:560px;margin:0 auto;padding:110px 16px 60px}
+.bk-stage{perspective:1800px}
+.bk-book{position:relative;aspect-ratio:3/4;width:100%;margin:0 auto;filter:drop-shadow(0 24px 40px rgba(0,0,0,.35))}
+.bk-leaf{position:absolute;inset:0;transform-origin:left center;transition:transform .9s cubic-bezier(.45,.05,.25,1);transform-style:preserve-3d}
+.bk-leaf.turned{transform:rotateY(-180deg)}.bk-leaf.gone{visibility:hidden}
+.bk-front,.bk-rear{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:4px 10px 10px 4px;overflow:hidden;background:#fffdf7;color:#1c1a16}
+.bk-rear{transform:rotateY(180deg);background:linear-gradient(90deg,#efe9da,#fbf7ec)}
+.bk-front::after{content:'';position:absolute;inset:0 auto 0 0;width:22px;background:linear-gradient(90deg,rgba(0,0,0,.22),transparent);pointer-events:none}
+.bk-cover{height:100%;padding:12% 10% 12% 13%;display:flex;flex-direction:column;justify-content:center;gap:14px;background:linear-gradient(150deg,var(--a),var(--b));color:#fff}
+.bk-cover h1,.bk-cover h2{margin:0;font-size:clamp(28px,7vw,44px);line-height:1.05}.bk-cover p{margin:0;font-size:1.05rem;opacity:.92}
+.bk-kicker{font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;font-weight:800}.bk-valid,.bk-count{font-size:.9rem;font-weight:700}
+.bk-cta{display:inline-block;align-self:flex-start;background:#fff;color:#111;text-decoration:none;font-weight:800;padding:12px 20px;border-radius:99px}
+.bk-page{height:100%;padding:6% 6% 5% 9%;display:flex;flex-direction:column}
+.bk-head{display:flex;justify-content:space-between;gap:10px;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;border-bottom:2px solid var(--a);padding-bottom:7px;color:#1c1a16}
+.bk-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;margin:12px 0 8px;min-height:0}
+.bk-item{display:flex;flex-direction:column;gap:5px;text-decoration:none;color:#1c1a16;min-height:0}
+.bk-pic{position:relative;flex:1;min-height:0;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center}
+.bk-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.bk-ph{font-size:34px;color:#fff;opacity:.8}
+.bk-item strong{font-size:.9rem;line-height:1.2;color:#1c1a16;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bk-price{font-size:.95rem;color:#1c1a16}.bk-price s{opacity:.55;margin-right:6px}.bk-price em{font-style:normal;font-weight:800}
+.bk-pct{position:absolute;top:6px;left:6px;background:#d7263d;color:#fff;border-radius:99px;padding:3px 8px;font-size:12px}
+.bk-out{position:absolute;bottom:6px;left:6px;background:#d7263d;color:#fff;font-style:normal;font-size:10px;font-weight:800;padding:3px 7px;border-radius:5px}
+.bk-foot{text-align:center;font-size:.78rem;color:#6f6a5e}
+.bk-ctrl{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:26px}
+.bk-ctrl button{background:#111827;color:#fff;border:0;border-radius:99px;padding:11px 20px;font-weight:700;font-size:1rem;cursor:pointer}.bk-ctrl button:disabled{opacity:.35;cursor:default}.bk-ctrl span{font-weight:700}
+`;
+function renderBrochure(user, offers) {
+  const cfg = user.brochure || {};
+  const list = brochureOffers(user, offers);
+  const s = esc(user.slug), stock = user._stockMap || {};
+  const title = esc(cleanStr(cfg.title, 60) || 'Special offers');
+  const sub = esc(cleanStr(cfg.subtitle, 120)), valid = esc(cleanStr(cfg.validUntil, 60));
+  const cell = (o) => {
+    const price = Number(o.price) || 0, sp = Number(o.salePrice) || 0;
+    const sale = sp > 0 && sp < price, pct = sale ? Math.round((1 - sp / price) * 100) : 0;
+    const st = stock[String(o._id)], out = st !== undefined && Number(st) <= 0;
+    const img = o.imageUrl ? '<img src="' + esc(o.imageUrl) + '" alt="" loading="lazy">' : '<span class="bk-ph">&#9733;</span>';
+    return '<a class="bk-item" href="/site/' + s + '/offer/' + String(o._id) + '"><span class="bk-pic">' + img + (pct ? '<b class="bk-pct">-' + pct + '%</b>' : '') + (out ? '<i class="bk-out">OUT OF STOCK</i>' : '') + '</span><strong>' + esc(cleanStr(o.title, 70)) + '</strong><span class="bk-price">' + (sale ? '<s>&euro;' + price.toFixed(2) + '</s><em>&euro;' + sp.toFixed(2) + '</em>' : '<em>&euro;' + price.toFixed(2) + '</em>') + '</span></a>';
+  };
+  const pages = [];
+  pages.push('<div class="bk-cover"><span class="bk-kicker">' + esc(user.siteName) + '</span><h1>' + title + '</h1>' + (sub ? '<p>' + sub + '</p>' : '') + (valid ? '<span class="bk-valid">' + valid + '</span>' : '') + '<span class="bk-count">' + list.length + ' offers inside</span></div>');
+  for (let i = 0; i < list.length; i += 4) {
+    pages.push('<div class="bk-page"><div class="bk-head"><span>' + title + '</span><span>' + esc(user.siteName) + '</span></div><div class="bk-grid">' + list.slice(i, i + 4).map(cell).join('') + '</div><div class="bk-foot">' + (pages.length + 1) + '</div></div>');
+  }
+  pages.push('<div class="bk-cover"><h2>Thank you!</h2><p>Questions or ready to order?</p><a class="bk-cta" href="/site/' + s + '/messages">Message us</a></div>');
+  const n = pages.length;
+  const leaves = pages.map((p, i) => '<div class="bk-leaf" style="z-index:' + (n - i) + '"><div class="bk-front">' + p + '</div><div class="bk-rear"></div></div>').join('');
+  const empty = list.length ? '' : '<p style="text-align:center;margin-top:24px">No offers in the brochure yet.</p>';
+  return '<style>' + BROCHURE_CSS + '</style><main class="bk-wrap"><div class="bk-stage"><div class="bk-book" id="bk">' + leaves + '</div></div>' + empty + '<div class="bk-ctrl"><button id="bkPrev" type="button">&lsaquo; Back</button><span id="bkNum"></span><button id="bkNext" type="button">Next &rsaquo;</button></div></main>' +
+    '<script>(function(){var L=[].slice.call(document.querySelectorAll(".bk-leaf")),n=L.length,cur=0,num=document.getElementById("bkNum"),pv=document.getElementById("bkPrev"),nx=document.getElementById("bkNext");' +
+    'function ui(){num.textContent=(cur+1)+" / "+n;pv.disabled=cur===0;nx.disabled=cur>=n-1}' +
+    'function go(d){var c=Math.max(0,Math.min(n-1,cur+d));if(c===cur)return;var m=d>0?cur:c,l=L[m];cur=c;l.style.zIndex=n+5;l.classList.remove("gone");if(d>0)l.classList.add("turned");else l.classList.remove("turned");setTimeout(function(){l.style.zIndex=d>0?(m+1):(n-m);if(d>0&&m<cur)l.classList.add("gone")},950);ui()}' +
+    'pv.onclick=function(){go(-1)};nx.onclick=function(){go(1)};document.addEventListener("keydown",function(e){if(e.key==="ArrowRight")go(1);if(e.key==="ArrowLeft")go(-1)});' +
+    'var sx=null;var bk=document.getElementById("bk");bk.addEventListener("touchstart",function(e){sx=e.touches[0].clientX},{passive:true});bk.addEventListener("touchend",function(e){if(sx===null)return;var dx=e.changedTouches[0].clientX-sx;sx=null;if(dx<-50)go(1);else if(dx>50)go(-1)});ui()})();</script>';
+}
+app.get('/site/:slug/brochure', async (req, res) => {
+  try {
+    const user = await User.findOne({ slug: req.params.slug });
+    if (!prepSite(req, user)) return res.status(404).send('Site not found');
+    if (!(user.brochure && user.brochure.enabled)) return res.redirect(302, '/site/' + encodeURIComponent(req.params.slug));
+    const offers = await Offer.find({ userId: user._id }).sort({ createdAt: -1 });
+    const inv = await ShopSetting.findOne({ sellerId: user._id }).select('stock').lean();
+    user._stockMap = inv && inv.stock ? Object.fromEntries(Object.entries(inv.stock)) : {};
+    res.setHeader('Content-Security-Policy', SITE_CSP);
+    const body = siteBar(user, 'brochure') + renderBrochure(user, offers);
+    res.send(pageShell(user, { title: cleanStr((user.brochure || {}).title, 60) + ' - ' + user.siteName, desc: 'Brochure with the current offers of ' + user.siteName, body, cls: 'brochure', page: 'brochure' }));
+  } catch (e) { console.error('Brochure error', e); res.status(500).send('Unable to load brochure'); }
+});
+app.get('/api/brochure', authenticateToken, async (req, res) => {
+  try {
+    const u = await User.findById(req.user.id);
+    if (!u) return res.status(404).json({ message: 'Not found' });
+    const offers = await Offer.find({ userId: u._id }).sort({ createdAt: -1 }).limit(200).select('title price salePrice imageUrl');
+    const b = u.brochure || {};
+    res.json({ slug: u.slug || '', config: { enabled: !!b.enabled, title: b.title || '', subtitle: b.subtitle || '', validUntil: b.validUntil || '', ids: Array.isArray(b.ids) ? b.ids : [] }, offers: offers.map(o => ({ id: String(o._id), title: o.title, price: o.price, salePrice: o.salePrice || 0, imageUrl: o.imageUrl || '' })) });
+  } catch (e) { res.status(500).json({ message: 'Could not load the brochure' }); }
+});
+app.put('/api/brochure', authenticateToken, async (req, res) => {
+  try {
+    const u = await User.findById(req.user.id);
+    if (!u) return res.status(404).json({ message: 'Not found' });
+    const b = req.body || {};
+    const mine = new Set((await Offer.find({ userId: u._id }).select('_id')).map(o => String(o._id)));
+    const ids = (Array.isArray(b.ids) ? b.ids : []).map(String).filter(id => mine.has(id)).slice(0, 15);
+    u.brochure = { enabled: !!b.enabled, title: cleanStr(b.title, 60), subtitle: cleanStr(b.subtitle, 120), validUntil: cleanStr(b.validUntil, 60), ids };
+    u.markModified('brochure');
+    await u.save();
+    res.json({ ok: true, count: ids.length });
+  } catch (e) { res.status(500).json({ message: 'Could not save the brochure' }); }
+});
+
+// ---------- Code editor: projects (folders of files) saved per account ----------
+function goCleanPath(p) {
+  let x = String(p || '').replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+/g, '/');
+  x = x.split('/').filter(seg => seg && seg !== '.' && seg !== '..').join('/');
+  x = x.replace(/[^A-Za-z0-9._\-\/ ]/g, '_').slice(0, 120);
+  return x;
+}
+function goCleanFiles(list) {
+  const seen = new Set(), out = [];
+  (Array.isArray(list) ? list : []).slice(0, 80).forEach(f => {
+    const path = goCleanPath(f && (f.path || f.name));
+    if (!path || seen.has(path)) return;
+    seen.add(path);
+    out.push({ path, content: String((f && f.content) == null ? '' : f.content).slice(0, 300000) });
+  });
+  return out;
+}
+async function goSaveCodeProject(userId, name, body) {
+  try {
+    let files = [];
+    if (Array.isArray(body.files)) files = goCleanFiles(body.files);
+    else { const code = body.html || body.code || ''; if (code) files = goCleanFiles([{ path: body.fileName || 'index.html', content: code }]); }
+    if (!files.length) return;
+    const n = await CodeProject.countDocuments({ userId });
+    if (n >= 30) { const old = await CodeProject.findOne({ userId }).sort({ updatedAt: 1 }); if (old) await old.deleteOne(); }
+    await CodeProject.create({ userId, name: cleanStr(name, 60) || 'AI website', files, source: 'ai' });
+  } catch (e) { console.error('Save code project', e.message); }
+}
+app.get('/api/code/projects', authenticateToken, async (req, res) => {
+  try {
+    const list = await CodeProject.find({ userId: req.user.id }).sort({ updatedAt: -1 }).select('name updatedAt source files.path');
+    res.json({ projects: list.map(p => ({ id: String(p._id), name: p.name, source: p.source || '', updatedAt: p.updatedAt, fileCount: (p.files || []).length })) });
+  } catch (e) { res.status(500).json({ message: 'Could not load projects' }); }
+});
+app.post('/api/code/projects', authenticateToken, async (req, res) => {
+  try {
+    if (await CodeProject.countDocuments({ userId: req.user.id }) >= 30) return res.status(400).json({ message: 'You can keep up to 30 projects. Delete one first.' });
+    let files = goCleanFiles(req.body && req.body.files);
+    if (!files.length) files = [{ path: 'index.html', content: '<!doctype html>\n<html>\n<head>\n  <meta charset="utf-8">\n  <title>My page</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>Hello</h1>\n  <script src="app.js"></script>\n</body>\n</html>\n' }, { path: 'style.css', content: 'body { font-family: system-ui, sans-serif; margin: 40px; }\n' }, { path: 'app.js', content: 'console.log("Hello");\n' }];
+    const p = await CodeProject.create({ userId: req.user.id, name: cleanStr(req.body && req.body.name, 60) || 'New project', files, source: 'manual' });
+    res.json({ id: String(p._id) });
+  } catch (e) { res.status(500).json({ message: 'Could not create the project' }); }
+});
+app.get('/api/code/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    const p = await CodeProject.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!p) return res.status(404).json({ message: 'Project not found' });
+    res.json({ id: String(p._id), name: p.name, files: p.files || [], updatedAt: p.updatedAt });
+  } catch (e) { res.status(404).json({ message: 'Project not found' }); }
+});
+app.put('/api/code/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    const p = await CodeProject.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!p) return res.status(404).json({ message: 'Project not found' });
+    const files = goCleanFiles(req.body && req.body.files);
+    if (!files.length) return res.status(400).json({ message: 'A project needs at least one file' });
+    if (files.reduce((a, f) => a + f.content.length, 0) > 1500000) return res.status(400).json({ message: 'The project is too large (1.5 MB max)' });
+    if (req.body && req.body.name) p.name = cleanStr(req.body.name, 60) || p.name;
+    p.files = files; p.updatedAt = new Date();
+    await p.save();
+    res.json({ ok: true, updatedAt: p.updatedAt });
+  } catch (e) { res.status(500).json({ message: 'Could not save the project' }); }
+});
+app.delete('/api/code/projects/:id', authenticateToken, async (req, res) => {
+  try { await CodeProject.deleteOne({ _id: req.params.id, userId: req.user.id }); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ message: 'Could not delete the project' }); }
+});
+const goCodeAiHits = new Map();
+app.post('/api/code/ai', authenticateToken, async (req, res) => {
+  try {
+    const key = process.env.OPENROUTER_API_KEY;
+    if (!key) return res.status(503).json({ message: 'The AI helper is not configured yet (OPENROUTER_API_KEY).' });
+    const now = Date.now(), uid = String(req.user.id);
+    const hits = (goCodeAiHits.get(uid) || []).filter(t => now - t < 3600000);
+    if (hits.length >= 20) return res.status(429).json({ message: 'AI edit limit reached (20 per hour). Try again later.' });
+    hits.push(now); goCodeAiHits.set(uid, hits);
+    const instruction = cleanStr(req.body && req.body.instruction, 800);
+    const content = String((req.body && req.body.content) || '').slice(0, 60000);
+    const path = goCleanPath(req.body && req.body.path) || 'file';
+    if (!instruction) return res.status(400).json({ message: 'Tell the AI what to change.' });
+    const sys = 'You are a careful code editor inside a small web IDE. You receive one file and an instruction. Return ONLY the complete new content of that file. No explanations and no markdown fences. Keep everything that the instruction does not ask to change. Never add secrets or tracking code.';
+    const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+      messages: [{ role: 'system', content: sys }, { role: 'user', content: 'File: ' + path + '\nInstruction: ' + instruction + '\n\nCurrent content:\n' + content }],
+      temperature: 0.3, max_tokens: 8000
+    }, { headers: { Authorization: 'Bearer ' + key }, timeout: 90000 });
+    let out = String(r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message && r.data.choices[0].message.content || '');
+    out = out.replace(/^```[a-zA-Z0-9]*\n/, '').replace(/\n```\s*$/, '');
+    if (!out.trim()) return res.status(502).json({ message: 'The AI returned nothing. Please try again.' });
+    res.json({ content: out.slice(0, 300000) });
+  } catch (e) { res.status(502).json({ message: 'The AI helper is not available right now.' }); }
+});
+
+
 app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
   // If the browser cancels a generation, never consume its link slot at the end.
   // A completed site remains accessible in My websites even if its response was missed.
@@ -4964,6 +5170,7 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
     const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
     // Export choice: create an offline standalone file, without storing another website.
     if (req.body.output === 'code') {
+      { const _json = res.json.bind(res); res.json = function (body) { try { if (body && body.output === 'code') goSaveCodeProject(req.user.id, name, body); } catch (e) {} return _json(body); }; }
       const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
       const cards = offers.map(o => `<article class="product"><h3>${esc(cleanStr(o.title,120))}</h3><p>${esc(cleanStr(o.description,400))}</p>${Number(o.price)>0?`<strong>€${Number(o.price).toFixed(2)}</strong>`:''}</article>`).join('');
       const faqs = (Array.isArray(j.faq)?j.faq:[]).slice(0,6).map(f=>`<details><summary>${esc(cleanStr(f.question,160))}</summary><p>${esc(cleanStr(f.answer,500))}</p></details>`).join('');
