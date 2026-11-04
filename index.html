@@ -1375,6 +1375,49 @@ body{background:#f5f8fc;color:#14233c;}
 @media(max-width:1050px){#v-orders .wk-board{grid-template-columns:repeat(5,minmax(235px,1fr));overflow-x:auto;scroll-snap-type:x proximity;}#v-orders .wk-col{scroll-snap-align:start;}}
 @media(max-width:700px){.go-order-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.go-order-stat{padding:13px 15px;}.go-order-toolbar span{margin-left:0;}.go-orders-actions{width:100%;}.go-work-link{flex:1;min-width:130px;}#v-orders .wk-board{grid-template-columns:repeat(5,minmax(82vw,1fr));}}
 </style>
+<style id="go-ux-final-fixes">
+/* GoldOffer NOV 2026: brochure + editor accessibility and layout */
+#v-brochure .bkx{max-width:1220px!important;color:#172d4a!important}
+#v-brochure .bkx h1{color:#142747!important;font-size:clamp(2rem,3vw,2.9rem)!important}
+#v-brochure .bkx-sub{color:#516783!important;font-size:1rem;line-height:1.6}
+#v-brochure .bkx-grid{gap:22px}
+#v-brochure .bkx-card{background:#fff!important;color:#172d4a!important;border:1px solid #d8e3f3!important;border-radius:19px!important;box-shadow:0 14px 36px rgba(27,56,95,.08);padding:26px!important}
+#v-brochure .bkx-card label,#v-brochure .bkx-card b,#v-brochure .bkx-head,#v-brochure .bkx-t b{color:#223d61!important;opacity:1!important}
+#v-brochure .bkx-card small{color:#526a88!important;opacity:1!important}
+#v-brochure .bkx-card input[type=text]{background:#f7faff!important;border:1px solid #c8d7ed!important;color:#1b3351!important;border-radius:10px!important}
+#v-brochure .bkx-card input::placeholder{color:#637a9b!important;opacity:1!important}
+#v-brochure .bkx-sw{color:#173b69!important;background:#eef5ff;padding:13px;border-radius:11px;font-weight:750}
+#v-brochure .bkx-sw input{width:19px;height:19px;accent-color:#315bd5}
+#v-brochure .bkx-row{background:#f7faff!important;border:1px solid #d8e3f3!important;color:#1c3455!important;border-radius:11px!important}
+#v-brochure .bkx-row.on{background:#eaf0ff!important;border-color:#4168da!important}
+#v-brochure .bkx-card .bkx-actions .btn{background:#3158cf!important;color:#fff!important;border:1px solid #3158cf!important;box-shadow:0 8px 20px rgba(49,88,207,.2);font-weight:750}
+#v-brochure .bkx-card .bkx-actions .btn:hover{background:#2445b2!important}
+#v-brochure .bkx-card .bkx-actions .btn-ghost{background:#e8efff!important;color:#224dba!important;border:1px solid #adc3f6!important;font-weight:750}
+#v-brochure .bkx-card .bkx-actions .btn-ghost:hover{background:#dce7ff!important}
+#v-brochure #bkCount{background:#e8efff;color:#2a50aa;border-radius:99px;padding:6px 12px;font-size:.85rem;font-weight:750}
+#v-brochure .bkx-msg{color:#117347!important;font-weight:650}
+#v-code .ce{background:#171b25!important;color:#e9effc!important}
+#v-code .ce-bar{background:#222938!important;border-bottom:1px solid #33435b!important;gap:8px}
+#v-code .ce-bar b{font-size:1.02rem;margin-right:10px}
+#v-code .ce-bar select,#v-code .ce-bar button{border-radius:8px!important;background:#323e52!important;color:#f4f7ff!important;border:1px solid #51617c!important;padding:8px 11px!important}
+#v-code .ce-bar button:hover{background:#435574!important}
+#v-code .ce-bar .ce-pri{background:#3564d6!important;border-color:#3564d6!important;color:#fff!important}
+#v-code .ce-side{background:#1e2635!important;border-color:#394860!important}
+#v-code .ce-sidehead{color:#d2ddf2!important}
+#v-code .ce-editor,#v-code .ce-gut{background:#171d29!important}
+#v-code .ce-tabs{background:#242c3d!important}
+#v-code .ce-tab.on{background:#171d29!important}
+#v-code .ce-ai{background:#222a3a!important;border-color:#3b4960!important}
+#v-code .ce-ai input{background:#151d2c!important;border-color:#536381!important;color:#fff!important}
+#v-code .ce-ai input::placeholder{color:#a9b9d1!important}
+#v-code .ce-ai button{background:#3564d6!important;border-radius:8px!important}
+#v-code .ce-prevhead{background:#263246!important;color:#fff!important}
+#v-code .ce-prevhead b{color:#fff!important}
+#v-code .ce-prevhead button{background:#354765!important;color:#fff!important}
+#v-code .ce-empty{color:#b9c8de!important;line-height:1.6;padding:20px!important}
+#v-code .ce-status{background:#2855b5!important}
+@media(max-width:800px){#v-brochure .bkx-card{padding:18px!important}#v-code .ce{height:calc(100dvh - 20px)}#v-code .ce-prev{width:100%!important}}
+</style>
 </head>
 <body class="theme-neon-blue font-sans" id="top" data-page="home">
 <nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/pro" data-link data-t="pro"><i>⚡</i>Pro</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
@@ -2837,7 +2880,7 @@ async function deleteSite(id) {
     try { data = await res.json(); } catch (e) {}
     if (!res.ok) {
       if (res.status === 401 && S.token && path !== '/api/ai/site-generate') logout(true);
-      const er = new Error(data.message || ('Request failed (HTTP ' + res.status + '). Check the server logs for details.'));
+      const er = new Error((res.status === 404 && /^\/api\/(brochure|code\/projects)/.test(path)) ? 'This feature is missing from the deployed backend (HTTP 404). Deploy the matching server.js to Render and check its start command, then reload.' : (data.message || ('Request failed (HTTP ' + res.status + '). Check the server logs for details.')));
       er.data = data; er.status = res.status;
       throw er;
     }
@@ -4590,7 +4633,7 @@ function bkRefreshPreview(){var link=$('bkOpen'),on=$('bkEnabled').checked;if(!l
 $('bkEnabled').addEventListener('change',bkRefreshPreview);
 /* ---------- Brochure ---------- */
 var BK={ids:[],offers:[]};
-async function bkOpen(){try{var d=await api('/api/brochure');BK.offers=d.offers||[];BK.ids=(d.config.ids||[]).slice(0,15);$('bkEnabled').checked=!!d.config.enabled;$('bkTitle').value=d.config.title||'';$('bkSub').value=d.config.subtitle||'';$('bkValid').value=d.config.validUntil||'';$('bkOpen').href=API+'/site/'+encodeURIComponent(d.slug||'')+'/brochure';bkRefreshPreview();$('bkMsg').textContent='';bkRender()}catch(e){notify(e.message,'Brochure')}}
+async function bkOpen(){try{var d=await api('/api/brochure');BK.offers=d.offers||[];BK.ids=(d.config.ids||[]).slice(0,15);$('bkEnabled').checked=!!d.config.enabled;$('bkTitle').value=d.config.title||'';$('bkSub').value=d.config.subtitle||'';$('bkValid').value=d.config.validUntil||'';$('bkOpen').href=API+'/site/'+encodeURIComponent(d.slug||'')+'/brochure';bkRefreshPreview();$('bkMsg').textContent='';bkRender()}catch(e){$('bkMsg').textContent=e.message;$('bkMsg').style.color='#b42339';notify(e.message,'Brochure')}}
 function bkRender(){$('bkList').innerHTML=BK.offers.length?BK.offers.map(function(o){var on=BK.ids.indexOf(o.id)>-1;return '<label class="bkx-row'+(on?' on':'')+'"><input type="checkbox" '+(on?'checked ':'')+'data-id="'+esc(o.id)+'"><span class="bkx-img">'+(o.imageUrl?'<img src="'+esc(o.imageUrl)+'" alt="">':'&#9733;')+'</span><span class="bkx-t"><b>'+esc(o.title)+'</b><small>&euro;'+Number(o.price||0).toFixed(2)+(o.salePrice>0?' &rarr; &euro;'+Number(o.salePrice).toFixed(2):'')+'</small></span></label>'}).join(''):'<p style="color:#9aa7c0">Add offers first, then come back here.</p>';$('bkCount').textContent=BK.ids.length+' / 15'}
 document.addEventListener('change',function(e){var c=e.target.closest&&e.target.closest('#bkList input[data-id]');if(!c)return;var id=c.getAttribute('data-id');if(c.checked){if(BK.ids.length>=15){c.checked=false;notify('The brochure holds up to 15 offers.','Brochure');return}BK.ids.push(id)}else BK.ids=BK.ids.filter(function(x){return x!==id});c.closest('.bkx-row').classList.toggle('on',c.checked);$('bkCount').textContent=BK.ids.length+' / 15'});
 async function bkSave(){try{await api('/api/brochure',{method:'PUT',body:JSON.stringify({enabled:$('bkEnabled').checked,title:$('bkTitle').value,subtitle:$('bkSub').value,validUntil:$('bkValid').value,ids:BK.ids})});bkRefreshPreview();$('bkMsg').textContent=!$('bkEnabled').checked?'Saved as a draft. Enable the brochure to publish it.':(BK.ids.length?'Saved. Your brochure is published.':'Saved. Your brochure uses promotional or available offers automatically.')}catch(e){notify(e.message,'Brochure')}}
@@ -4625,7 +4668,7 @@ function ceDeleteFile(p){if(!confirm('Delete '+p+'?'))return;delete CE.files[p];
 function ceDeleteDir(d){if(!confirm('Delete the folder '+d+' and everything inside?'))return;Object.keys(CE.files).forEach(function(p){if(p.indexOf(d+'/')===0){delete CE.files[p];delete CE.mod[p]}});CE.open=CE.open.filter(function(x){return x.indexOf(d+'/')!==0});if(CE.active&&CE.active.indexOf(d+'/')===0)CE.active=CE.open[0]||null;CE.dirty=true;ceRenderAll()}
 async function ceLoadList(selectId){var d=await api('/api/code/projects');CE.projects=d.projects||[];var sel=$('ceProj');sel.innerHTML=CE.projects.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.name)+(p.source==='ai'?' (AI)':'')+'</option>'}).join('')||'<option value="">No projects</option>';var id=selectId||CE.id||(CE.projects[0]&&CE.projects[0].id);if(id&&CE.projects.some(function(p){return p.id===id})){sel.value=id;await ceLoadProject(id)}else{CE.id=null;CE.files={};CE.open=[];CE.active=null;ceRenderAll()}}
 async function ceLoadProject(id){var d=await api('/api/code/projects/'+encodeURIComponent(id));CE.id=d.id;CE.name=d.name;CE.files={};(d.files||[]).forEach(function(f){CE.files[f.path]=f.content});CE.mod={};CE.dirty=false;CE.collapsed={};CE.aiPrev=null;$('ceAiUndo').hidden=true;var paths=Object.keys(CE.files).filter(function(p){return ceName(p)!=='.keep'});var first=paths.filter(function(p){return /(^|\/)index\.html?$/i.test(p)})[0]||paths[0]||null;CE.open=first?[first]:[];CE.active=first;ceRenderAll();ceStatus()}
-async function ceOpen(){try{await ceLoadList()}catch(e){notify(e.message,'Code editor')}}
+async function ceOpen(){try{await ceLoadList()}catch(e){$('ceTree').innerHTML='<p class="ce-empty">'+esc(e.message)+'</p>';notify(e.message,'Code editor')}}
 async function ceSwitch(id){if(CE.dirty&&!confirm('You have unsaved changes. Switch anyway?')){$('ceProj').value=CE.id;return}try{await ceLoadProject(id)}catch(e){notify(e.message,'Code editor')}}
 async function ceNewProject(){var n=prompt('Project name','My project');if(n===null)return;try{var d=await api('/api/code/projects',{method:'POST',body:JSON.stringify({name:n})});CE.dirty=false;await ceLoadList(d.id)}catch(e){notify(e.message,'Code editor')}}
 async function ceRenameProject(){if(!CE.id)return;var n=prompt('Project name',CE.name);if(!n)return;CE.name=n;CE.dirty=true;await ceSave()}
