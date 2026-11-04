@@ -1572,6 +1572,102 @@ body[data-page="code"] #v-code input#ceAiIn:focus{border-color:#1875bb!important
 body[data-page="code"] #v-code .ce-ai,
 body[data-page="code"] #v-code .go-term-input{background:#141414!important}
 </style>
+<style id="go-mobile-system-2026">
+/* Compact, usable mobile workspace. No horizontal page scrolling. */
+#v-code .go-mobile-files,#v-code .go-mobile-actions,#v-code .go-mobile-close,#v-code .go-ce-backdrop{display:none}
+@media(max-width:900px){
+  html,body{max-width:100%;overflow-x:clip}
+  .view,.go-workspace,.go-workhead,.go-suite,.go-suite-grid,.go-suite-card,.bkx,.bkx-card{min-width:0;max-width:100%;box-sizing:border-box}
+  .go-workspace{padding-left:clamp(12px,3.5vw,24px)!important;padding-right:clamp(12px,3.5vw,24px)!important}
+  .go-workhead{flex-wrap:wrap;gap:14px}
+  .go-workhead>*,.go-workhead>div{min-width:0;max-width:100%}
+  .go-workhead h1{font-size:clamp(25px,7.4vw,39px)!important;overflow-wrap:anywhere}
+  .go-workhead p{font-size:clamp(13px,3.5vw,16px);overflow-wrap:anywhere}
+  .go-suite-grid,.go-setting-grid,#v-brochure .bkx-grid,.bkx-grid,.go-free-guide{grid-template-columns:minmax(0,1fr)!important}
+  .go-suite-card,.bkx-card{width:100%;min-width:0!important;overflow-wrap:anywhere}
+  .go-suite-card input:not([type=checkbox]),.go-suite-card select,.go-suite-card textarea,
+  .bkx-card input,.bkx-card select,.bkx-card textarea,.wk-in{max-width:100%;min-width:0;box-sizing:border-box}
+  .go-suite-actions,.bkx-actions,.go-orders-actions,.go-tools{display:flex;flex-wrap:wrap;gap:8px}
+  .go-suite-actions button,.bkx-actions button,.bkx-actions a{max-width:100%;white-space:normal}
+  #v-brochure .bkx{width:100%;padding:0!important}
+  #v-brochure .bkx-grid{gap:12px}
+  #v-brochure .bkx-row{min-width:0;overflow-wrap:anywhere}
+  #v-brochure .bkx-t{min-width:0}
+  #v-brochure .bkx-t b,#v-brochure .bkx-t small{overflow-wrap:anywhere}
+  #v-aisites .ai-form{width:100%!important;max-width:100%!important}
+  #v-aisites #aiFormPanel{padding:18px 14px!important;width:100%;max-width:100%}
+  #v-aisites .go-output-choice{gap:9px!important;padding:12px!important}
+  #v-aisites .go-code-language select{width:100%;max-width:100%;margin:6px 0 0}
+  #v-dashboard .go-tools a{flex:1 1 130px;min-width:0;text-align:center;font-size:clamp(12px,3.2vw,14px)}
+  #v-orders .wk-board{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+  table{max-width:100%}
+  .go-workspace .panel,.go-workspace .wk-panel{min-width:0}
+}
+@media(max-width:600px){
+  /* Touch friendly controls without expanding the page width */
+  .go-workspace button,.go-workspace .btn,.go-workspace .btn-ghost,.go-workspace select{max-width:100%;min-height:38px}
+  .go-order-stats,.go-free-guide{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #v-aisites .go-free-guide{grid-template-columns:minmax(0,1fr)!important}
+  #v-aisites #aiFormPanel input,#v-aisites #aiFormPanel textarea,#v-aisites #aiFormPanel select{max-width:100%;min-width:0}
+  .go-orders-head{flex-wrap:wrap}
+  #v-brochure .bkx-card{padding:14px!important}
+}
+/* Mobile code editor is a dedicated full-screen application. */
+@media(max-width:760px){
+  body[data-page="code"]{overflow:hidden!important}
+  body[data-page="code"] #v-code{position:fixed!important;inset:0!important;height:100dvh!important;width:100vw!important;overflow:hidden!important;z-index:85!important}
+  body[data-page="code"] #v-code .ce{height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;min-width:0!important}
+  #v-code .ce-bar{display:flex!important;align-content:center!important;align-items:center!important;gap:5px!important;flex-wrap:wrap!important;overflow:visible!important;min-height:0!important;height:auto!important;max-height:126px;box-sizing:border-box;padding:7px 8px!important;flex:0 0 auto!important}
+  #v-code .go-mobile-files,#v-code .go-mobile-actions{display:inline-flex!important;align-items:center;justify-content:center;background:#282828!important;color:#f2f2f2!important;border:1px solid #424242!important;border-radius:6px!important;padding:7px 9px!important;min-height:34px!important;font-size:12px!important;cursor:pointer}
+  #v-code .ce-bar .ce-home{order:1!important;padding:7px!important;font-size:11px!important}
+  #v-code .ce-bar .go-mobile-files{order:0!important}
+  #v-code .ce-bar>b{order:2!important;font-size:11px!important;letter-spacing:0!important;margin:0!important;flex:1 1 auto!important}
+  #v-code .ce-bar .go-monaco-state{order:5!important;font-size:10px!important;min-width:0;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #v-code .ce-bar #ceProj{order:4!important;min-width:90px!important;max-width:min(42vw,180px)!important;flex:1 1 90px!important;padding:6px 5px!important;font-size:12px!important}
+  #v-code .ce-bar .go-mobile-actions{order:3!important;margin-left:auto}
+  #v-code .ce-bar>button:not(.go-mobile-files):not(.go-mobile-actions){display:none!important}
+  #v-code .ce-bar.go-actions-open>button:not(.go-mobile-files):not(.go-mobile-actions){display:inline-flex!important;order:8!important;flex:1 1 42%!important;align-items:center;justify-content:center;white-space:normal!important;padding:7px!important;line-height:1.2!important;font-size:11px!important}
+  #v-code .ce-bar.go-actions-open{max-height:240px;overflow-y:auto!important}
+  #v-code .ce-body{display:flex!important;flex-direction:row!important;min-height:0!important;position:relative!important;flex:1 1 auto!important}
+  #v-code .ce-main{width:100%!important;min-width:0!important;flex:1!important;overflow:hidden!important}
+  #v-code .ce-side{position:absolute!important;top:0!important;bottom:0!important;left:0!important;z-index:35!important;width:min(82vw,300px)!important;max-width:300px!important;min-width:0!important;max-height:none!important;transform:translateX(-103%);transition:transform .2s ease;box-shadow:5px 0 30px #0009;visibility:hidden;pointer-events:none;flex-direction:column!important;background:#191919!important}
+  #v-code.go-files-open .ce-side{transform:translateX(0);visibility:visible;pointer-events:auto}
+  #v-code .go-ce-backdrop:not([hidden]){display:block!important;position:absolute!important;inset:0!important;background:#0009!important;z-index:34!important;border:0!important}
+  #v-code .ce-sidehead{display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:wrap!important;gap:8px!important;padding:10px!important}
+  #v-code .go-mobile-close{display:block!important;order:10;margin-left:auto;border:1px solid #555!important;background:#292929!important;color:white!important;font-size:18px!important;padding:2px 8px!important}
+  #v-code .ce-tree{overflow-y:auto!important;min-height:0}
+  #v-code .ce-tabs{flex:0 0 auto!important;min-height:37px!important;max-width:100%!important;scrollbar-width:thin}
+  #v-code .ce-tab{font-size:12px!important;padding:8px 10px!important;flex-shrink:0}
+  #v-code .ce-editor{flex:1 1 auto!important;min-height:110px!important;max-width:100%!important}
+  #v-code #goMonaco{max-width:100%!important}
+  #v-code .ce-gut{width:34px!important;font-size:12px!important}
+  #v-code .ce-ta,#v-code .ce-hl{font-size:12px!important;line-height:19px!important}
+  #v-code .go-term{flex:0 0 clamp(142px,24dvh,220px)!important;min-height:0!important;overflow:hidden!important}
+  #v-code .go-term.collapsed{flex:0 0 35px!important}
+  #v-code .go-term-bar{flex:0 0 33px!important;padding:0 10px!important}
+  #v-code .go-term-body{flex:1 1 auto!important;overflow-y:auto!important;overflow-x:hidden!important;min-height:0!important;font-size:11px!important;line-height:1.45!important;padding:7px 9px!important;overscroll-behavior:contain}
+  #v-code .go-term-line{white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+  #v-code .go-term-input{display:flex!important;flex:0 0 auto!important;gap:5px!important;padding:6px!important;min-height:40px!important;flex-wrap:nowrap!important}
+  #v-code .go-term-input span{font-size:10px!important;white-space:nowrap!important}
+  #v-code .go-term-input input{flex:1!important;width:0!important;min-width:0!important;padding:7px!important;font-size:12px!important;background:#242424!important;color:#fff!important}
+  #v-code .go-term-input button{flex:0 0 auto!important;padding:7px!important;font-size:12px!important}
+  #v-code .ce-ai{display:flex!important;flex:0 0 auto!important;align-items:stretch!important;flex-wrap:nowrap!important;gap:5px!important;padding:6px!important;min-width:0!important}
+  #v-code .ce-ai input{flex:1 1 auto!important;flex-basis:0!important;min-width:0!important;width:0!important;background:#242424!important;color:#fff!important;font-size:12px!important;padding:8px!important;min-height:36px!important}
+  #v-code .ce-ai button{flex:0 0 auto!important;max-width:35%!important;font-size:11px!important;padding:6px!important;white-space:normal!important;line-height:1.2!important}
+  #v-code .ce-status{flex:0 0 24px!important;min-height:24px!important;padding:4px 8px!important;gap:8px!important;font-size:10px!important;overflow:hidden}
+  #v-code .ce-prev:not([hidden]){position:absolute!important;inset:0!important;width:100%!important;height:100%!important;z-index:20!important;max-width:none!important;min-width:0!important}
+  #v-code .ce-prev[hidden]{display:none!important}
+}
+@media(max-width:380px){
+  #v-code .ce-bar>b{font-size:10px!important}
+  #v-code .ce-bar .go-monaco-state{font-size:9px!important;max-width:96px!important}
+  #v-code .go-term{flex-basis:135px!important}
+  #v-code .ce-ai button{font-size:10px!important}
+  #v-code .go-term-input span{font-size:9px!important}
+  .go-order-stats{grid-template-columns:minmax(0,1fr)!important}
+}
+@media(prefers-reduced-motion:reduce){#v-code .ce-side{transition:none!important}}
+</style>
 </head>
 <body class="theme-neon-blue font-sans" id="top" data-page="home">
 <nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/pro" data-link data-t="pro"><i>⚡</i>Pro</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
@@ -2359,11 +2455,12 @@ body[data-page="code"] #v-code .go-term-input{background:#141414!important}
     <section class="bkx-card"><div class="bkx-head"><b>Choose offers</b><span id="bkCount">0 / 15</span></div><div class="bkx-list" id="bkList"></div><div class="go-brochure-legend">The published catalogue uses your real offer photos and prices.</div></section>
   </div></div></main>
 <main class="view" id="v-code"><div class="ce" data-nav="dark">
-  <div class="ce-bar"><a class="ce-home" href="/dashboard" data-link title="Back to dashboard">‹ Dashboard</a><b>GOLDOFFER <span>/</span> EDITOR</b><span class="go-monaco-state" id="goMonacoState">Monaco loading…</span><select id="ceProj" onchange="ceSwitch(this.value)"></select>
+  <div class="ce-bar"><button type="button" class="go-mobile-files" id="goMobileFiles" aria-controls="goEditorExplorer" aria-expanded="false" onclick="goMobileExplorer()">☰ Files</button><a class="ce-home" href="/dashboard" data-link title="Back to dashboard">‹ Dashboard</a><b>GOLDOFFER <span>/</span> EDITOR</b><span class="go-monaco-state" id="goMonacoState">Monaco loading…</span><button type="button" class="go-mobile-actions" id="goMobileActions" aria-expanded="false" onclick="goMobileActions()">⋯ Actions</button><select id="ceProj" onchange="ceSwitch(this.value)"></select>
     <button type="button" onclick="ceNewProject()">New project</button><button type="button" onclick="ceRenameProject()">Rename</button>
     <button type="button" class="ce-pri" onclick="ceSave()">Save to MongoDB (Ctrl+S)</button><button type="button" onclick="ceRun()">Run preview</button><button type="button" onclick="ceZip()">Download ZIP</button><button type="button" onclick="ceDeleteProject()">Delete project</button></div>
   <div class="ce-body">
-    <aside class="ce-side"><div class="ce-sidehead"><span>EXPLORER</span><span><button type="button" title="New file" onclick="ceNewFile('')">+ file</button><button type="button" title="New folder" onclick="ceNewFolder()">+ folder</button></span></div><div class="ce-tree" id="ceTree"></div></aside>
+    <button type="button" class="go-ce-backdrop" id="goCeBackdrop" aria-label="Close explorer" onclick="goMobileExplorer(false)" hidden></button>
+    <aside class="ce-side" id="goEditorExplorer"><div class="ce-sidehead"><button type="button" class="go-mobile-close" onclick="goMobileExplorer(false)" aria-label="Close file explorer">✕</button><span>EXPLORER</span><span><button type="button" title="New file" onclick="ceNewFile('')">+ file</button><button type="button" title="New folder" onclick="ceNewFolder()">+ folder</button></span></div><div class="ce-tree" id="ceTree"></div></aside>
     <section class="ce-main"><div class="ce-tabs" id="ceTabs"><span class="go-start-hint">Choose New project to start coding</span></div>
       <div class="ce-editor"><div class="ce-editor-empty" id="ceEmpty"><div class="ce-empty-mark">{ }</div><h2>GoldOffer Code Studio</h2><p>Create a project to start editing HTML, CSS and JavaScript.<br>Your files are stored securely in MongoDB.</p><button type="button" onclick="ceNewProject()">+ Create project</button></div><div class="ce-gut" id="ceGut"></div><div class="ce-wrap"><pre class="ce-hl" id="ceHl"></pre><textarea class="ce-ta" id="ceTa" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" disabled></textarea></div><div id="goMonaco" aria-label="Monaco source code editor"></div></div>
       <div class="go-term"><div class="go-term-bar"><div class="go-term-tabs"><span>TERMINAL</span><span class="go-term-secondary">OUTPUT</span></div><div><button type="button" onclick="ceTerminalHelp()" title="Available commands">?</button><button type="button" onclick="ceTermToggle()" title="Toggle terminal">⌃</button></div></div><div id="goTermBody" class="go-term-body" role="log" aria-live="polite"><div class="go-term-line">GoldOffer Studio Terminal · Workspace shell (preview only)</div><div class="go-term-line">Type <b>help</b> for commands. This terminal does not execute system commands.</div></div><form class="go-term-input" onsubmit="ceTermSubmit(event)"><span>➜ ~/workspace $</span><input id="goTermIn" autocomplete="off" spellcheck="false" aria-label="Terminal command" placeholder="help, ls, cat, preview, clear"><button type="submit">Run</button></form></div>
@@ -4901,6 +4998,36 @@ var goAutoSaveTimer=null;window.goPlanCodeSave=function goPlanCodeSave(){clearTi
    if(c==='save'){ceSave();log('Save requested.');return}
    log('Unsupported command. This console does not run programs. Type help.','err')
  };
+})();
+</script>
+<script id="goMobileEditorControls">
+(function(){
+  window.goMobileExplorer=function(force){
+    var root=document.getElementById('v-code');if(!root)return;
+    var open=typeof force==='boolean'?force:!root.classList.contains('go-files-open');
+    root.classList.toggle('go-files-open',open);
+    var btn=document.getElementById('goMobileFiles');if(btn)btn.setAttribute('aria-expanded',String(open));
+    var bg=document.getElementById('goCeBackdrop');if(bg)bg.hidden=!open;
+  };
+  window.goMobileActions=function(){
+    var bar=document.querySelector('#v-code .ce-bar');if(!bar)return;
+    var open=bar.classList.toggle('go-actions-open');
+    var btn=document.getElementById('goMobileActions');if(btn)btn.setAttribute('aria-expanded',String(open));
+  };
+  document.addEventListener('click',function(e){
+    if(e.target.closest('#v-code .ce-tree [data-file]'))window.goMobileExplorer(false);
+    if(e.target.closest('#v-code .ce-bar>button:not(.go-mobile-files):not(.go-mobile-actions)')){
+      var bar=document.querySelector('#v-code .ce-bar');if(bar)bar.classList.remove('go-actions-open');
+      var btn=document.getElementById('goMobileActions');if(btn)btn.setAttribute('aria-expanded','false');
+    }
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){window.goMobileExplorer(false);var bar=document.querySelector('#v-code .ce-bar');if(bar)bar.classList.remove('go-actions-open')}});
+  var resizePending=0;
+  function relayout(){clearTimeout(resizePending);resizePending=setTimeout(function(){
+    try{var el=document.getElementById('goMonaco');if(el&&window.ceMonacoEditor&&typeof window.ceMonacoEditor.layout==='function')window.ceMonacoEditor.layout();}catch(e){}
+  },240)}
+  window.addEventListener('resize',relayout,{passive:true});
+  window.addEventListener('orientationchange',relayout,{passive:true});
 })();
 </script>
 </body>
