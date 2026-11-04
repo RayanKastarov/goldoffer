@@ -1,4 +1,5 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') }); // also support running from repository root
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -3690,7 +3691,7 @@ function renderSite(user, offers, sent) {
 </section>
 
 <main class="wrap top" id="offers">
-  <div class="sec-head"><h2>Offers</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/profile#reviews" style="color:inherit;text-decoration:underline">Seller reviews</a></span></div>
+  <div class="sec-head"><h2>Offers</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/profile#reviews" style="color:inherit;text-decoration:underline">Seller reviews</a>${user.brochure?.enabled ? ' · <a href="/site/' + esc(user.slug) + '/brochure" style="display:inline-flex;padding:8px 12px;border:1px solid #b7d1e7;border-radius:10px;background:#eaf4ff;color:#123a68;font-weight:800;text-decoration:none">View brochure →</a>' : ''}</span></div>
   <div class="go-shop-search"><input id="goOfferSearch" type="search" autocomplete="off" aria-label="Search offers" placeholder="Search offers by name or description..."><span id="goFound">${offers.length} offers</span></div>
   ${sent ? `<div class="ok">Thank you. Your request was sent and the business will contact you.${sentTrack(user)}</div>` : ''}
   <div class="grid" id="goOfferGrid">${cards}</div><p id="goNoResults" style="display:none;padding:28px 0;color:#707781">No matching offers.</p>
@@ -4977,6 +4978,32 @@ const BROCHURE_CSS = String.raw`.bk-wrap{max-width:560px;margin:0 auto;padding:1
 .bk-foot{text-align:center;font-size:.78rem;color:#6f6a5e}
 .bk-ctrl{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:26px}
 .bk-ctrl button{background:#111827;color:#fff;border:0;border-radius:99px;padding:11px 20px;font-weight:700;font-size:1rem;cursor:pointer}.bk-ctrl button:disabled{opacity:.35;cursor:default}.bk-ctrl span{font-weight:700}
+/* GoldOffer retail catalogue, responsive and page-turning */
+body.page-brochure{background:linear-gradient(135deg,#ebf2ff,#fff 47%,#e7effc)!important;color:#142745!important}
+.bk-wrap{max-width:820px!important;padding:118px 24px 70px!important}
+.bk-book{max-width:650px!important;filter:drop-shadow(0 28px 42px rgba(22,45,82,.25))!important}
+.bk-front,.bk-rear{border-radius:10px 19px 19px 10px!important;background:#fff!important;border:1px solid #d7e1f0}
+.bk-cover{background:linear-gradient(155deg,#e52c4a 0%,#c71636 53%,#fa4761 100%)!important;color:white!important;position:relative;overflow:hidden;text-align:left}
+.bk-cover:before{content:'CATALOGUE';position:absolute;font-weight:900;font-size:clamp(72px,18vw,150px);letter-spacing:-.09em;line-height:1;right:-70px;bottom:14%;transform:rotate(-17deg);opacity:.10;pointer-events:none}
+.bk-cover .bk-kicker{background:#fff;color:#b60f2d!important;display:inline-flex;align-self:start;padding:8px 13px;border-radius:3px;letter-spacing:.12em;font-size:.72rem}
+.bk-cover h1,.bk-cover h2{font-weight:900!important;font-size:clamp(40px,8vw,62px)!important;color:#fff!important;max-width:11ch;letter-spacing:-.07em}
+.bk-cover p{max-width:26ch;font-size:1.25rem!important;font-weight:600}
+.bk-page{background:#fff!important;color:#182d48!important;padding:6% 7% 5% 10%!important}
+.bk-head{color:#d22947!important;border-bottom:3px solid #e72e48!important;letter-spacing:.04em!important}
+.bk-grid{gap:13px!important}
+.bk-item{background:#f7f9fc;border:1px solid #e4e9f0;border-radius:10px;padding:7px;color:#162d4b!important}
+.bk-pic{background:linear-gradient(145deg,#eaf1ff,#d8e5f5)!important;min-height:30px!important}
+.bk-item strong,.bk-price{color:#152945!important}
+.bk-price em{color:#b81738!important;font-size:1.12rem!important}
+.bk-pct{border-radius:4px!important;background:#e21a3d!important;font-size:.9rem!important;font-weight:900!important;box-shadow:0 5px 16px #78112433}
+.bk-ctrl{display:flex;align-items:center;justify-content:center;gap:14px!important}
+.bk-ctrl button{background:#1d49a0!important;border-radius:12px!important;min-width:112px;transition:transform .2s,background .2s}
+.bk-ctrl button:not(:disabled):hover{background:#173774!important;transform:translateY(-2px)}
+.bk-ctrl span{background:#fff;border:1px solid #d9e4f2;border-radius:100px;padding:10px 18px;color:#193d6d}
+.bk-item:hover{border-color:#4478cc!important;transform:translateY(-2px)}
+.bk-cta{background:#fff!important;color:#b81738!important;border-radius:7px!important}
+@media(max-width:600px){.bk-wrap{padding:90px 12px 40px!important}.bk-item{padding:4px}.bk-grid{gap:5px!important;margin-top:7px!important}.bk-page{padding:5% 5% 4% 8%!important}.bk-item strong{font-size:clamp(9px,2.6vw,14px)}.bk-price em{font-size:clamp(11px,3vw,16px)!important}.bk-pct{font-size:10px!important}.bk-head{font-size:9px!important}}
+
 `;
 function renderBrochure(user, offers) {
   const cfg = user.brochure || {};
@@ -5003,7 +5030,7 @@ function renderBrochure(user, offers) {
   return '<style>' + BROCHURE_CSS + '</style><main class="bk-wrap"><div class="bk-stage"><div class="bk-book" id="bk">' + leaves + '</div></div>' + empty + '<div class="bk-ctrl"><button id="bkPrev" type="button">&lsaquo; Back</button><span id="bkNum"></span><button id="bkNext" type="button">Next &rsaquo;</button></div></main>' +
     '<script>(function(){var L=[].slice.call(document.querySelectorAll(".bk-leaf")),n=L.length,cur=0,num=document.getElementById("bkNum"),pv=document.getElementById("bkPrev"),nx=document.getElementById("bkNext");' +
     'function ui(){num.textContent=(cur+1)+" / "+n;pv.disabled=cur===0;nx.disabled=cur>=n-1}' +
-    'function go(d){var c=Math.max(0,Math.min(n-1,cur+d));if(c===cur)return;var m=d>0?cur:c,l=L[m];cur=c;l.style.zIndex=n+5;l.classList.remove("gone");if(d>0)l.classList.add("turned");else l.classList.remove("turned");setTimeout(function(){l.style.zIndex=d>0?(m+1):(n-m);if(d>0&&m<cur)l.classList.add("gone")},950);ui()}' +
+    'function go(d){var c=Math.max(0,Math.min(n-1,cur+d));if(c===cur)return;var m=d>0?cur:c,l=L[m];cur=c;l.style.zIndex=n+5;l.classList.remove("gone");if(d>0)l.classList.add("turned");else l.classList.remove("turned");setTimeout(function(){l.style.zIndex=d>0?(m+1):(n-m);/* keep turned leaves in document so back navigation restores them */},950);ui()}' +
     'pv.onclick=function(){go(-1)};nx.onclick=function(){go(1)};document.addEventListener("keydown",function(e){if(e.key==="ArrowRight")go(1);if(e.key==="ArrowLeft")go(-1)});' +
     'var sx=null;var bk=document.getElementById("bk");bk.addEventListener("touchstart",function(e){sx=e.touches[0].clientX},{passive:true});bk.addEventListener("touchend",function(e){if(sx===null)return;var dx=e.changedTouches[0].clientX-sx;sx=null;if(dx<-50)go(1);else if(dx>50)go(-1)});ui()})();</script>';
 }
@@ -5046,7 +5073,7 @@ app.put('/api/brochure', authenticateToken, async (req, res) => {
 // Deployment diagnostic: confirms this server release includes both feature APIs.
 app.get('/api/goldoffer-features', (req, res) => {
   res.set('Cache-Control', 'no-store');
-  res.json({ service: 'GoldOffer', featureApiVersion: '2026-11-04-fix', brochure: true, codeProjects: true });
+  res.json({ service: 'GoldOffer', featureApiVersion: '2026-11-04-pro-studio', brochure: true, codeProjects: true, monaco: true, brochureFlipbook: true });
 });
 
 // ---------- Code editor: projects (folders of files) saved per account ----------
@@ -5638,7 +5665,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases', '/ai-sites', '/pro', '/login', '/signup'];
+const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases', '/ai-sites', '/pro', '/login', '/signup', '/brochure', '/code'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
@@ -5646,9 +5673,10 @@ app.get(PAGE_ROUTES, (req, res) => {
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+    "worker-src 'self' blob:",
     "script-src-attr 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' data: https: blob:",
     "media-src 'self'",
     "connect-src 'self' https://cdn.jsdelivr.net https://en.wikipedia.org",
