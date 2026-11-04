@@ -13,7 +13,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&family=Comfortaa:wght@600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@400;600;800&family=Oswald:wght@500;700&family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Caveat:wght@600&amp;family=Comfortaa:wght@600;700&amp;family=Inter:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;600&amp;family=Montserrat:wght@400;600;800&amp;family=Oswald:wght@500;700&amp;family=Playfair+Display:wght@600;800&amp;display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -795,7 +795,7 @@
 #gpHost{position:fixed;inset:0;z-index:1500}
 </style>
 <style>@media(max-width:600px){html{font-size:14.5px}.page-head h1{font-size:2.2rem!important;margin-bottom:14px}.page-head p{font-size:.95rem}.go-workhead h1{font-size:1.6rem!important}.btn,.btn-ghost{padding:9px 14px;font-size:.84rem}.card,.panel{padding:16px 14px!important;border-radius:18px}.plan{padding:22px 18px!important}.plan .price{font-size:2.1rem!important}.plan li{font-size:.88rem}.section{padding-left:14px;padding-right:14px}.go-suite-card{padding:14px!important}.go-suite-card h3{font-size:1rem}.stat,.dash-stat{padding:12px!important}.live-hero h2{font-size:1.4rem}}</style>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
 <style id="gx-design">
 /* ===== GoldOffer redesign layer (Craftify / Framer style) ===== */
 :root{--gx-a:#7c5cff;--gx-b:#4f7dff;--gx-glow:#a78bfa;--gx-bg:#07060f;--gx-glass:rgba(255,255,255,.045);--gx-line:rgba(255,255,255,.1);--display:'Plus Jakarta Sans','Inter',sans-serif;--ink:#07060f;--deep:#0b0916;--panel:#120f22;--raise:#191530;--iris:#8b7bff;--lt2:#f3f1ff;--lt:#ebe8fb}
@@ -1322,6 +1322,59 @@ body{background:#f5f8fc;color:#14233c;}
 .ce-prev{width:42%;flex:none;display:flex;flex-direction:column;border-left:1px solid #111;background:#fff;min-width:0}.ce-prev[hidden]{display:none}.ce-prevhead{display:flex;gap:8px;align-items:center;padding:6px 10px;background:#323233;color:#fff}.ce-prevhead b{flex:1}.ce-prevhead button{background:#3c3c3c;color:#eee;border:1px solid #4a4a4a;border-radius:4px;padding:4px 9px;cursor:pointer}.ce-prev iframe{flex:1;border:0;background:#fff;width:100%}
 @media(max-width:800px){.ce-body{flex-direction:column}.ce-side{width:auto;max-height:26vh;border-right:0;border-bottom:1px solid #111}.ce-prev{width:auto;height:42vh;border-left:0;border-top:1px solid #111}.ce-gut{width:38px}}
 </style>
+<style id="go-ux-fixes">
+/* GoldOffer readability and workspace redesign — deliberately scoped */
+#v-orders .go-order-center {max-width:1480px;}
+#v-orders .go-orders-head {align-items:flex-end;gap:20px;margin-bottom:22px;}
+#v-orders .go-orders-head h1 {color:#14223c!important;letter-spacing:-.055em;}
+#v-orders .go-orders-head p {color:#50617b!important;}
+.go-orders-actions,.go-builder-shortcuts {display:flex;align-items:center;flex-wrap:wrap;gap:9px;}
+.go-work-link,.go-builder-shortcuts a {display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 14px;background:#fff;color:#23406b!important;border:1px solid #cdd9ed;border-radius:11px;text-decoration:none;font-weight:750;font-size:13px;transition:transform .16s,box-shadow .16s;}
+.go-work-link:hover,.go-builder-shortcuts a:hover {transform:translateY(-2px);box-shadow:0 9px 22px #253e7130;color:#194caa!important;}
+.go-work-link-primary {background:#3156ce!important;color:#fff!important;border-color:#3156ce!important;}
+.go-work-link-primary:hover {color:#fff!important;background:#2445b5!important;}
+.go-builder-shortcuts {justify-content:center;margin:14px 0 5px;}
+.go-order-stats {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:20px;}
+.go-order-stat {background:#fff;border:1px solid #dce5f3;border-radius:16px;padding:18px 20px;box-shadow:0 8px 30px #23385a0a;}
+.go-order-stat span {display:block;color:#586b84!important;font-size:13px;font-weight:650;}
+.go-order-stat strong {display:block;color:#172b4e!important;font-size:clamp(24px,3vw,34px);line-height:1.3;margin-top:5px;}
+.go-order-toolbar {display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 18px;padding:12px 15px;background:#fff;border:1px solid #dce5f3;border-radius:14px;}
+.go-order-toolbar label {color:#243955!important;font-weight:750;font-size:13px;}
+.go-order-toolbar .wk-in {flex:1;min-width:200px;max-width:480px;background:#f8faff!important;color:#172b4e!important;border:1px solid #cbd7eb!important;}
+.go-order-toolbar span {margin-left:auto;color:#52657e!important;font-size:12px;}
+#v-orders .wk-board {grid-template-columns:repeat(5,minmax(220px,1fr));gap:13px;align-items:start;}
+#v-orders .wk-col {background:#f3f6fc!important;color:#192c49!important;border:1px solid #d7e1f0!important;border-radius:17px;min-height:245px;padding:12px;}
+#v-orders .wk-col h3 {color:#2b4163!important;font-size:12px!important;letter-spacing:.05em!important;padding:5px 3px 11px;border-bottom:1px solid #d6e0ee;align-items:center;}
+#v-orders .wk-col h3 span {background:#e0e9fa;color:#224b9b;border-radius:20px;padding:4px 9px;font-size:12px;letter-spacing:0;}
+#v-orders .wk-card {background:#fff!important;color:#152841!important;border:1px solid #dbe5f1!important;border-radius:13px;padding:15px;margin:10px 0;box-shadow:0 4px 15px #162e5910;overflow-wrap:anywhere;}
+#v-orders .wk-card b {color:#162d51!important;font-size:14px!important;line-height:1.4;}
+#v-orders .wk-card small {color:#52647c!important;font-size:12px;line-height:1.5;margin-top:5px;}
+#v-orders .wk-act {gap:6px;margin-top:13px;}
+#v-orders .wk-act button {background:#edf3ff!important;color:#24446c!important;border:1px solid #cbd9ef!important;border-radius:8px;font-size:11.5px;padding:8px 9px;line-height:1.25;}
+#v-orders .wk-act button:hover {background:#dce9ff!important;border-color:#829fe0!important;}
+#v-orders .wk-act button.pri {background:#3156ce!important;color:#fff!important;border-color:#3156ce!important;}
+#v-orders .wk-act button.pri:hover {background:#2445b5!important;}
+/* Dark panels: explicit foreground colors override broad light-page typography rules. */
+.view:not(#v-home) .go-suite-card,.view:not(#v-home) .wk-panel,.view:not(#v-home) .bkx-card,.view:not(#v-home) .ce-bar {color:#f3f7ff!important;}
+.view:not(#v-home) .go-suite-card h2,.view:not(#v-home) .go-suite-card h3,.view:not(#v-home) .go-suite-card b,.view:not(#v-home) .go-suite-card strong,.view:not(#v-home) .wk-panel h3,.view:not(#v-home) .bkx-card b,.view:not(#v-home) .ce-bar b {color:#f7faff!important;}
+.view:not(#v-home) .go-suite-card p,.view:not(#v-home) .go-suite-card small,.view:not(#v-home) .go-suite-card label,.view:not(#v-home) .bkx-card label,.view:not(#v-home) .bkx-card small,.view:not(#v-home) .wk-panel small {color:#c7d3e6!important;}
+.view:not(#v-home) .go-suite-card a,.view:not(#v-home) .wk-panel a,.view:not(#v-home) .bkx-card a:not(.btn-ghost),.view:not(#v-home) .ce-bar a {color:#91c5ff!important;}
+.view:not(#v-home) .go-suite-card button,.view:not(#v-home) .go-suite-actions a {color:#fff!important;}
+/* Explicit text contrast for dark status cards and light workspaces. */
+#v-system #sysBody .wk-panel p,#v-releases #relBody .wk-panel p,
+#v-system #sysBody .wk-panel small,#v-releases #relBody .wk-panel small,
+#v-system #sysBody .wk-panel span,#v-releases #relBody .wk-panel span {color:#c7d5eb!important;opacity:1!important}
+#v-system #sysBody .wk-panel a,#v-releases #relBody .wk-panel a {color:#9fc7ff!important;text-decoration:underline;text-underline-offset:3px}
+#v-orders .wk-card a,#v-orders .wk-card .wk-act a{color:#2057b0!important}
+#v-orders .wk-card a:hover{text-decoration:underline}
+#v-brochure .bkx-card a:not(.btn-ghost){color:#9fc7ff!important}
+#v-code .ce-bar select,#v-code .ce-bar button,#v-code .ce-side button {color:#f4f7ff!important}
+#v-system #sysBody,#v-releases #relBody {color:#213955;}
+#v-system #sysBody h3,#v-releases #relBody h3 {color:#f4f8ff!important;}
+#v-system #sysBody .wk-panel,#v-releases #relBody .wk-panel {color:#e8f1ff!important;}
+@media(max-width:1050px){#v-orders .wk-board{grid-template-columns:repeat(5,minmax(235px,1fr));overflow-x:auto;scroll-snap-type:x proximity;}#v-orders .wk-col{scroll-snap-align:start;}}
+@media(max-width:700px){.go-order-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.go-order-stat{padding:13px 15px;}.go-order-toolbar span{margin-left:0;}.go-orders-actions{width:100%;}.go-work-link{flex:1;min-width:130px;}#v-orders .wk-board{grid-template-columns:repeat(5,minmax(82vw,1fr));}}
+</style>
 </head>
 <body class="theme-neon-blue font-sans" id="top" data-page="home">
 <nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/pro" data-link data-t="pro"><i>⚡</i>Pro</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
@@ -1805,6 +1858,7 @@ body{background:#f5f8fc;color:#14233c;}
             <h2>Create your unique website</h2>
             <p class="sub">Answer a few quick questions and customize the look. Free for up to 3 offers.</p>
             <button class="btn btn-lg btn-block" style="margin-top:0" onclick="startWizard()">Start the builder</button>
+            <div class="go-builder-shortcuts"><a href="/brochure" data-link>▤ Make a brochure</a><a href="/code" data-link>⌘ Open code editor</a></div>
 
           </div>
 
@@ -1916,7 +1970,12 @@ body{background:#f5f8fc;color:#14233c;}
 </div>
 
 <!-- =================== ORDERS =================== -->
-<main class="view" id="v-orders"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Order Center</h1><p>Accept, process and complete requests. Customers get a tracking link.</p></div><input id="ordQ" class="wk-in" placeholder="Search orders" oninput="renderOrders()"></div><div id="ordBoard" class="wk-board"></div></div></main>
+<main class="view" id="v-orders"><div class="go-workspace go-order-center" data-nav="dark">
+<div class="go-workhead go-orders-head"><div><span class="go-kicker">YOUR WORKSPACE / ORDERS</span><h1>Order Center</h1><p>Manage requests from first contact to completion. Share tracking links with customers.</p></div>
+<div class="go-orders-actions"><a href="/build" data-link class="go-work-link">✦ Website builder</a><a href="/brochure" data-link class="go-work-link">▤ Brochure</a><a href="/code" data-link class="go-work-link go-work-link-primary">⌘ Code editor</a></div></div>
+<div class="go-order-stats" id="ordStats" aria-live="polite"></div>
+<div class="go-order-toolbar"><label for="ordQ">Search orders</label><input id="ordQ" class="wk-in" type="search" placeholder="Search by offer, customer or contact…" oninput="renderOrders()"><span>Move orders through each stage using the action buttons.</span></div>
+<div id="ordBoard" class="wk-board"></div></div></main>
 <!-- =================== CALENDAR =================== -->
 <main class="view" id="v-calendar"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Booking Calendar</h1><p>Set your working hours. Customers can only pick free times, so double booking cannot happen.</p></div></div><div id="calBody"></div></div></main>
 <!-- =================== CUSTOMERS =================== -->
@@ -4337,6 +4396,9 @@ function renderOrders() {
   const q = ($('ordQ').value || '').toLowerCase();
   const rows = ORDERS.filter(o => !q || [o.offerTitle, o.customerName, o.customerContact].join(' ').toLowerCase().includes(q));
   const next = { Pending: ['Accepted', 'Accept'], Accepted: ['Processing', 'Start work'], Processing: ['Completed', 'Complete'] };
+  const counts = Object.fromEntries(['Pending','Accepted','Processing','Completed','Cancelled'].map(k => [k, rows.filter(o => (o.status || 'Pending') === k).length]));
+  const stats = $('ordStats');
+  if (stats) stats.innerHTML = [['Total',rows.length],['New',counts.Pending],['In progress',counts.Accepted+counts.Processing],['Completed',counts.Completed]].map(([name,n]) => '<div class="go-order-stat"><span>'+name+'</span><strong>'+n+'</strong></div>').join('');
   $('ordBoard').innerHTML = ORD_COLS.map(([k, label]) => {
     const list = rows.filter(o => (o.status || 'Pending') === k);
     return '<div class="wk-col"><h3>' + label + '<span>' + list.length + '</span></h3>' + (list.map(o => '<div class="wk-card"><b>' + esc(o.offerTitle || 'Request') + '</b><small>' + esc(o.customerName || '') + ' &middot; EUR ' + money(o.amount) + '</small><small>' + esc((o.customerContact || '').slice(0, 90)) + '</small>' + (o.note ? '<small>&ldquo;' + esc(o.note.slice(0, 120)) + '&rdquo;</small>' : '') + '<small>' + new Date(o.createdAt).toLocaleString() + '</small><div class="wk-act">' + (next[k] ? '<button class="pri" onclick="ordSet(\'' + o._id + '\',\'' + next[k][0] + '\')">' + next[k][1] + '</button>' : '') + (o.trackUrl ? '<button onclick="copyTxt(\'' + esc(o.trackUrl) + '\')">Copy tracking link</button>' : '') + (k !== 'Cancelled' && k !== 'Completed' ? '<button onclick="ordSet(\'' + o._id + '\',\'Cancelled\')">Cancel</button>' : '') + (k === 'Cancelled' ? '<button onclick="ordSet(\'' + o._id + '\',\'Pending\')">Reopen</button>' : '') + '</div></div>').join('') || '<small style="color:#6f7d94;padding:6px">Nothing here</small>') + '</div>';
@@ -4523,19 +4585,22 @@ ROUTES['/code']='code';ROUTES['/brochure']='brochure';TITLES.code='Code editor -
 (function(){var _n=navigate;navigate=function(p,push){_n(p,push);if(currentPage==='code')ceOpen();if(currentPage==='brochure')bkOpen()};
 if(location.pathname==='/code'||location.pathname==='/brochure')navigate(location.pathname,false)})();
 
+/* Brochure preview is only public after enabling and saving. */
+function bkRefreshPreview(){var link=$('bkOpen'),on=$('bkEnabled').checked;if(!link)return;link.setAttribute('aria-disabled',on?'false':'true');link.title=on?'Opens the published brochure (save changes first)':'Enable the brochure and save first';link.style.opacity=on?'1':'.55';link.style.pointerEvents=on?'auto':'none'}
+$('bkEnabled').addEventListener('change',bkRefreshPreview);
 /* ---------- Brochure ---------- */
 var BK={ids:[],offers:[]};
-async function bkOpen(){try{var d=await api('/api/brochure');BK.offers=d.offers||[];BK.ids=(d.config.ids||[]).slice(0,15);$('bkEnabled').checked=!!d.config.enabled;$('bkTitle').value=d.config.title||'';$('bkSub').value=d.config.subtitle||'';$('bkValid').value=d.config.validUntil||'';$('bkOpen').href=API+'/site/'+encodeURIComponent(d.slug||'')+'/brochure';$('bkMsg').textContent='';bkRender()}catch(e){notify(e.message,'Brochure')}}
+async function bkOpen(){try{var d=await api('/api/brochure');BK.offers=d.offers||[];BK.ids=(d.config.ids||[]).slice(0,15);$('bkEnabled').checked=!!d.config.enabled;$('bkTitle').value=d.config.title||'';$('bkSub').value=d.config.subtitle||'';$('bkValid').value=d.config.validUntil||'';$('bkOpen').href=API+'/site/'+encodeURIComponent(d.slug||'')+'/brochure';bkRefreshPreview();$('bkMsg').textContent='';bkRender()}catch(e){notify(e.message,'Brochure')}}
 function bkRender(){$('bkList').innerHTML=BK.offers.length?BK.offers.map(function(o){var on=BK.ids.indexOf(o.id)>-1;return '<label class="bkx-row'+(on?' on':'')+'"><input type="checkbox" '+(on?'checked ':'')+'data-id="'+esc(o.id)+'"><span class="bkx-img">'+(o.imageUrl?'<img src="'+esc(o.imageUrl)+'" alt="">':'&#9733;')+'</span><span class="bkx-t"><b>'+esc(o.title)+'</b><small>&euro;'+Number(o.price||0).toFixed(2)+(o.salePrice>0?' &rarr; &euro;'+Number(o.salePrice).toFixed(2):'')+'</small></span></label>'}).join(''):'<p style="color:#9aa7c0">Add offers first, then come back here.</p>';$('bkCount').textContent=BK.ids.length+' / 15'}
 document.addEventListener('change',function(e){var c=e.target.closest&&e.target.closest('#bkList input[data-id]');if(!c)return;var id=c.getAttribute('data-id');if(c.checked){if(BK.ids.length>=15){c.checked=false;notify('The brochure holds up to 15 offers.','Brochure');return}BK.ids.push(id)}else BK.ids=BK.ids.filter(function(x){return x!==id});c.closest('.bkx-row').classList.toggle('on',c.checked);$('bkCount').textContent=BK.ids.length+' / 15'});
-async function bkSave(){try{await api('/api/brochure',{method:'PUT',body:JSON.stringify({enabled:$('bkEnabled').checked,title:$('bkTitle').value,subtitle:$('bkSub').value,validUntil:$('bkValid').value,ids:BK.ids})});$('bkMsg').textContent=BK.ids.length?'Saved. Your brochure is ready.':'Saved. With no offers chosen, your promotions are used automatically.'}catch(e){notify(e.message,'Brochure')}}
+async function bkSave(){try{await api('/api/brochure',{method:'PUT',body:JSON.stringify({enabled:$('bkEnabled').checked,title:$('bkTitle').value,subtitle:$('bkSub').value,validUntil:$('bkValid').value,ids:BK.ids})});bkRefreshPreview();$('bkMsg').textContent=!$('bkEnabled').checked?'Saved as a draft. Enable the brochure to publish it.':(BK.ids.length?'Saved. Your brochure is published.':'Saved. Your brochure uses promotional or available offers automatically.')}catch(e){notify(e.message,'Brochure')}}
 
 /* ---------- Code editor ---------- */
 var CE={projects:[],id:null,name:'',files:{},open:[],active:null,collapsed:{},dirty:false,mod:{},aiPrev:null};
 var CE_RULES={
 js:[['c',/\/\/[^\n]*|\/\*[\s\S]*?\*\//],['s',/`(?:\\[\s\S]|[^`\\])*`|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/],['k',/\b(?:const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|class|extends|import|from|export|default|async|await|try|catch|finally|throw|typeof|instanceof|in|of|this|null|undefined|true|false)\b/],['n',/\b\d+(?:\.\d+)?\b/]],
 css:[['c',/\/\*[\s\S]*?\*\//],['s',/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/],['k',/@[a-zA-Z-]+/],['p',/[a-zA-Z-]+(?=\s*:)/],['n',/#[0-9a-fA-F]{3,8}\b|-?\d*\.?\d+(?:px|em|rem|%|vh|vw|s|ms|deg)?\b/]],
-html:[['c',/<!--[\s\S]*?-->/],['s',/"[^"\n<>]*"|'[^'\n<>]*'/],['t',/<\/?[a-zA-Z][\w:-]*|\/?>/]]};
+html:[['c',/\x3c!--[\s\S]*?-->/],['s',/"[^"\n<>]*"|'[^'\n<>]*'/],['t',/\x3c\/?[a-zA-Z][\w:-]*|\/?>/]]};
 var CE_RE={};
 function ceLang(p){var m=/\.([a-z0-9]+)$/i.exec(p||''),e=m?m[1].toLowerCase():'';if(e==='html'||e==='htm')return 'html';if(e==='css')return 'css';if(e==='js'||e==='mjs'||e==='json'||e==='jsx'||e==='ts')return 'js';return ''}
 function ceHl(code,lang){var R=CE_RULES[lang];if(!R)return esc(code);if(!CE_RE[lang])CE_RE[lang]=new RegExp(R.map(function(r){return '('+r[1].source+')'}).join('|'),'g');var re=CE_RE[lang];re.lastIndex=0;var out='',last=0,m;while((m=re.exec(code))){if(m[0]===''){re.lastIndex++;continue}out+=esc(code.slice(last,m.index));var gi=1;for(var g=1;g<m.length;g++){if(m[g]!==undefined){gi=g;break}}out+='<span class="t'+R[gi-1][0]+'">'+esc(m[0])+'</span>';last=re.lastIndex}return out+esc(code.slice(last))}

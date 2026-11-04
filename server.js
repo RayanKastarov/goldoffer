@@ -3361,6 +3361,18 @@ body .go-stock-badge.is-out{background:#d7263d!important;color:#fff!important;bo
 body .go-stock-badge.is-out::before{background:#fff!important}
 body .go-stock-badge ~ .count{top:50px!important}
 body .go-stock-badge.is-out::before{background:#e5455d}
+/* Stock status always sits in the top-left of the offer image. */
+body .card .pic{position:relative!important;isolation:isolate}
+body .card .pic .go-stock-badge{position:absolute!important;left:12px!important;top:12px!important;right:auto!important;bottom:auto!important;z-index:15!important;max-width:calc(100% - 90px);font-size:11px!important;line-height:1.25!important;box-shadow:0 5px 16px rgba(12,32,58,.18)!important}
+body .card .pic .tag{right:12px!important;top:12px!important;left:auto!important;z-index:14!important}
+body .card .pic .go-stock-badge.is-out{background:#b91c39!important;color:white!important;border-color:#b91c39!important}
+body .card .pic .count{top:54px!important;bottom:auto!important}
+/* Maintain strong contrast on storefront cards, links and descriptive copy. */
+body .card .in h3{color:#162c4b!important}
+body .card .in p{color:#4a617d!important}
+body .card .in .more{color:#2057b0!important;font-weight:750!important}
+body .card .in .more:hover{color:#133b80!important}
+
 body .go-detail-stock{display:inline-flex;align-items:center;gap:7px;background:#e8f9f0!important;color:#087b45!important;border:1px solid #a9e5c4;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:800;margin-bottom:15px}
 body .go-detail-stock.is-out{background:#fff0f0!important;color:#bd3144!important;border-color:#f3bdc4!important}
 
@@ -3423,6 +3435,13 @@ body .wrap > a[style*="background:#161c25"] strong{color:#235fbd!important}
 /* Keep captions on darkened image overlays white for readability. */
 body .screen-caption,body .screen-caption strong{color:#fff!important}
 body .screen-caption span{color:#d9ebff!important}
+/* Keep offer content contrast irrespective of theme variables. */
+body .card .in{background:#fff!important;color:#182b47!important}
+body .card .in h3,body .card .in h3 a{color:#172d4b!important;-webkit-text-fill-color:#172d4b!important;opacity:1!important}
+body .card .in p,body .card .in small{color:#435b79!important;-webkit-text-fill-color:#435b79!important;opacity:1!important}
+body .card .in .more,body .card .in a:not(.btn){color:#2057b0!important;-webkit-text-fill-color:#2057b0!important}
+body .card .in a:hover{text-decoration:underline!important}
+
 @media(max-width:680px){body .bar{left:8px!important;right:8px!important;top:8px!important}body .bar nav a{padding:7px 10px!important}}
 </style>`;
 
@@ -4599,11 +4618,13 @@ function aiBaseCss(user) {
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.55;-webkit-text-size-adjust:100%}
 img{max-width:100%;height:auto}a{color:inherit}
 .ai-offers{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}.ai-offer{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-.ai-offer-img{aspect-ratio:4/3;width:100%;object-fit:cover;display:block;background:linear-gradient(135deg,var(--a),var(--b))}.go-ai-stock{display:inline-block;background:#e8f9f0;color:#087b45;border:1px solid #a9e5c4;font-size:12px;letter-spacing:.06em;border-radius:999px;padding:6px 11px;margin:10px 0 0 12px;font-weight:800}.go-ai-stock.is-out{background:#fff0f0;color:#bd3144;border-color:#f3bdc4}.ai-offer-body{padding:16px}.ai-offer-title{margin:0 0 6px;font-size:1.1rem}.ai-offer-desc{margin:0 0 10px;opacity:.8;font-size:.92rem}.ai-offer-price{font-weight:800;color:var(--a)}
+.ai-offer{position:relative}.ai-offer-img{aspect-ratio:4/3;width:100%;object-fit:cover;display:block;background:linear-gradient(135deg,var(--a),var(--b))}.go-ai-stock{position:absolute;top:12px;left:12px;z-index:3;margin:0!important;display:inline-block;background:#e8f9f0;color:#087b45;border:1px solid #a9e5c4;font-size:12px;letter-spacing:.06em;border-radius:999px;padding:6px 11px;font-weight:800}.go-ai-stock.is-out{background:#fff0f0;color:#bd3144;border-color:#f3bdc4}.ai-offer-body{padding:16px}.ai-offer-title{margin:0 0 6px;font-size:1.1rem}.ai-offer-desc{margin:0 0 10px;opacity:.8;font-size:.92rem}.ai-offer-price{font-weight:800;color:var(--a)}
 .ai-faq details{border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin:8px 0;background:var(--panel)}.ai-faq summary{cursor:pointer;font-weight:700}.ai-contact{display:grid;gap:8px}.ai-contact a{text-decoration:underline}
 .ai-float{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:80}.ai-float a{display:inline-block;padding:11px 18px;border-radius:999px;background:var(--a);color:var(--on);font-weight:800;text-decoration:none;box-shadow:0 8px 24px #0005}
 .go-public-announcement{margin:12px auto!important;max-width:1100px}`;
 }
+const AI_STORE_CSS = `<style id="go-ai-accessible-cards">body .ai-offer{background:#fff!important;color:#182b47!important;border:1px solid #d7e2f1!important}body .ai-offer-body,body .ai-offer-title{color:#182b47!important;-webkit-text-fill-color:#182b47!important}body .ai-offer-desc{color:#435b79!important;-webkit-text-fill-color:#435b79!important;opacity:1!important}body .ai-offer-price{color:#1f56ac!important;-webkit-text-fill-color:#1f56ac!important}body .go-ai-stock{top:12px!important;left:12px!important;right:auto!important;bottom:auto!important;color:#075d35!important;background:#e6f8ee!important;-webkit-text-fill-color:#075d35!important}body .go-ai-stock.is-out{background:#b91c39!important;color:#fff!important;-webkit-text-fill-color:#fff!important}body #goAISearch{color:#172d4b!important;background:#fff!important}</style>`;
+const AI_READABILITY_SCRIPT = "<script id=\"go-ai-accessible-contrast\">(function(){\nfunction rgb(c){var m=String(c).match(/^rgba?\\(\\s*(\\d+)[ ,]+(\\d+)[ ,]+(\\d+)(?:[ ,/]+([\\d.]+))?/i);return m?[+m[1],+m[2],+m[3],m[4]===undefined?1:+m[4]]:null}\nfunction lum(c){var a=c.slice(0,3).map(function(v){v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*a[0]+.7152*a[1]+.0722*a[2]}\nfunction ratio(a,b){var x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}\nfunction effectiveBackground(el){var chain=[],p=el;while(p&&p.nodeType===1){chain.unshift(p);p=p.parentElement}var out=[255,255,255];for(var j=0;j<chain.length;j++){var st=getComputedStyle(chain[j]);if(st.backgroundImage&&st.backgroundImage!=='none')return null;var v=rgb(st.backgroundColor);if(v&&v[3]>0){var a=v[3];out=[v[0]*a+out[0]*(1-a),v[1]*a+out[1]*(1-a),v[2]*a+out[2]*(1-a)]}}return out}\nfunction fix(){document.querySelectorAll('main h1,main h2,main h3,main h4,main p,main span,main small,main li,main a,main label,main strong,section h1,section h2,section h3,section p,section a,header a,nav a,.ai-offer-title,.ai-offer-desc,.ai-offer-price').forEach(function(el){if(el.closest('.go-ai-stock,.ai-float,.go-owner-banner,button,[role=button]'))return;var cs=getComputedStyle(el);if(cs.visibility==='hidden'||cs.display==='none'||parseFloat(cs.opacity)<.65)return;var bg=effectiveBackground(el);if(!bg)return;var fg=rgb(cs.color);if(!fg)return;var thresh=parseFloat(cs.fontSize)>=24?3:4.5;if(ratio(fg,bg)>=thresh)return;var dark=[20,33,54],light=[255,255,255],best=ratio(dark,bg)>=ratio(light,bg)?dark:light;el.style.setProperty('color','rgb('+best.join(',')+')','important');el.style.setProperty('-webkit-text-fill-color','rgb('+best.join(',')+')','important');if(el.tagName==='A')el.style.textDecorationThickness='2px'})}\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fix);else fix();window.addEventListener('load',fix,{once:true});\n})();</script>";
 function renderAiSite(user, offers, sent) {
   const slug = esc(user.slug);
   const offersHtml = offers.length ? `<div class="ai-offers">${offers.map(o => {
@@ -4626,7 +4647,7 @@ function renderAiSite(user, offers, sent) {
   html = html.replace(/\{\{OFFERS\}\}/g, offersHtml).replace(/\{\{FAQ\}\}/g, faqHtml).replace(/\{\{CONTACT\}\}/g, contactHtml);
   if (!hadOffers) html += `<section id="offers" style="padding:40px 18px;max-width:1100px;margin:auto">${offersHtml}</section>`;
   const aiSearch = `<div style="max-width:1050px;margin:24px auto;padding:12px"><input id="goAISearch" type="search" placeholder="Search products in any language..." aria-label="Search products" style="width:100%;padding:14px;border:1px solid #bac3d1;border-radius:10px"></div><script>(function(){var i=document.getElementById('goAISearch'),cards=[].slice.call(document.querySelectorAll('.ai-offer')),timer,seq=0;if(!i)return;i.addEventListener('input',function(){clearTimeout(timer);var q=i.value.trim(),v=++seq;if(!q){cards.forEach(x=>x.style.display='');return}timer=setTimeout(async function(){try{var r=await fetch('/site/'+encodeURIComponent(document.body.dataset.slug)+'/search.json?q='+encodeURIComponent(q)),d=await r.json();if(v!==seq)return;var ids=new Set(d.ids);cards.forEach(x=>x.style.display=ids.has(x.getAttribute('href').split('/').pop())?'':'none')}catch(e){}},500)})})();</script>`;
-  const body = `${aiSearch}${html}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>`;
+  const body = `${aiSearch}${html}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>` + AI_STORE_CSS + AI_READABILITY_SCRIPT;
   return pageShell(user, { title: user.siteName, desc: String(user.sellerBio || user.siteName).slice(0, 160), body, page: 'home' });
 }
 
@@ -4951,8 +4972,8 @@ const BROCHURE_CSS = String.raw`.bk-wrap{max-width:560px;margin:0 auto;padding:1
 .bk-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.bk-ph{font-size:34px;color:#fff;opacity:.8}
 .bk-item strong{font-size:.9rem;line-height:1.2;color:#1c1a16;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .bk-price{font-size:.95rem;color:#1c1a16}.bk-price s{opacity:.55;margin-right:6px}.bk-price em{font-style:normal;font-weight:800}
-.bk-pct{position:absolute;top:6px;left:6px;background:#d7263d;color:#fff;border-radius:99px;padding:3px 8px;font-size:12px}
-.bk-out{position:absolute;bottom:6px;left:6px;background:#d7263d;color:#fff;font-style:normal;font-size:10px;font-weight:800;padding:3px 7px;border-radius:5px}
+.bk-pct{position:absolute;top:6px;right:6px;background:#d7263d;color:#fff;border-radius:99px;padding:3px 8px;font-size:12px}
+.bk-out{position:absolute;top:6px;left:6px;background:#d7263d;color:#fff;font-style:normal;font-size:10px;font-weight:800;padding:3px 7px;border-radius:5px}
 .bk-foot{text-align:center;font-size:.78rem;color:#6f6a5e}
 .bk-ctrl{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:26px}
 .bk-ctrl button{background:#111827;color:#fff;border:0;border-radius:99px;padding:11px 20px;font-weight:700;font-size:1rem;cursor:pointer}.bk-ctrl button:disabled{opacity:.35;cursor:default}.bk-ctrl span{font-weight:700}
