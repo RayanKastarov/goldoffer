@@ -1,4 +1,5 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') }); // also support running from repository root
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -160,6 +161,7 @@ const UserSchema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId, index: true }, // set for extra websites created under a main account
   aiGenerated: { type: Boolean, default: false },
   receptionist: { type: mongoose.Schema.Types.Mixed },
+  brochure: { type: mongoose.Schema.Types.Mixed },
   aiPage: { type: mongoose.Schema.Types.Mixed }, // fully AI-written page: { html, css, palette }
   resetTokenHash: String,
   resetExpires: Date,
@@ -218,6 +220,22 @@ const ImageSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', UserSchema);
 const Image = mongoose.model('Image', ImageSchema);
+const CodeProjectSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, index: true },
+  name: { type: String, maxlength: 80, default: 'New project' },
+  files: { type: [{ path: String, content: String, _id: false }], default: [] },
+  source: { type: String, default: 'manual' },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+const CodeProject = mongoose.model('CodeProject', CodeProjectSchema);
+OfferSchema.pre('save', async function () { this.$locals.goNew = this.isNew; });
+OfferSchema.post('save', function (doc) {
+  if (doc.$locals && doc.$locals.goNew) {
+    const k = 'stock.' + String(doc._id);
+    ShopSetting.updateOne({ sellerId: doc.userId }, { $set: { [k]: 10, updatedAt: new Date() } }, { upsert: true }).catch(() => {});
+  }
+});
 const Offer = mongoose.model('Offer', OfferSchema);
 const Order = mongoose.model('Order', OrderSchema);
 const Review = mongoose.model('Review', ReviewSchema);
@@ -526,7 +544,7 @@ async function sendMail({ to, subject, html, text }) {
 // Free plan: up to 3 offers, no card, no trial clock. Paid (active subscription): effectively unlimited.
 const FREE_OFFER_LIMIT = 3;
 const PLANS = {
-  free:   { name: 'Free',   price: 0,  offers: 3,    sites: 2,  aiGen: 1,  aiGenPeriod: 'month', proModules: false, whiteLabel: false, customDomain: false, templateSites: false },
+  free:   { name: 'Free',   price: 0,  offers: 3,    sites: 2,  aiGen: 1,  aiGenPeriod: 'lifetime-code / replaceable-link', proModules: false, whiteLabel: false, customDomain: false, templateSites: false },
   pro:    { name: 'Pro',    price: 19.99, offers: 500,  sites: 3,  aiGen: 3,  aiGenPeriod: 'month', proModules: true, whiteLabel: false, customDomain: false, templateSites: false },
   agency: { name: 'Agency', price: 99, offers: 2000, sites: 20, aiGen: 50, aiGenPeriod: 'month', proModules: true, whiteLabel: true,  customDomain: true,  templateSites: true }
 };
@@ -3288,6 +3306,146 @@ const GX_SITE_CSS = `
 `;
 const GX_SITE_JS = `(function(){try{var fine=matchMedia('(pointer:fine)').matches,rm=matchMedia('(prefers-reduced-motion:reduce)').matches;if(rm)return;if(fine){var g=document.createElement('div');g.className='gx-cur';document.body.appendChild(g);addEventListener('pointermove',function(e){g.style.transform='translate('+e.clientX+'px,'+e.clientY+'px)'},{passive:true});}
 document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.cta,.more,button,[type=submit]');if(!t)return;for(var i=0;i<10;i++){var s=document.createElement('i');s.className='gx-spk';var a=Math.PI*2*i/10,d=26+Math.random()*34;s.style.left=e.clientX+'px';s.style.top=e.clientY+'px';s.style.setProperty('--dx',Math.cos(a)*d+'px');s.style.setProperty('--dy',Math.sin(a)*d+'px');document.body.appendChild(s);setTimeout(function(x){x.remove()}.bind(null,s),850);}});}catch(e){}})();`;
+/* Contrast repair for public websites. Unlike index.html, these views are rendered by the server. */
+const GO_PUBLIC_LIGHT_FIX_CSS = `<style id="go-public-light-contrast">
+/* Treat the public storefront as a deliberately light interface, not the old dark theme. */
+body{--bg:#f7faff!important;--panel:#fff!important;--line:rgba(31,67,110,.16)!important;--mute:#546985!important;--soft:#405674!important;--a:#2769df!important;--b:#49c6d0!important;--on:#fff!important;background:#f7faff!important;color:#142541!important}
+body .bar{background:rgba(255,255,255,.95)!important;color:#1d3554!important;border:1px solid #d9e4f2!important;box-shadow:0 12px 36px rgba(30,56,92,.10)!important}
+body .bar b,body .bar a,body .bar nav a{color:#1d3554!important}
+body .bar nav a{border-color:#d8e3f0!important;background:#fff!important}
+body .bar nav a:hover{background:#ecf4ff!important;border-color:#87aeea!important}
+body .hero,body .mast,body .intro{background:linear-gradient(120deg,#f8fbff 0%,#eaf4ff 52%,#e6f8f5 100%)!important;color:#172943!important}
+body .herobg{opacity:.11!important;filter:blur(54px) saturate(.8)!important}
+body .blob{opacity:.12!important;filter:blur(110px)!important}
+body .gridbg{opacity:.35!important}
+body .hero h1,body .mast h1,body .intro h1,body .hero h1 *,body .mast h1 *,body .intro h1 *{color:#172943!important;-webkit-text-fill-color:#172943!important;background-image:none!important;text-shadow:none!important}
+body .hero .lead,body .hero p,body .mast p,body .intro p,body .hero .chip{color:#435b7a!important}
+body .hero .chip{background:rgba(255,255,255,.83)!important;border:1px solid #cfdbeb!important}
+body .hero .cta,body a.cta,body button.cta{background:linear-gradient(120deg,#2769df,#41b9c7)!important;color:#fff!important;border:0!important;box-shadow:0 12px 30px rgba(39,105,223,.20)!important}
+body .strip{background:#f1f6ff!important;border-color:#e0e8f4!important}
+body .strip span{color:#223d5d!important}
+body .wrap,body .info,body .sp-wrap,body .sp-section,body .sp-intro,body .mwrap{color:#192c48!important}
+body .wrap h1,body .wrap h2,body .wrap h3,body .info h1,body .sp-wrap h1,body .sp-wrap h2,body .sp-wrap h3,body .sp-intro h1,body .about h3{color:#192c48!important;-webkit-text-fill-color:#192c48!important}
+body .sub,body .short,body .long,body .about .cat,body .sp-subtle,body .sp-about p,body .sp-about small,body .sp-review-list,body .sp-review-item p,body .seller small,body .in p{color:#536984!important}
+body .card,body .glass,body .info .seller,body .info .req,body .sp-hero,body .sp-about,body .sp-review-summary,body .sp-review-list,body .sp-dialog{background:#fff!important;color:#192c48!important;border:1px solid #d9e4f0!important;box-shadow:0 14px 36px rgba(28,67,112,.09)!important}
+body .card .in,body .card .in h3,body .card .in p,body .card .more{color:#1d3554!important}
+body .card .in p{color:#596d87!important}
+body .card::before,body .card::after{display:none!important}
+body .card:hover{box-shadow:0 20px 45px rgba(28,67,112,.14)!important}
+body .glass .row,body .sp-about .row{border-color:#e2eaf4!important}
+body .glass .row small,body .sp-about .row small,body .row small{color:#637792!important}
+body .glass .row div,body .glass .row a,body .row a,body .row div{color:#253c5b!important}
+body .info .price,body .tag{background:#edf5ff!important;color:#235ab9!important;border:1px solid #cadff7!important;box-shadow:none!important}
+body .info .seller,body .seller b,body .seller em,body .sp-intro p{color:#253c5b!important}
+body .crumb,body .sp-back{color:#375a86!important}
+body .about .map,body .main{background:#edf3fb!important;border-color:#dce7f4!important;box-shadow:0 18px 35px rgba(26,61,108,.11)!important}
+body .about .map iframe{filter:none!important}
+body .abtn,body .sp-btn,body .sp-tabs a,body .sp-proof span,body .seller-pill{color:#28425f!important;background:#f7faff!important;border-color:#d9e4f0!important}
+body .abtn.pri,body .sp-primary,body .sp-btn.sp-primary{background:#2769df!important;color:#fff!important;border-color:#2769df!important}
+body input:not([type=checkbox]):not([type=radio]),body textarea,body select{background:#fff!important;color:#1a3150!important;border-color:#cbd9eb!important;caret-color:#2866da!important}
+body input::placeholder,body textarea::placeholder{color:#687d9a!important;opacity:1!important}
+body .sp-review-summary strong,body .sp-review-item strong,body .sp-about strong{color:#193456!important}
+body .sp-review-item,body .sp-review-list{border-color:#dbe5f2!important}
+body .sp-bar{background:#e9eff8!important}
+body .sp-dialog label{color:#244361!important}
+body .sp-modal-head button{background:#eff5fd!important;color:#244361!important;border-color:#cad8e9!important}
+body .sp-tabs{background:rgba(248,251,255,.96)!important;color:#294567!important;border-color:#dde7f2!important}
+body .sp-tabs button,body .sp-tabs a{color:#385475!important}
+body .sp-mobile-actions{background:#fff!important;border-color:#d9e4f0!important;box-shadow:0 -8px 26px rgba(30,56,92,.10)!important}
+body .go-owner-banner{background:rgba(255,255,255,.97)!important;color:#223955!important;border:1px solid #d9e4ef!important;box-shadow:0 12px 30px rgba(29,57,98,.13)!important}
+body .go-owner-banner a{color:#2467d6!important}
+body .go-owner-landing,body .go-owner-landing h1,body .go-owner-landing p{color:#25405f!important}
+body .go-owner-landing iframe{background:#fff!important;border-color:#d9e4f0!important}
+body .go-stock-badge{position:absolute;z-index:5;left:12px;top:12px;bottom:auto!important;display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:100px!important;background:#e8f9f0!important;color:#087b45!important;border:1px solid #a9e5c4!important;box-shadow:0 5px 15px rgba(8,123,69,.10)!important;font:800 11px/1.2 system-ui;letter-spacing:.06em!important;white-space:nowrap}
+body .go-stock-badge::before{content:'';width:7px;height:7px;background:#19ad65;border-radius:50%}
+body .go-stock-badge.is-out{background:#d7263d!important;color:#fff!important;border-color:#d7263d!important}
+body .go-stock-badge.is-out::before{background:#fff!important}
+body .go-stock-badge ~ .count{top:50px!important}
+body .go-stock-badge.is-out::before{background:#e5455d}
+/* Stock status always sits in the top-left of the offer image. */
+body .card .pic{position:relative!important;isolation:isolate;overflow:hidden!important}
+body .card .pic .go-stock-badge{position:absolute!important;left:12px!important;top:12px!important;right:auto!important;bottom:auto!important;z-index:15!important;max-width:calc(100% - 90px);font-size:11px!important;line-height:1.25!important;box-shadow:0 5px 16px rgba(12,32,58,.18)!important}
+body .card .pic .tag{right:12px!important;top:12px!important;left:auto!important;z-index:14!important}
+body .card .pic .go-stock-badge.is-out{background:#b91c39!important;color:white!important;border-color:#b91c39!important}
+body .card .pic .count{top:54px!important;bottom:auto!important}
+/* Maintain strong contrast on storefront cards, links and descriptive copy. */
+body .card .in h3{color:#162c4b!important}
+body .card .in p{color:#4a617d!important}
+body .card .in .more{color:#2057b0!important;font-weight:750!important}
+body .card .in .more:hover{color:#133b80!important}
+
+body .go-detail-stock{display:inline-flex;align-items:center;gap:7px;background:#e8f9f0!important;color:#087b45!important;border:1px solid #a9e5c4;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:800;margin-bottom:15px}
+body .go-detail-stock.is-out{background:#fff0f0!important;color:#bd3144!important;border-color:#f3bdc4!important}
+
+/* Final storefront typography contrast: cinematic areas were still using light text on light backgrounds
+   and dark text on dark cards. Keep all existing layout, features and animations. */
+body .cine-hero .cine-copy,
+body .cine-hero .cine-copy h1,
+body .cine-hero .cine-copy h1 *,
+body .cine-hero .cine-copy .cine-sub {
+  color:#182b47!important;-webkit-text-fill-color:#182b47!important;text-shadow:none!important;
+}
+body .cine-hero .cine-copy .cine-sub{color:#48617f!important;-webkit-text-fill-color:#48617f!important}
+body .cine-hero .cine-eyebrow,
+body .cine-feature .cine-eyebrow,
+body .story-panel .cine-eyebrow{color:#2566cc!important;-webkit-text-fill-color:#2566cc!important}
+body .cine-hero .cine-meta span,
+body .cine-hero .offer-pills a{background:#ffffffec!important;color:#284460!important;border-color:#cdddf0!important}
+body .cine-hero .offer-pills a:hover{color:#195ec9!important;border-color:#4a8ce8!important}
+body .hero-fade{background:linear-gradient(180deg,transparent 60%,#f7faff 100%)!important}
+body .story-canvas{
+  background:#ffffff!important;border-color:#d7e3f2!important;
+  color:#182b47!important;box-shadow:0 24px 70px rgba(25,63,113,.13)!important;
+}
+body .story-panel,
+body .story-panel h2,
+body .story-panel h2 *{
+  color:#182b47!important;-webkit-text-fill-color:#182b47!important;
+  text-shadow:none!important;opacity:1!important;
+}
+body .story-panel p{color:#526a86!important;opacity:1!important}
+body .story-stats div{background:#f0f6fe!important;border:1px solid #dce8f6!important}
+body .story-stats b{color:#1b3555!important;-webkit-text-fill-color:#1b3555!important}
+body .story-stats span{color:#5d7490!important}
+body .reveal-band .copyline{color:#697c96!important;opacity:1!important;text-shadow:none!important}
+body .reveal-band .copyline.on{color:#142a49!important;text-shadow:none!important}
+body .feature-card.dark{
+  background:#f1f6fc!important;border:1px solid #d9e5f2!important;color:#172d4b!important
+}
+body .feature-card.dark h3,
+body .feature-card.dark p,
+body .feature-card.dark .feature-link{
+  color:#183351!important;-webkit-text-fill-color:#183351!important;opacity:1!important
+}
+body .feature-card.light{background:#ffffff!important;border:1px solid #d8e4f1!important;color:#1c3553!important}
+body .feature-card.light h3,
+body .feature-card.light p,
+body .feature-card.light .feature-link{color:#1c3553!important;-webkit-text-fill-color:#1c3553!important;opacity:1!important}
+body .feature-card .cine-eyebrow{color:#2566cc!important}
+body .sec-head h2,body .sec-head span,body .sec-head a{color:#203957!important}
+body .go-shop-search span{color:#59718e!important}
+body .go-shop-search input{background:#fff!important;color:#182d4a!important}
+body .go-shop-search input::placeholder{color:#677c96!important}
+body .bar,body .bar nav{background-color:rgba(255,255,255,.96)!important}
+body .bar a,body .bar b,body .bar nav a{color:#203a5b!important;-webkit-text-fill-color:#203a5b!important}
+body .bar nav a:hover{background-color:#e9f2ff!important;color:#195dba!important}
+body .wrap > a[style*="background:#161c25"]{background:#fff!important;border-color:#d8e4f1!important}
+body .wrap > a[style*="background:#161c25"] b{color:#193556!important}
+body .wrap > a[style*="background:#161c25"] small{color:#5b718d!important}
+body .wrap > a[style*="background:#161c25"] strong{color:#235fbd!important}
+/* Keep captions on darkened image overlays white for readability. */
+body .screen-caption,body .screen-caption strong{color:#fff!important}
+body .screen-caption span{color:#d9ebff!important}
+/* Keep offer content contrast irrespective of theme variables. */
+body .card .in{background:#fff!important;color:#182b47!important}
+body .card .in h3,body .card .in h3 a{color:#172d4b!important;-webkit-text-fill-color:#172d4b!important;opacity:1!important}
+body .card .in p,body .card .in small{color:#435b79!important;-webkit-text-fill-color:#435b79!important;opacity:1!important}
+body .card .in .more,body .card .in a:not(.btn){color:#2057b0!important;-webkit-text-fill-color:#2057b0!important}
+body .card .in a:hover{text-decoration:underline!important}
+
+@media(max-width:680px){body .bar{left:8px!important;right:8px!important;top:8px!important}body .bar nav a{padding:7px 10px!important}}
+</style>`;
+
 function pageShell(user, { title, desc, body, cls, page }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
@@ -3323,6 +3481,7 @@ body #goOfferGrid{gap:22px!important}
 </style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
+${GO_PUBLIC_LIGHT_FIX_CSS}
 ${GD.freeHtml(D, page)}
 <script type="application/json" id="go-design">${JSON.stringify(D || {}).replace(/</g, '\\u003c')}</script><script>${GO_APPLY_JS}</script>${studio ? `<script>(${goStudioClient.toString()})(${goDesignCore.toString()})</script>` : ''}
 ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
@@ -3360,6 +3519,7 @@ ${studio ? '' : `<script>(function(){
       }
     }).catch(function(){});
 })();</script>`}
+<script>(function(){function parse(c){if(!c)return null;var i=c.indexOf('(');if(i<0)return null;var p=c.slice(i+1,c.indexOf(')',i)).split('/').join(',').split(' ').join(',').split(',').filter(Boolean).map(parseFloat);if(p.length<3||isNaN(p[0]))return null;return{r:p[0],g:p[1],b:p[2],a:p.length>3&&!isNaN(p[3])?p[3]:1}}function lum(c){function f(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b)}function ratio(a,b){var x=lum(a),y=lum(b);if(x<y){var t=x;x=y;y=t}return(x+.05)/(y+.05)}function over(t,b){var a=t.a;return{r:t.r*a+b.r*(1-a),g:t.g*a+b.g*(1-a),b:t.b*a+b.b*(1-a),a:1}}var cache,fixed=[];function gradColors(bi){var out=[],i=0;while(true){i=bi.indexOf('rgb',i);if(i<0)break;var j=bi.indexOf(')',i);out.push(parse(bi.slice(i,j+1)));i=j+1}return out.filter(Boolean)}function bgOf(el){if(cache.has(el))return cache.get(el);var layers=[],n=el,img=false;while(n&&n.nodeType===1){var cs=getComputedStyle(n),bi=cs.backgroundImage;if(bi&&bi!=='none'){if(bi.indexOf('url(')>-1){img=true;break}var g=gradColors(bi);if(g.length){var s={r:0,g:0,b:0,a:1};g.forEach(function(c){s.r+=c.r;s.g+=c.g;s.b+=c.b;s.a=Math.min(s.a,c.a)});s.r/=g.length;s.g/=g.length;s.b/=g.length;layers.push(s);if(s.a>=.95)break}}var c=parse(cs.backgroundColor);if(c&&c.a>0){layers.push(c);if(c.a>=.95)break}n=n.parentElement}var res=null;if(!img){var base={r:255,g:255,b:255,a:1};for(var i=layers.length-1;i>=0;i--)base=over(layers[i],base);res=base}cache.set(el,res);return res}function run(){cache=new Map();fixed.forEach(function(e){e.style.removeProperty('color')});fixed=[];var all=document.body.querySelectorAll('*');for(var k=0;k<all.length;k++){var el=all[k],tag=el.tagName;if(tag==='SCRIPT'||tag==='STYLE'||tag==='svg'||tag==='path'||tag==='IMG'||tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.closest('.go-owner-banner'))continue;var has=false;for(var c=el.firstChild;c;c=c.nextSibling){if(c.nodeType===3&&c.nodeValue.trim().length>1){has=true;break}}if(!has)continue;var cs=getComputedStyle(el);if(cs.visibility==='hidden'||cs.display==='none')continue;if(cs.webkitTextFillColor&&cs.webkitTextFillColor.indexOf('rgba(0, 0, 0, 0)')>-1)continue;var fg=parse(cs.color);if(!fg||fg.a<.25)continue;var bg=bgOf(el);if(!bg)continue;if(ratio(over(fg,bg),bg)>=3.2)continue;el.style.setProperty('color',lum(bg)>.42?'#0b1020':'#ffffff','important');fixed.push(el)}}var t,mo=new MutationObserver(function(){clearTimeout(t);t=setTimeout(function(){mo.disconnect();try{run()}catch(e){}obs()},250)});function obs(){mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']})}function init(){try{run()}catch(e){}obs()}if(document.readyState==='complete')setTimeout(init,100);else window.addEventListener('load',function(){setTimeout(init,150)});})();</script>
 <style>.go-owner-banner{position:fixed;z-index:80;left:12px;right:12px;bottom:12px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:11px 16px;border-radius:13px;background:rgba(15,21,32,.96);border:1px solid rgba(255,255,255,.15);color:#ecf0f7;box-shadow:0 16px 40px #0008;font:600 13px system-ui}.go-owner-banner a{color:var(--a);text-decoration:none}body.go-site-owner,body.go-site-owner.mpage{overflow-y:auto!important;height:auto!important}.go-owner-landing{padding-bottom:96px!important;max-width:1180px!important;min-height:50vh;margin:115px auto 45px;padding:32px 24px;text-align:center}.go-owner-landing h1{font-size:clamp(30px,5vw,52px)}.go-owner-landing p{color:var(--soft);margin:18px 0 25px}.go-owner-landing iframe{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:1px solid var(--line);border-radius:18px;background:#080c13}.go-owner-landing{max-width:1200px;text-align:left}.go-owner-landing a{display:inline-block;border-radius:12px;padding:13px 22px;background:var(--a);color:var(--on);font-weight:700;text-decoration:none}@media(max-width:650px){.go-owner-banner{font-size:11px;gap:8px;padding:10px}}</style>
 </body></html>`;
 }
@@ -3389,8 +3549,8 @@ function offerCard(user, o, i) {
   const tracked=user._stockMap&&Object.prototype.hasOwnProperty.call(user._stockMap,String(o._id));
   const stock=tracked?Number(user._stockMap[String(o._id)]):null;
   return `<a class="card rv" style="--d:${(i % 6) * 70}ms" href="/site/${esc(user.slug)}/offer/${o._id}">
-  <div class="pic">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : artPlaceholder(o.title, user.categoryLabel || user.category || user.siteName)}
-    <span class="tag">${eur(o.salePrice > 0 ? o.salePrice : o.price)}</span>${stock===0?'<span class="count" style="top:auto;bottom:12px;background:#b52f40;color:#fff">OUT OF STOCK</span>':stock!==null?'<span class="count" style="top:auto;bottom:12px;background:#187f5a;color:#fff">IN STOCK</span>':''}${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
+  <div class="pic">${stock===0?'<span class="go-stock-badge is-out" style="position:absolute!important;top:12px!important;left:12px!important;bottom:auto!important;right:auto!important;z-index:50!important" role="status">OUT OF STOCK</span>':'<span class="go-stock-badge" style="position:absolute!important;top:12px!important;left:12px!important;bottom:auto!important;right:auto!important;z-index:50!important" role="status">IN STOCK</span>'}${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : artPlaceholder(o.title, user.categoryLabel || user.category || user.siteName)}
+    <span class="tag">${eur(o.salePrice > 0 ? o.salePrice : o.price)}</span>${HEART_SMALL(o._id)}${g.length > 1 ? `<span class="count">${g.length} photos</span>` : ''}</div>
   <div class="in"><h3>${esc(o.title)}</h3><p>${esc(o.description)}</p><span class="more">View details</span></div>
 </a>`;
 }
@@ -3531,7 +3691,7 @@ function renderSite(user, offers, sent) {
 </section>
 
 <main class="wrap top" id="offers">
-  <div class="sec-head"><h2>Offers</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/profile#reviews" style="color:inherit;text-decoration:underline">Seller reviews</a></span></div>
+  <div class="sec-head"><h2>Offers</h2><span>${offers.length} available · <a href="/site/${esc(user.slug)}/profile#reviews" style="color:inherit;text-decoration:underline">Seller reviews</a>${user.brochure?.enabled ? ' · <a href="/site/' + esc(user.slug) + '/brochure" style="display:inline-flex;padding:8px 12px;border:1px solid #b7d1e7;border-radius:10px;background:#eaf4ff;color:#123a68;font-weight:800;text-decoration:none">View brochure →</a>' : ''}</span></div>
   <div class="go-shop-search"><input id="goOfferSearch" type="search" autocomplete="off" aria-label="Search offers" placeholder="Search offers by name or description..."><span id="goFound">${offers.length} offers</span></div>
   ${sent ? `<div class="ok">Thank you. Your request was sent and the business will contact you.${sentTrack(user)}</div>` : ''}
   <div class="grid" id="goOfferGrid">${cards}</div><p id="goNoResults" style="display:none;padding:28px 0;color:#707781">No matching offers.</p>
@@ -3632,7 +3792,7 @@ function renderOfferPage(user, offer, others, sent) {
   <div class="gal">${main}</div>
   <div class="info">
     <h1>${esc(offer.title)}</h1>
-    <div class="price">${eur(offer.price)}</div>${stockRemaining!==null?`<p role="status" style="color:${soldOut?'#c73344':'#18835a'};font-weight:700;margin-bottom:15px">${soldOut?'Out of stock':stockRemaining+' in stock'}</p>`:''}
+    <div class="price">${eur(offer.price)}</div><p class="go-detail-stock${soldOut?' is-out':''}" role="status">${soldOut?'OUT OF STOCK':'IN STOCK'}${!soldOut&&stockRemaining!==null?' · '+stockRemaining+' remaining':''}</p>
     <div class="actions">
       <a class="abtn pri" href="/site/${esc(user.slug)}/messages?offer=${offer._id}">${MSG_SVG}Message</a>
       ${phoneRaw ? `<a class="abtn" href="tel:${esc(phoneRaw)}">${PHONE_SVG}<span class="t2">Call</span></a>` : ''}
@@ -3693,7 +3853,7 @@ function siteBar(user, kind) {
   const first = kind === 'home'
     ? '<a class="hide-m" href="#offers">Offers</a><a class="hide-m" href="#about">About</a>'
     : `<a class="hide-m" href="/site/${s}#offers">All offers</a>`;
-  return `<header class="bar"><b>${esc(user.siteName)}</b><nav>${first}<a class="hide-m" href="/site/${s}/profile">Seller profile</a><a class="navi" href="/site/${s}/favorites" aria-label="Saved offers">${HEART_PATH}<span class="lab">Saved</span><span class="nbadge" id="favCount"></span></a><a class="navi" href="/site/${s}/messages" aria-label="Messages">${MSG_SVG}<span class="lab">Messages</span><span class="nbadge" id="msgBadge"></span></a></nav></header>`;
+  return `<header class="bar"><b>${esc(user.siteName)}</b><nav>${first}${(user.brochure && user.brochure.enabled) ? '<a class="hide-m" href="/site/' + s + '/brochure">Brochure</a>' : ''}<a class="hide-m" href="/site/${s}/profile">Seller profile</a><a class="navi" href="/site/${s}/favorites" aria-label="Saved offers">${HEART_PATH}<span class="lab">Saved</span><span class="nbadge" id="favCount"></span></a><a class="navi" href="/site/${s}/messages" aria-label="Messages">${MSG_SVG}<span class="lab">Messages</span><span class="nbadge" id="msgBadge"></span></a></nav></header>`;
 }
 
 // ---------- Messages page (opens from the Messages button): list of chats + the open chat, photos/files and voice calls ----------
@@ -4328,9 +4488,21 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
       orderAmount = Math.max(0, Math.round((orderAmount - discount) * 100) / 100); couponCode = cp.code;
     }
     const trackToken = crypto.randomBytes(12).toString('hex');
+    let stockTaken = false;
+    try {
+      const invS = await ShopSetting.findOne({ sellerId: user._id }).select('stock').lean();
+      const sm = invS && invS.stock ? invS.stock : null, idS = String(offer._id);
+      const trackedS = sm ? (typeof sm.has === 'function' ? sm.has(idS) : Object.prototype.hasOwnProperty.call(sm, idS)) : false;
+      if (trackedS) {
+        const keyS = 'stock.' + idS;
+        const got = await ShopSetting.findOneAndUpdate({ sellerId: user._id, [keyS]: { $gte: 1 } }, { $inc: { [keyS]: -1 } });
+        if (!got) { await rollback(); return res.status(409).send('This offer is currently sold out. Please contact the seller.'); }
+        stockTaken = true;
+      }
+    } catch (stockErr) { await rollback(); throw stockErr; }
     let newOrder;
     try { newOrder = await Order.create({
-      variant: variantName, coupon: couponCode, discount,
+      stockApplied: stockTaken, variant: variantName, coupon: couponCode, discount,
       trackToken, history: [{ status: 'Pending', at: new Date() }],
       userId: user._id, offerId: offer._id, offerTitle: offer.title, amount: orderAmount,
       customerName: String(req.body.customerName || '').slice(0, 80),
@@ -4338,7 +4510,7 @@ app.post('/site/:slug/order', publicLimiter, rejectOwnerSelfAction, async (req, 
       contacts: parsed.contacts,
       note: String(req.body.note || '').replace(/\r/g, '').trim().slice(0, 1000),
       status: 'Pending'
-    }); } catch (createErr) { await rollback(); throw createErr; }
+    }); } catch (createErr) { if (stockTaken) { try { await ShopSetting.updateOne({ sellerId: user._id }, { $inc: { ['stock.' + String(offer._id)]: 1 } }); } catch (e9) {} } await rollback(); throw createErr; }
     void runAutomations(user._id, 'order.created', { ref: String(newOrder._id), customer: String(req.body.customerName || '').slice(0, 80), contact: parsed.text, offer: offer.title, offerId: offer._id, amount: orderAmount });
     await pushNote(user._id, 'order', String(newOrder._id), 'New request', `${String(req.body.customerName || 'A customer').slice(0, 60)} · ${offer.title}`, '/orders');
     const mailC = (parsed.contacts || []).find(c => c.type === 'email' && isEmail(c.value));
@@ -4447,17 +4619,19 @@ function aiBaseCss(user) {
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.55;-webkit-text-size-adjust:100%}
 img{max-width:100%;height:auto}a{color:inherit}
 .ai-offers{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}.ai-offer{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-.ai-offer-img{aspect-ratio:4/3;width:100%;object-fit:cover;display:block;background:linear-gradient(135deg,var(--a),var(--b))}.ai-offer-body{padding:16px}.ai-offer-title{margin:0 0 6px;font-size:1.1rem}.ai-offer-desc{margin:0 0 10px;opacity:.8;font-size:.92rem}.ai-offer-price{font-weight:800;color:var(--a)}
+.ai-offer{position:relative}.ai-offer-img{aspect-ratio:4/3;width:100%;object-fit:cover;display:block;background:linear-gradient(135deg,var(--a),var(--b))}.go-ai-stock{position:absolute;top:12px;left:12px;z-index:3;margin:0!important;display:inline-block;background:#e8f9f0;color:#087b45;border:1px solid #a9e5c4;font-size:12px;letter-spacing:.06em;border-radius:999px;padding:6px 11px;font-weight:800}.go-ai-stock.is-out{background:#fff0f0;color:#bd3144;border-color:#f3bdc4}.ai-offer-body{padding:16px}.ai-offer-title{margin:0 0 6px;font-size:1.1rem}.ai-offer-desc{margin:0 0 10px;opacity:.8;font-size:.92rem}.ai-offer-price{font-weight:800;color:var(--a)}
 .ai-faq details{border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin:8px 0;background:var(--panel)}.ai-faq summary{cursor:pointer;font-weight:700}.ai-contact{display:grid;gap:8px}.ai-contact a{text-decoration:underline}
 .ai-float{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:80}.ai-float a{display:inline-block;padding:11px 18px;border-radius:999px;background:var(--a);color:var(--on);font-weight:800;text-decoration:none;box-shadow:0 8px 24px #0005}
 .go-public-announcement{margin:12px auto!important;max-width:1100px}`;
 }
+const AI_STORE_CSS = `<style id="go-ai-accessible-cards">body .ai-offer{background:#fff!important;color:#182b47!important;border:1px solid #d7e2f1!important}body .ai-offer-body,body .ai-offer-title{color:#182b47!important;-webkit-text-fill-color:#182b47!important}body .ai-offer-desc{color:#435b79!important;-webkit-text-fill-color:#435b79!important;opacity:1!important}body .ai-offer-price{color:#1f56ac!important;-webkit-text-fill-color:#1f56ac!important}body .ai-offer .go-ai-stock{position:absolute!important;top:12px!important;left:12px!important;right:auto!important;bottom:auto!important;color:#075d35!important;background:#e6f8ee!important;-webkit-text-fill-color:#075d35!important}body .go-ai-stock.is-out{background:#b91c39!important;color:#fff!important;-webkit-text-fill-color:#fff!important}body #goAISearch{color:#172d4b!important;background:#fff!important}</style>`;
+const AI_READABILITY_SCRIPT = "<script id=\"go-ai-accessible-contrast\">(function(){\nfunction rgb(c){var m=String(c).match(/^rgba?\\(\\s*(\\d+)[ ,]+(\\d+)[ ,]+(\\d+)(?:[ ,/]+([\\d.]+))?/i);return m?[+m[1],+m[2],+m[3],m[4]===undefined?1:+m[4]]:null}\nfunction lum(c){var a=c.slice(0,3).map(function(v){v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*a[0]+.7152*a[1]+.0722*a[2]}\nfunction ratio(a,b){var x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}\nfunction effectiveBackground(el){var chain=[],p=el;while(p&&p.nodeType===1){chain.unshift(p);p=p.parentElement}var out=[255,255,255];for(var j=0;j<chain.length;j++){var st=getComputedStyle(chain[j]);if(st.backgroundImage&&st.backgroundImage!=='none')return null;var v=rgb(st.backgroundColor);if(v&&v[3]>0){var a=v[3];out=[v[0]*a+out[0]*(1-a),v[1]*a+out[1]*(1-a),v[2]*a+out[2]*(1-a)]}}return out}\nfunction fix(){document.querySelectorAll('main h1,main h2,main h3,main h4,main p,main span,main small,main li,main a,main label,main strong,section h1,section h2,section h3,section p,section a,header a,nav a,.ai-offer-title,.ai-offer-desc,.ai-offer-price').forEach(function(el){if(el.closest('.go-ai-stock,.ai-float,.go-owner-banner,button,[role=button]'))return;var cs=getComputedStyle(el);if(cs.visibility==='hidden'||cs.display==='none'||parseFloat(cs.opacity)<.65)return;var bg=effectiveBackground(el);if(!bg)return;var fg=rgb(cs.color);if(!fg)return;var thresh=parseFloat(cs.fontSize)>=24?3:4.5;if(ratio(fg,bg)>=thresh)return;var dark=[20,33,54],light=[255,255,255],best=ratio(dark,bg)>=ratio(light,bg)?dark:light;el.style.setProperty('color','rgb('+best.join(',')+')','important');el.style.setProperty('-webkit-text-fill-color','rgb('+best.join(',')+')','important');if(el.tagName==='A')el.style.textDecorationThickness='2px'})}\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fix);else fix();window.addEventListener('load',fix,{once:true});\n})();</script>";
 function renderAiSite(user, offers, sent) {
   const slug = esc(user.slug);
   const offersHtml = offers.length ? `<div class="ai-offers">${offers.map(o => {
     const g = galleryOf(o);
     const st = user._stockMap && Object.prototype.hasOwnProperty.call(user._stockMap,String(o._id)) ? Number(user._stockMap[String(o._id)]) : null;
-    return `<a class="ai-offer" href="/site/${slug}/offer/${o._id}">${g.length ? `<img class="ai-offer-img" src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : '<div class="ai-offer-img"></div>'}${st!==null?`<div style="padding:6px 12px;color:${st===0?'#bf233e':'#168258'};font-weight:700">${st===0?'OUT OF STOCK':'IN STOCK'}</div>`:''}<div class="ai-offer-body"><h3 class="ai-offer-title">${esc(o.title)}</h3>${o.description ? `<p class="ai-offer-desc">${esc(String(o.description).slice(0, 140))}</p>` : ''}${Number(o.price) > 0 ? `<span class="ai-offer-price">${eur(o.price)}</span>` : ''}</div></a>`;
+    return `<a class="ai-offer" href="/site/${slug}/offer/${o._id}">${g.length ? `<img class="ai-offer-img" src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : '<div class="ai-offer-img"></div>'}<div class="go-ai-stock${st===0?' is-out':''}" role="status">${st===0?'OUT OF STOCK':'IN STOCK'}</div><div class="ai-offer-body"><h3 class="ai-offer-title">${esc(o.title)}</h3>${o.description ? `<p class="ai-offer-desc">${esc(String(o.description).slice(0, 140))}</p>` : ''}${Number(o.price) > 0 ? `<span class="ai-offer-price">${eur(o.price)}</span>` : ''}</div></a>`;
   }).join('')}</div>` : '<p>No offers yet. Please check back soon.</p>';
   const faqs = (user.faqItems || []).filter(f => f.question && f.answer);
   const faqHtml = faqs.length ? `<div class="ai-faq">${faqs.map(f => `<details><summary>${esc(f.question)}</summary><p>${esc(f.answer)}</p></details>`).join('')}</div>` : '';
@@ -4474,7 +4648,7 @@ function renderAiSite(user, offers, sent) {
   html = html.replace(/\{\{OFFERS\}\}/g, offersHtml).replace(/\{\{FAQ\}\}/g, faqHtml).replace(/\{\{CONTACT\}\}/g, contactHtml);
   if (!hadOffers) html += `<section id="offers" style="padding:40px 18px;max-width:1100px;margin:auto">${offersHtml}</section>`;
   const aiSearch = `<div style="max-width:1050px;margin:24px auto;padding:12px"><input id="goAISearch" type="search" placeholder="Search products in any language..." aria-label="Search products" style="width:100%;padding:14px;border:1px solid #bac3d1;border-radius:10px"></div><script>(function(){var i=document.getElementById('goAISearch'),cards=[].slice.call(document.querySelectorAll('.ai-offer')),timer,seq=0;if(!i)return;i.addEventListener('input',function(){clearTimeout(timer);var q=i.value.trim(),v=++seq;if(!q){cards.forEach(x=>x.style.display='');return}timer=setTimeout(async function(){try{var r=await fetch('/site/'+encodeURIComponent(document.body.dataset.slug)+'/search.json?q='+encodeURIComponent(q)),d=await r.json();if(v!==seq)return;var ids=new Set(d.ids);cards.forEach(x=>x.style.display=ids.has(x.getAttribute('href').split('/').pop())?'':'none')}catch(e){}},500)})})();</script>`;
-  const body = `${aiSearch}${html}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>`;
+  const body = `${aiSearch}${html}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>` + AI_STORE_CSS + AI_READABILITY_SCRIPT;
   return pageShell(user, { title: user.siteName, desc: String(user.sellerBio || user.siteName).slice(0, 160), body, page: 'home' });
 }
 
@@ -4560,7 +4734,11 @@ app.get('/api/my-sites', authenticateToken, async (req, res) => {
     if (!root) return res.status(404).json({ message: 'Account not found.' });
     const subs = await User.find({ ownerId: root._id }).sort({ _id: 1 });
     const all = [root, ...subs];
+    const freeCodeUsed = planOf(root) === 'free' ? !!(await GOFreeCodeExport.exists({ sellerId: root._id })) : null;
+    const freeLinkUsed = subs.filter(x => x.aiGenerated).length;
     res.json({
+      freeCodeUsed, freeLinkUsed, freeLinkLimit: 1,
+      freeActiveSite: subs.find(x => x.aiGenerated) ? { id: String(subs.find(x => x.aiGenerated)._id), siteName: subs.find(x => x.aiGenerated).siteName || 'AI website', slug: subs.find(x => x.aiGenerated).slug, siteUrl: subs.find(x => x.aiGenerated).slug ? `${PUBLIC_BASE}/site/${subs.find(x => x.aiGenerated).slug}` : null } : null,
       currentId: String(req.user.id), rootId: String(root._id), cap: SITE_CAP(root), plan: planOf(root), planLimits: limitsOf(root), canTemplate: hasFeature(root, 'templateSites'), aiReady: !!process.env.OPENROUTER_API_KEY,
       sites: all.map(u => ({ id: String(u._id), siteName: u.siteName || 'Untitled', slug: u.slug, published: !!u.published, aiGenerated: !!u.aiGenerated, isMain: String(u._id) === String(root._id), siteUrl: u.slug ? `${PUBLIC_BASE}/site/${u.slug}` : null }))
     });
@@ -4583,26 +4761,454 @@ app.delete('/api/my-sites/:id', authenticateToken, async (req, res) => {
     if (!root || !target || !target.ownerId || String(target.ownerId) !== String(root._id)) return res.status(403).json({ message: 'Only extra sites can be deleted.' });
     await Offer.deleteMany({ userId: target._id });
     await User.deleteOne({ _id: target._id });
-    res.json({ ok: true });
+    res.json({ ok: true, rootId: String(root._id) });
   } catch (e) { res.status(500).json({ message: 'Could not delete the site.' }); }
 });
 
+// ---------- Full-stack code export (frontend + Express backend) ----------
+const GO_FS_SERVER = String.raw`const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const app = express();
+app.use(express.json({ limit: '50kb' }));
+const DATA = path.join(__dirname, 'data.json');
+const ADMIN_KEY = process.env.ADMIN_KEY || crypto.randomBytes(8).toString('hex');
+const SEED = require('./offers.json');
+function save(db) { fs.writeFileSync(DATA, JSON.stringify(db, null, 2)); }
+function load() {
+  try { return JSON.parse(fs.readFileSync(DATA, 'utf8')); }
+  catch (e) {
+    var db = { offers: SEED.map(function (o, i) { return { id: 'o' + (i + 1), title: o.title, description: o.description, price: o.price, stock: 10 }; }), orders: [], messages: [] };
+    save(db); return db;
+  }
+}
+function clean(v, n) { return String(v || '').replace(/[<>]/g, '').trim().slice(0, n); }
+var hits = {};
+function limit(req, res, next) {
+  var k = req.ip + req.path, now = Date.now();
+  hits[k] = (hits[k] || []).filter(function (t) { return now - t < 60000; });
+  if (hits[k].length >= 20) return res.status(429).json({ error: 'Too many requests, try again in a minute.' });
+  hits[k].push(now); next();
+}
+function admin(req, res, next) {
+  if (req.get('x-admin-key') !== ADMIN_KEY) return res.status(401).json({ error: 'Admin key required' });
+  next();
+}
+
+// Public API
+app.get('/api/offers', function (req, res) { res.json(load().offers); });
+
+app.post('/api/orders', limit, function (req, res) {
+  var db = load();
+  var o = db.offers.find(function (x) { return x.id === req.body.offerId; });
+  if (!o) return res.status(404).json({ error: 'Offer not found' });
+  var qty = Math.max(1, Math.min(10, parseInt(req.body.quantity, 10) || 1));
+  var name = clean(req.body.name, 80), contact = clean(req.body.contact, 120);
+  if (!name || !contact) return res.status(400).json({ error: 'Name and contact are required' });
+  if (o.stock < qty) return res.status(409).json({ error: o.stock <= 0 ? 'Out of stock' : 'Only ' + o.stock + ' left', stock: o.stock });
+  o.stock -= qty; // stock drops automatically when someone buys
+  db.orders.push({ id: crypto.randomBytes(5).toString('hex'), offerId: o.id, offer: o.title, quantity: qty, name: name, contact: contact, note: clean(req.body.note, 500), status: 'pending', at: new Date().toISOString() });
+  save(db);
+  res.json({ ok: true, stock: o.stock });
+});
+
+app.post('/api/messages', limit, function (req, res) {
+  var db = load();
+  var name = clean(req.body.name, 80), text = clean(req.body.text, 1500);
+  if (!name || !text) return res.status(400).json({ error: 'Name and message are required' });
+  db.messages.push({ id: crypto.randomBytes(5).toString('hex'), name: name, contact: clean(req.body.contact, 120), text: text, at: new Date().toISOString() });
+  save(db);
+  res.json({ ok: true });
+});
+
+// Owner API (send the header x-admin-key)
+app.get('/api/admin/orders', admin, function (req, res) { res.json(load().orders); });
+app.get('/api/admin/messages', admin, function (req, res) { res.json(load().messages); });
+app.put('/api/admin/offers/:id/stock', admin, function (req, res) {
+  var db = load(), o = db.offers.find(function (x) { return x.id === req.params.id; });
+  if (!o) return res.status(404).json({ error: 'Offer not found' });
+  o.stock = Math.max(0, parseInt(req.body.stock, 10) || 0);
+  save(db); res.json(o);
+});
+app.put('/api/admin/orders/:id', admin, function (req, res) {
+  var db = load(), ord = db.orders.find(function (x) { return x.id === req.params.id; });
+  if (!ord) return res.status(404).json({ error: 'Order not found' });
+  var status = String(req.body.status || '');
+  if (['pending', 'completed', 'cancelled'].indexOf(status) < 0) return res.status(400).json({ error: 'Bad status' });
+  if (status === 'cancelled' && ord.status !== 'cancelled') {
+    var o = db.offers.find(function (x) { return x.id === ord.offerId; });
+    if (o) o.stock += ord.quantity; // a cancelled order puts the items back
+  }
+  ord.status = status; save(db); res.json(ord);
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
+var PORT = process.env.PORT || 3000;
+app.listen(PORT, function () {
+  console.log('Website: http://localhost:' + PORT);
+  console.log('Admin key (header x-admin-key): ' + ADMIN_KEY);
+});
+`;
+const GO_FS_CLIENT = String.raw`(function () {
+  var grid = document.getElementById('offerGrid');
+  var dlg = document.getElementById('orderDialog'), cur = null;
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function render(list) {
+    if (!grid) return;
+    grid.innerHTML = '';
+    list.forEach(function (o) {
+      var out = o.stock <= 0, card = el('article', 'gf-card');
+      card.appendChild(el('span', 'gf-badge' + (out ? ' out' : ''), out ? 'OUT OF STOCK' : 'IN STOCK'));
+      if (o.price > 0) card.appendChild(el('span', 'gf-price', '€' + Number(o.price).toFixed(2)));
+      var body = el('div', 'gf-body');
+      body.appendChild(el('h3', '', o.title));
+      if (o.description) body.appendChild(el('p', '', o.description));
+      body.appendChild(el('small', 'gf-left', out ? 'Currently unavailable' : o.stock + ' left'));
+      var b = el('button', 'gf-btn', out ? 'Sold out' : 'Order');
+      b.type = 'button'; b.disabled = out;
+      b.addEventListener('click', function () { openOrder(o); });
+      body.appendChild(b); card.appendChild(body); grid.appendChild(card);
+    });
+  }
+  function load() { fetch('/api/offers').then(function (r) { return r.json(); }).then(render).catch(function () {}); }
+  function openOrder(o) {
+    cur = o;
+    document.getElementById('orderTitle').textContent = o.title;
+    document.getElementById('orderMsg').textContent = '';
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  document.getElementById('orderForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!cur) return;
+    var f = e.target, msg = document.getElementById('orderMsg');
+    fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offerId: cur.id, quantity: f.elements.quantity.value, name: f.elements.customer.value, contact: f.elements.contact.value, note: f.elements.note.value }) })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (x) {
+        if (x.ok) { msg.textContent = 'Thank you! Your request was sent.'; f.reset(); load(); setTimeout(function () { dlg.close(); }, 1400); }
+        else { msg.textContent = x.d.error || 'Something went wrong'; load(); }
+      })
+      .catch(function () { msg.textContent = 'Network error'; });
+  });
+  document.getElementById('orderClose').addEventListener('click', function () { dlg.close(); });
+  var cf = document.getElementById('contactForm');
+  if (cf) cf.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var m = document.getElementById('contactMsg');
+    fetch('/api/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: cf.elements.who.value, contact: cf.elements.how.value, text: cf.elements.text.value }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { m.textContent = d.ok ? 'Message sent. Thank you!' : (d.error || 'Error'); if (d.ok) cf.reset(); })
+      .catch(function () { m.textContent = 'Network error'; });
+  });
+  load();
+})();
+`;
+const GO_FS_CSS = String.raw`*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.55}
+main,section{max-width:1080px;margin:auto;padding:32px 20px}img{max-width:100%}
+.gf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px}
+.gf-card{position:relative;background:var(--panel);border:1px solid rgba(127,127,127,.25);border-radius:12px;overflow:hidden;padding-top:46px}
+.gf-badge{position:absolute;top:12px;left:12px;font-size:.72rem;font-weight:800;letter-spacing:.04em;padding:5px 10px;border-radius:6px;background:#e8f9f0;color:#087b45;border:1px solid #b6e8cf}
+.gf-badge.out{background:#d7263d;color:#fff;border-color:#d7263d}
+.gf-price{position:absolute;top:12px;right:12px;font-weight:800;color:var(--a)}
+.gf-body{padding:14px 16px 18px}.gf-body h3{margin:0 0 6px}.gf-body p{margin:0 0 10px;opacity:.8}.gf-left{display:block;margin-bottom:12px;opacity:.75}
+.gf-btn{background:var(--a);color:#fff;border:0;border-radius:8px;padding:11px 18px;font-weight:700;cursor:pointer;font-size:1rem}.gf-btn:disabled{opacity:.5;cursor:not-allowed}.gf-btn.alt{background:transparent;color:inherit;border:1px solid rgba(127,127,127,.4)}
+.gf-form,.gf-dialog form{display:grid;gap:10px;max-width:520px}.gf-form input,.gf-form textarea,.gf-dialog input,.gf-dialog textarea{padding:11px;border-radius:8px;border:1px solid rgba(127,127,127,.4);font:inherit;background:#fff;color:#111}
+.gf-dialog{border:0;border-radius:14px;padding:22px;background:var(--panel);color:var(--text);width:min(92vw,460px)}.gf-dialog::backdrop{background:rgba(0,0,0,.55)}
+`;
+function goFullstackFiles(o) {
+  const name = cleanStr(o.name, 80) || 'My website';
+  const faqs = (Array.isArray(o.faq) ? o.faq : []).slice(0, 6).map(f => '<details><summary>' + esc(cleanStr(f && f.question, 160)) + '</summary><p>' + esc(cleanStr(f && f.answer, 500)) + '</p></details>').join('');
+  const offersSec = '<section id="offers"><h2>Offers</h2><div id="offerGrid" class="gf-grid"></div></section>';
+  const contactSec = '<section id="contact"><h2>Contact</h2><form id="contactForm" class="gf-form"><input name="who" placeholder="Your name" required maxlength="80"><input name="how" placeholder="Email or phone" maxlength="120"><textarea name="text" rows="4" placeholder="Your message" required maxlength="1500"></textarea><button class="gf-btn" type="submit">Send message</button><p id="contactMsg" role="status"></p></form></section>';
+  let page = o.page || ('<main><h1>' + esc(name) + '</h1>{{OFFERS}}{{FAQ}}{{CONTACT}}</main>');
+  const hadO = page.includes('{{OFFERS}}'), hadC = page.includes('{{CONTACT}}');
+  page = page.split('{{OFFERS}}').join(offersSec).split('{{FAQ}}').join(faqs).split('{{CONTACT}}').join(contactSec);
+  if (!hadO) page += offersSec;
+  if (!hadC) page += contactSec;
+  const dialog = '<dialog id="orderDialog" class="gf-dialog"><form id="orderForm"><h3 id="orderTitle"></h3><input name="customer" placeholder="Your name" required maxlength="80"><input name="contact" placeholder="Email or phone" required maxlength="120"><input name="quantity" type="number" min="1" max="10" value="1" aria-label="Quantity"><textarea name="note" rows="3" placeholder="Note (optional)" maxlength="500"></textarea><button class="gf-btn" type="submit">Send request</button><button class="gf-btn alt" type="button" id="orderClose">Cancel</button><p id="orderMsg" role="status"></p></form></dialog>';
+  const html = '<!doctype html><html lang="' + esc(o.lang || 'en') + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(name) + '</title><style>' + o.cssVars + GO_FS_CSS + (o.pageCss || '') + '</style></head><body>' + page + dialog + '<script src="/app.js"></script></body></html>';
+  const seed = (Array.isArray(o.offers) ? o.offers : []).slice(0, 6).map(x => ({ title: cleanStr(x && x.title, 120), description: cleanStr(x && x.description, 400), price: Math.max(0, Number(x && x.price) || 0) })).filter(x => x.title);
+  const readme = '# ' + name + '\n\nFull-stack website generated by GoldOffer Studio (frontend + backend).\n\n## Run\n\n1. Install Node.js 18 or newer.\n2. In this folder run: npm install\n3. Start: npm start\n4. Open http://localhost:3000\n\nThe admin key is printed in the terminal. Set your own with the ADMIN_KEY environment variable.\n\n## What is included\n\n- public/index.html + public/app.js: the website (offers, order form, contact form)\n- server.js: Express backend that stores offers, orders and messages in data.json\n- New offers start with 10 in stock. Stock drops automatically when someone orders and a cancelled order puts it back.\n- GET /api/offers, POST /api/orders, POST /api/messages (public)\n- GET /api/admin/orders, GET /api/admin/messages, PUT /api/admin/orders/:id, PUT /api/admin/offers/:id/stock (send header x-admin-key)\n';
+  return [
+    { name: 'package.json', content: JSON.stringify({ name: 'goldoffer-website', version: '1.0.0', private: true, scripts: { start: 'node server.js' }, dependencies: { express: '^4.19.2' } }, null, 2) },
+    { name: 'server.js', content: GO_FS_SERVER },
+    { name: 'offers.json', content: JSON.stringify(seed, null, 2) },
+    { name: 'public/index.html', content: html },
+    { name: 'public/app.js', content: GO_FS_CLIENT },
+    { name: '.gitignore', content: 'node_modules\ndata.json\n' },
+    { name: 'README.md', content: readme }
+  ];
+}
+
+// ---------- Brochure: a flip-book of up to 15 promo offers ----------
+function brochureOffers(user, offers) {
+  const cfg = user.brochure || {};
+  const byId = new Map(offers.map(o => [String(o._id), o]));
+  let list = (Array.isArray(cfg.ids) ? cfg.ids : []).map(id => byId.get(String(id))).filter(Boolean);
+  if (!list.length) {
+    const promo = offers.filter(o => Number(o.salePrice) > 0 && Number(o.salePrice) < Number(o.price));
+    list = (promo.length ? promo : offers).slice(0, 15);
+  }
+  return list.slice(0, 15);
+}
+const BROCHURE_CSS = String.raw`.bk-wrap{max-width:560px;margin:0 auto;padding:110px 16px 60px}
+.bk-stage{perspective:1800px}
+.bk-book{position:relative;aspect-ratio:3/4;width:100%;margin:0 auto;filter:drop-shadow(0 24px 40px rgba(0,0,0,.35))}
+.bk-leaf{position:absolute;inset:0;transform-origin:left center;transition:transform .9s cubic-bezier(.45,.05,.25,1);transform-style:preserve-3d}
+.bk-leaf.turned{transform:rotateY(-180deg)}.bk-leaf.gone{visibility:hidden}
+.bk-front,.bk-rear{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:4px 10px 10px 4px;overflow:hidden;background:#fffdf7;color:#1c1a16}
+.bk-rear{transform:rotateY(180deg);background:linear-gradient(90deg,#efe9da,#fbf7ec)}
+.bk-front::after{content:'';position:absolute;inset:0 auto 0 0;width:22px;background:linear-gradient(90deg,rgba(0,0,0,.22),transparent);pointer-events:none}
+.bk-cover{height:100%;padding:12% 10% 12% 13%;display:flex;flex-direction:column;justify-content:center;gap:14px;background:linear-gradient(150deg,var(--a),var(--b));color:#fff}
+.bk-cover h1,.bk-cover h2{margin:0;font-size:clamp(28px,7vw,44px);line-height:1.05}.bk-cover p{margin:0;font-size:1.05rem;opacity:.92}
+.bk-kicker{font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;font-weight:800}.bk-valid,.bk-count{font-size:.9rem;font-weight:700}
+.bk-cta{display:inline-block;align-self:flex-start;background:#fff;color:#111;text-decoration:none;font-weight:800;padding:12px 20px;border-radius:99px}
+.bk-page{height:100%;padding:6% 6% 5% 9%;display:flex;flex-direction:column}
+.bk-head{display:flex;justify-content:space-between;gap:10px;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;border-bottom:2px solid var(--a);padding-bottom:7px;color:#1c1a16}
+.bk-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;margin:12px 0 8px;min-height:0}
+.bk-item{display:flex;flex-direction:column;gap:5px;text-decoration:none;color:#1c1a16;min-height:0}
+.bk-pic{position:relative;flex:1;min-height:0;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center}
+.bk-pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.bk-ph{font-size:34px;color:#fff;opacity:.8}
+.bk-item strong{font-size:.9rem;line-height:1.2;color:#1c1a16;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bk-price{font-size:.95rem;color:#1c1a16}.bk-price s{opacity:.55;margin-right:6px}.bk-price em{font-style:normal;font-weight:800}
+.bk-pct{position:absolute;top:6px;right:6px;background:#d7263d;color:#fff;border-radius:99px;padding:3px 8px;font-size:12px}
+.bk-out{position:absolute;top:10px;left:10px;background:#d7263d;color:#fff;font-style:normal;font-size:10px;font-weight:800;padding:3px 7px;border-radius:5px}
+.bk-foot{text-align:center;font-size:.78rem;color:#6f6a5e}
+.bk-ctrl{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:26px}
+.bk-ctrl button{background:#111827;color:#fff;border:0;border-radius:99px;padding:11px 20px;font-weight:700;font-size:1rem;cursor:pointer}.bk-ctrl button:disabled{opacity:.35;cursor:default}.bk-ctrl span{font-weight:700}
+/* GoldOffer retail catalogue, responsive and page-turning */
+body.page-brochure{background:linear-gradient(135deg,#ebf2ff,#fff 47%,#e7effc)!important;color:#142745!important}
+.bk-wrap{max-width:820px!important;padding:118px 24px 70px!important}
+.bk-book{max-width:650px!important;filter:drop-shadow(0 28px 42px rgba(22,45,82,.25))!important}
+.bk-front,.bk-rear{border-radius:10px 19px 19px 10px!important;background:#fff!important;border:1px solid #d7e1f0}
+.bk-cover{background:linear-gradient(155deg,#e52c4a 0%,#c71636 53%,#fa4761 100%)!important;color:white!important;position:relative;overflow:hidden;text-align:left}
+.bk-cover:before{content:'CATALOGUE';position:absolute;font-weight:900;font-size:clamp(72px,18vw,150px);letter-spacing:-.09em;line-height:1;right:-70px;bottom:14%;transform:rotate(-17deg);opacity:.10;pointer-events:none}
+.bk-cover .bk-kicker{background:#fff;color:#b60f2d!important;display:inline-flex;align-self:start;padding:8px 13px;border-radius:3px;letter-spacing:.12em;font-size:.72rem}
+.bk-cover h1,.bk-cover h2{font-weight:900!important;font-size:clamp(40px,8vw,62px)!important;color:#fff!important;max-width:11ch;letter-spacing:-.07em}
+.bk-cover p{max-width:26ch;font-size:1.25rem!important;font-weight:600}
+.bk-page{background:#fff!important;color:#182d48!important;padding:6% 7% 5% 10%!important}
+.bk-head{color:#d22947!important;border-bottom:3px solid #e72e48!important;letter-spacing:.04em!important}
+.bk-grid{gap:13px!important}
+.bk-item{background:#f7f9fc;border:1px solid #e4e9f0;border-radius:10px;padding:7px;color:#162d4b!important}
+.bk-pic{background:linear-gradient(145deg,#eaf1ff,#d8e5f5)!important;min-height:30px!important}
+.bk-item strong,.bk-price{color:#152945!important}
+.bk-price em{color:#b81738!important;font-size:1.12rem!important}
+.bk-pct{border-radius:4px!important;background:#e21a3d!important;font-size:.9rem!important;font-weight:900!important;box-shadow:0 5px 16px #78112433}
+.bk-ctrl{display:flex;align-items:center;justify-content:center;gap:14px!important}
+.bk-ctrl button{background:#1d49a0!important;border-radius:12px!important;min-width:112px;transition:transform .2s,background .2s}
+.bk-ctrl button:not(:disabled):hover{background:#173774!important;transform:translateY(-2px)}
+.bk-ctrl span{background:#fff;border:1px solid #d9e4f2;border-radius:100px;padding:10px 18px;color:#193d6d}
+.bk-item:hover{border-color:#4478cc!important;transform:translateY(-2px)}
+.bk-cta{background:#fff!important;color:#b81738!important;border-radius:7px!important}
+@media(max-width:600px){.bk-wrap{padding:90px 12px 40px!important}.bk-item{padding:4px}.bk-grid{gap:5px!important;margin-top:7px!important}.bk-page{padding:5% 5% 4% 8%!important}.bk-item strong{font-size:clamp(9px,2.6vw,14px)}.bk-price em{font-size:clamp(11px,3vw,16px)!important}.bk-pct{font-size:10px!important}.bk-head{font-size:9px!important}}
+
+`;
+function renderBrochure(user, offers) {
+  const cfg = user.brochure || {};
+  const list = brochureOffers(user, offers);
+  const s = esc(user.slug), stock = user._stockMap || {};
+  const title = esc(cleanStr(cfg.title, 60) || 'Special offers');
+  const sub = esc(cleanStr(cfg.subtitle, 120)), valid = esc(cleanStr(cfg.validUntil, 60));
+  const cell = (o) => {
+    const price = Number(o.price) || 0, sp = Number(o.salePrice) || 0;
+    const sale = sp > 0 && sp < price, pct = sale ? Math.round((1 - sp / price) * 100) : 0;
+    const st = stock[String(o._id)], out = st !== undefined && Number(st) <= 0;
+    const img = o.imageUrl ? '<img src="' + esc(o.imageUrl) + '" alt="" loading="lazy">' : '<span class="bk-ph">&#9733;</span>';
+    return '<a class="bk-item" href="/site/' + s + '/offer/' + String(o._id) + '"><span class="bk-pic">' + img + (pct ? '<b class="bk-pct">-' + pct + '%</b>' : '') + (out ? '<i class="bk-out">OUT OF STOCK</i>' : '') + '</span><strong>' + esc(cleanStr(o.title, 70)) + '</strong><span class="bk-price">' + (sale ? '<s>&euro;' + price.toFixed(2) + '</s><em>&euro;' + sp.toFixed(2) + '</em>' : '<em>&euro;' + price.toFixed(2) + '</em>') + '</span></a>';
+  };
+  const pages = [];
+  pages.push('<div class="bk-cover"><span class="bk-kicker">' + esc(user.siteName) + '</span><h1>' + title + '</h1>' + (sub ? '<p>' + sub + '</p>' : '') + (valid ? '<span class="bk-valid">' + valid + '</span>' : '') + '<span class="bk-count">' + list.length + ' offers inside</span></div>');
+  for (let i = 0; i < list.length; i += 4) {
+    pages.push('<div class="bk-page"><div class="bk-head"><span>' + title + '</span><span>' + esc(user.siteName) + '</span></div><div class="bk-grid">' + list.slice(i, i + 4).map(cell).join('') + '</div><div class="bk-foot">' + (pages.length + 1) + '</div></div>');
+  }
+  pages.push('<div class="bk-cover"><h2>Thank you!</h2><p>Questions or ready to order?</p><a class="bk-cta" href="/site/' + s + '/messages">Message us</a></div>');
+  const n = pages.length;
+  const leaves = pages.map((p, i) => '<div class="bk-leaf" style="z-index:' + (n - i) + '"><div class="bk-front">' + p + '</div><div class="bk-rear"></div></div>').join('');
+  const empty = list.length ? '' : '<p style="text-align:center;margin-top:24px">No offers in the brochure yet.</p>';
+  return '<style>' + BROCHURE_CSS + '</style><main class="bk-wrap"><div class="bk-stage"><div class="bk-book" id="bk">' + leaves + '</div></div>' + empty + '<div class="bk-ctrl"><button id="bkPrev" type="button">&lsaquo; Back</button><span id="bkNum"></span><button id="bkNext" type="button">Next &rsaquo;</button></div></main>' +
+    '<script>(function(){var L=[].slice.call(document.querySelectorAll(".bk-leaf")),n=L.length,cur=0,num=document.getElementById("bkNum"),pv=document.getElementById("bkPrev"),nx=document.getElementById("bkNext");' +
+    'function ui(){num.textContent=(cur+1)+" / "+n;pv.disabled=cur===0;nx.disabled=cur>=n-1}' +
+    'function go(d){var c=Math.max(0,Math.min(n-1,cur+d));if(c===cur)return;var m=d>0?cur:c,l=L[m];cur=c;l.style.zIndex=n+5;l.classList.remove("gone");if(d>0)l.classList.add("turned");else l.classList.remove("turned");setTimeout(function(){l.style.zIndex=d>0?(m+1):(n-m);/* keep turned leaves in document so back navigation restores them */},950);ui()}' +
+    'pv.onclick=function(){go(-1)};nx.onclick=function(){go(1)};document.addEventListener("keydown",function(e){if(e.key==="ArrowRight")go(1);if(e.key==="ArrowLeft")go(-1)});' +
+    'var sx=null;var bk=document.getElementById("bk");bk.addEventListener("touchstart",function(e){sx=e.touches[0].clientX},{passive:true});bk.addEventListener("touchend",function(e){if(sx===null)return;var dx=e.changedTouches[0].clientX-sx;sx=null;if(dx<-50)go(1);else if(dx>50)go(-1)});ui()})();</script>';
+}
+app.get('/site/:slug/brochure', async (req, res) => {
+  try {
+    const user = await User.findOne({ slug: req.params.slug });
+    if (!prepSite(req, user)) return res.status(404).send('Site not found');
+    if (!(user.brochure && user.brochure.enabled)) return res.redirect(302, '/site/' + encodeURIComponent(req.params.slug));
+    const offers = await Offer.find({ userId: user._id }).sort({ createdAt: -1 });
+    const inv = await ShopSetting.findOne({ sellerId: user._id }).select('stock').lean();
+    user._stockMap = inv && inv.stock ? Object.fromEntries(Object.entries(inv.stock)) : {};
+    res.setHeader('Content-Security-Policy', SITE_CSP);
+    const body = siteBar(user, 'brochure') + renderBrochure(user, offers);
+    res.send(pageShell(user, { title: cleanStr((user.brochure || {}).title, 60) + ' - ' + user.siteName, desc: 'Brochure with the current offers of ' + user.siteName, body, cls: 'brochure', page: 'brochure' }));
+  } catch (e) { console.error('Brochure error', e); res.status(500).send('Unable to load brochure'); }
+});
+app.get('/api/brochure', authenticateToken, async (req, res) => {
+  try {
+    const u = await User.findById(req.user.id);
+    if (!u) return res.status(404).json({ message: 'Not found' });
+    const offers = await Offer.find({ userId: u._id }).sort({ createdAt: -1 }).limit(200).select('title price salePrice imageUrl');
+    const b = u.brochure || {};
+    res.json({ slug: u.slug || '', config: { enabled: !!b.enabled, title: b.title || '', subtitle: b.subtitle || '', validUntil: b.validUntil || '', ids: Array.isArray(b.ids) ? b.ids : [] }, offers: offers.map(o => ({ id: String(o._id), title: o.title, price: o.price, salePrice: o.salePrice || 0, imageUrl: o.imageUrl || '' })) });
+  } catch (e) { res.status(500).json({ message: 'Could not load the brochure' }); }
+});
+app.put('/api/brochure', authenticateToken, async (req, res) => {
+  try {
+    const u = await User.findById(req.user.id);
+    if (!u) return res.status(404).json({ message: 'Not found' });
+    const b = req.body || {};
+    const mine = new Set((await Offer.find({ userId: u._id }).select('_id')).map(o => String(o._id)));
+    const ids = (Array.isArray(b.ids) ? b.ids : []).map(String).filter(id => mine.has(id)).slice(0, 15);
+    u.brochure = { enabled: !!b.enabled, title: cleanStr(b.title, 60), subtitle: cleanStr(b.subtitle, 120), validUntil: cleanStr(b.validUntil, 60), ids };
+    u.markModified('brochure');
+    await u.save();
+    res.json({ ok: true, count: ids.length });
+  } catch (e) { res.status(500).json({ message: 'Could not save the brochure' }); }
+});
+
+// Deployment diagnostic: confirms this server release includes both feature APIs.
+app.get('/api/goldoffer-features', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ service: 'GoldOffer', featureApiVersion: '2026-11-04-pro-studio', brochure: true, codeProjects: true, monaco: true, brochureFlipbook: true });
+});
+
+// ---------- Code editor: projects (folders of files) saved per account ----------
+function goCleanPath(p) {
+  let x = String(p || '').replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+/g, '/');
+  x = x.split('/').filter(seg => seg && seg !== '.' && seg !== '..').join('/');
+  x = x.replace(/[^A-Za-z0-9._\-\/ ]/g, '_').slice(0, 120);
+  return x;
+}
+function goCleanFiles(list) {
+  const seen = new Set(), out = [];
+  (Array.isArray(list) ? list : []).slice(0, 80).forEach(f => {
+    const path = goCleanPath(f && (f.path || f.name));
+    if (!path || seen.has(path)) return;
+    seen.add(path);
+    out.push({ path, content: String((f && f.content) == null ? '' : f.content).slice(0, 300000) });
+  });
+  return out;
+}
+async function goSaveCodeProject(userId, name, body) {
+  try {
+    let files = [];
+    if (Array.isArray(body.files)) files = goCleanFiles(body.files);
+    else { const code = body.html || body.code || ''; if (code) files = goCleanFiles([{ path: body.fileName || 'index.html', content: code }]); }
+    if (!files.length) return;
+    const n = await CodeProject.countDocuments({ userId });
+    if (n >= 30) { const old = await CodeProject.findOne({ userId }).sort({ updatedAt: 1 }); if (old) await old.deleteOne(); }
+    await CodeProject.create({ userId, name: cleanStr(name, 60) || 'AI website', files, source: 'ai' });
+  } catch (e) { console.error('Save code project', e.message); }
+}
+app.get('/api/code/projects', authenticateToken, async (req, res) => {
+  try {
+    const list = await CodeProject.find({ userId: req.user.id }).sort({ updatedAt: -1 }).select('name updatedAt source files.path');
+    res.json({ projects: list.map(p => ({ id: String(p._id), name: p.name, source: p.source || '', updatedAt: p.updatedAt, fileCount: (p.files || []).length })) });
+  } catch (e) { res.status(500).json({ message: 'Could not load projects' }); }
+});
+app.post('/api/code/projects', authenticateToken, async (req, res) => {
+  try {
+    if (await CodeProject.countDocuments({ userId: req.user.id }) >= 30) return res.status(400).json({ message: 'You can keep up to 30 projects. Delete one first.' });
+    let files = goCleanFiles(req.body && req.body.files);
+    if (!files.length) files = [{ path: 'index.html', content: '<!doctype html>\n<html>\n<head>\n  <meta charset="utf-8">\n  <title>My page</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>Hello</h1>\n  <script src="app.js"></script>\n</body>\n</html>\n' }, { path: 'style.css', content: 'body { font-family: system-ui, sans-serif; margin: 40px; }\n' }, { path: 'app.js', content: 'console.log("Hello");\n' }];
+    const p = await CodeProject.create({ userId: req.user.id, name: cleanStr(req.body && req.body.name, 60) || 'New project', files, source: 'manual' });
+    res.json({ id: String(p._id) });
+  } catch (e) { res.status(500).json({ message: 'Could not create the project' }); }
+});
+app.get('/api/code/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    const p = await CodeProject.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!p) return res.status(404).json({ message: 'Project not found' });
+    res.json({ id: String(p._id), name: p.name, files: p.files || [], updatedAt: p.updatedAt });
+  } catch (e) { res.status(404).json({ message: 'Project not found' }); }
+});
+app.put('/api/code/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    const p = await CodeProject.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!p) return res.status(404).json({ message: 'Project not found' });
+    const files = goCleanFiles(req.body && req.body.files);
+    if (!files.length) return res.status(400).json({ message: 'A project needs at least one file' });
+    if (files.reduce((a, f) => a + f.content.length, 0) > 1500000) return res.status(400).json({ message: 'The project is too large (1.5 MB max)' });
+    if (req.body && req.body.name) p.name = cleanStr(req.body.name, 60) || p.name;
+    p.files = files; p.updatedAt = new Date();
+    await p.save();
+    res.json({ ok: true, updatedAt: p.updatedAt });
+  } catch (e) { res.status(500).json({ message: 'Could not save the project' }); }
+});
+app.delete('/api/code/projects/:id', authenticateToken, async (req, res) => {
+  try { await CodeProject.deleteOne({ _id: req.params.id, userId: req.user.id }); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ message: 'Could not delete the project' }); }
+});
+const goCodeAiHits = new Map();
+app.post('/api/code/ai', authenticateToken, async (req, res) => {
+  try {
+    const key = process.env.OPENROUTER_API_KEY;
+    if (!key) return res.status(503).json({ message: 'The AI helper is not configured yet (OPENROUTER_API_KEY).' });
+    const now = Date.now(), uid = String(req.user.id);
+    const hits = (goCodeAiHits.get(uid) || []).filter(t => now - t < 3600000);
+    if (hits.length >= 20) return res.status(429).json({ message: 'AI edit limit reached (20 per hour). Try again later.' });
+    hits.push(now); goCodeAiHits.set(uid, hits);
+    const instruction = cleanStr(req.body && req.body.instruction, 800);
+    const content = String((req.body && req.body.content) || '').slice(0, 60000);
+    const path = goCleanPath(req.body && req.body.path) || 'file';
+    if (!instruction) return res.status(400).json({ message: 'Tell the AI what to change.' });
+    const sys = 'You are a careful code editor inside a small web IDE. You receive one file and an instruction. Return ONLY the complete new content of that file. No explanations and no markdown fences. Keep everything that the instruction does not ask to change. Never add secrets or tracking code.';
+    const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+      messages: [{ role: 'system', content: sys }, { role: 'user', content: 'File: ' + path + '\nInstruction: ' + instruction + '\n\nCurrent content:\n' + content }],
+      temperature: 0.3, max_tokens: 8000
+    }, { headers: { Authorization: 'Bearer ' + key }, timeout: 90000 });
+    let out = String(r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message && r.data.choices[0].message.content || '');
+    out = out.replace(/^```[a-zA-Z0-9]*\n/, '').replace(/\n```\s*$/, '');
+    if (!out.trim()) return res.status(502).json({ message: 'The AI returned nothing. Please try again.' });
+    res.json({ content: out.slice(0, 300000) });
+  } catch (e) { res.status(502).json({ message: 'The AI helper is not available right now.' }); }
+});
+
+
 app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
+  // If the browser cancels a generation, never consume its link slot at the end.
+  // A completed site remains accessible in My websites even if its response was missed.
+  let clientGone = false;
+  res.on('close', () => { if (!res.writableEnded) clientGone = true; });
   try {
     const key = process.env.OPENROUTER_API_KEY;
     if (!key) return res.status(503).json({ message: 'AI is not set up yet. Add OPENROUTER_API_KEY on the server.' });
     const root = await familyOf(req.user.id);
     if (!root) return res.status(404).json({ message: 'Account not found.' });
-    const count = await User.countDocuments({ ownerId: root._id });
-    if (req.body.output !== 'code' && count + 1 >= SITE_CAP(root)) return res.status(402).json({ message: `Your ${limitsOf(root).name} plan allows ${SITE_CAP(root)} website${SITE_CAP(root) === 1 ? '' : 's'}. Upgrade to add more.`, upgrade: true });
+    const isCode = req.body.output === 'code';
+    const isFree = planOf(root) === 'free';
+    // Free link allowance counts only real AI websites, not unrelated child/template records.
+    const count = await User.countDocuments(isFree ? { ownerId: root._id, aiGenerated: true } : { ownerId: root._id });
+    if (!isCode && (isFree ? count >= 1 : count + 1 >= SITE_CAP(root))) {
+      const active = isFree ? await User.findOne({ ownerId: root._id, aiGenerated: true }).select('siteName slug').lean() : null;
+      return res.status(402).json({
+        message: isFree ? 'You already have an AI website saved' + (active && active.siteName ? ' (' + active.siteName + ')' : '') + '. Open My websites to view or delete it; deleting frees the link slot. Code generation is separate.' : `Your ${limitsOf(root).name} plan allows ${SITE_CAP(root)} websites.`,
+        existingSiteUrl: active && active.slug ? `${PUBLIC_BASE}/site/${active.slug}` : null,
+        existingSiteName: active && active.siteName || null,
+        upgrade: !isFree
+      });
+    }
     const genCap = limitsOf(root).aiGen;
-    if (genCap <= 0) return res.status(402).json({ message: 'AI website generation is unavailable for your account.', upgrade: true });
+    if (!isFree && genCap <= 0) return res.status(402).json({ message: 'AI website generation is unavailable for your account.', upgrade: true });
     const name = cleanStr(req.body.name, 60), desc = cleanStr(req.body.description, 1500);
     const lang = (typeof req.body.lang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(req.body.lang)) ? req.body.lang : 'en';
     const languageName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(lang) || lang; } catch (e) { return lang; } })();
     if (!name || desc.length < 10) return res.status(400).json({ message: 'Give a name and describe the business (at least a sentence).' });
-    if (!(await G.takeQuota(GOAiUsage, root._id, genCap, monthKey()))) return res.status(402).json({ message: `You used all ${genCap} AI generations for this month on the ${limitsOf(root).name} plan.`, upgrade: true });
-    res.on('finish', () => { if (res.statusCode >= 400) G.releaseQuota(GOAiUsage, root._id, monthKey()).catch(() => {}); });
+    if (isFree && isCode) {
+      // Reserve the one-time export atomically so parallel requests cannot bypass it.
+      try { await GOFreeCodeExport.create({ sellerId: root._id }); }
+      catch (e) { if (e.code === 11000) return res.status(402).json({ message: 'Your one free source-code generation has already been used. Deleting a website does not restore it.', upgrade: true }); throw e; }
+      // Failed generations must not consume the one-time credit.
+      res.on('finish', () => { if (res.statusCode >= 400) GOFreeCodeExport.deleteOne({ sellerId: root._id }).catch(() => {}); });
+    } else if (!isFree) {
+      if (!(await G.takeQuota(GOAiUsage, root._id, genCap, monthKey()))) return res.status(402).json({ message: `You used all ${genCap} AI generations for this month on the ${limitsOf(root).name} plan.`, upgrade: true });
+      res.on('finish', () => { if (res.statusCode >= 400) G.releaseQuota(GOAiUsage, root._id, monthKey()).catch(() => {}); });
+    }
     const sys = `You are a senior web designer. Create a UNIQUE, modern, mobile-first one-page website for a small business. Reply with ONE JSON object only, no markdown fences. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), palette {a,b,bg,panel,text} (hex colors with strong contrast: a=accent, b=second accent, bg=page background, panel=card background, text=text color), offers (array of 3-6 {title, price (number, 0 if unknown), description}), faq (array of 3 {question, answer}), css (string), html (string).
 Rules for html: a body fragment only. No html/head/body/script/style/iframe/form tags, no inline event handlers, no external images: make visuals with CSS gradients, emoji or inline SVG. Structure: a hero with a big headline and a call-to-action link href="#offers"; an about/story section; 3 benefit cards; then <section id="offers"> with a heading and exactly the text {{OFFERS}}; a FAQ section containing exactly {{FAQ}}; a section id="contact" containing exactly {{CONTACT}}; a short footer. Never write the offer cards, FAQ items or contact details yourself, the server replaces the placeholders.
 Rules for css: plain CSS for that html, mobile-first with media queries, bold distinctive typography and layout (not a generic template). Use var(--a), var(--b), var(--bg), var(--panel), var(--text) for colors (they come from your palette). Also style the classes .ai-offers .ai-offer .ai-offer-img .ai-offer-title .ai-offer-desc .ai-offer-price .ai-faq .ai-contact if you want to change their look.
@@ -4618,6 +5224,7 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
     const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
     // Export choice: create an offline standalone file, without storing another website.
     if (req.body.output === 'code') {
+      { const _json = res.json.bind(res); res.json = function (body) { try { if (body && body.output === 'code') goSaveCodeProject(req.user.id, name, body); } catch (e) {} return _json(body); }; }
       const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
       const cards = offers.map(o => `<article class="product"><h3>${esc(cleanStr(o.title,120))}</h3><p>${esc(cleanStr(o.description,400))}</p>${Number(o.price)>0?`<strong>€${Number(o.price).toFixed(2)}</strong>`:''}</article>`).join('');
       const faqs = (Array.isArray(j.faq)?j.faq:[]).slice(0,6).map(f=>`<details><summary>${esc(cleanStr(f.question,160))}</summary><p>${esc(cleanStr(f.answer,500))}</p></details>`).join('');
@@ -4629,12 +5236,45 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
       const safeHex = (v,f)=>/^#[0-9a-f]{6}$/i.test(v||'')?v:f;
       const staticCss = (aiPage && aiPage.css)||'';
       const file='<!doctype html><html lang="'+esc(lang)+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(name)+'</title><style>:root{--a:'+safeHex(palette.a,'#355cbd')+';--b:'+safeHex(palette.b,'#0e8490')+';--bg:'+safeHex(palette.bg,'#ffffff')+';--panel:'+safeHex(palette.panel,'#f1f4f8')+';--text:'+safeHex(palette.text,'#182339')+'}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}main{max-width:1080px;margin:auto;padding:32px}section{padding:32px 0}.product{background:var(--panel);padding:16px;border-radius:10px;margin:12px 0}'+staticCss+'</style></head><body>'+page+'</body></html>';
-      if(req.body.codeLanguage === 'react') {
-        const safeJs = value => JSON.stringify(String(value)).replace(/</g,'\\u003c');
-        const react = 'import React from "react";\n\nexport default function GoldOfferWebsite(){\n  const content = '+safeJs(page)+';\n  const css = '+safeJs('body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}.product{padding:16px;margin:12px 0;border-radius:10px;background:var(--panel)}'+staticCss)+';\n  return <><style>{`:root { --a:'+safeHex(palette.a,'#355cbd')+'; --b:'+safeHex(palette.b,'#0e8490')+'; --bg:'+safeHex(palette.bg,'#ffffff')+'; --panel:'+safeHex(palette.panel,'#f1f4f8')+'; --text:'+safeHex(palette.text,'#182339')+'; }` + css}</style><div dangerouslySetInnerHTML={{__html: content}} /></>;\n}';
-        return res.json({output:'code',codeLanguage:'react',html:react,language:lang});
+      // Export one source file for the requested target. These contain the generated
+      // static page, not the hosted GoldOffer commerce / messaging backend.
+      const format = String(req.body.codeLanguage || 'html').toLowerCase();
+      const jsString = v => JSON.stringify(String(v)).replace(/</g, '\\u003c');
+      const cssVars = ':root{--a:'+safeHex(palette.a,'#355cbd')+';--b:'+safeHex(palette.b,'#0e8490')+';--bg:'+safeHex(palette.bg,'#ffffff')+';--panel:'+safeHex(palette.panel,'#f1f4f8')+';--text:'+safeHex(palette.text,'#182339')+'}';
+      const pageCss = cssVars+'body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}main{max-width:1080px;margin:auto;padding:32px}section{padding:32px 0}.product{background:var(--panel);padding:16px;border-radius:10px;margin:12px 0}'+staticCss;
+      const b64 = Buffer.from(file,'utf8').toString('base64');
+      const snip = (s, prefix) => ({ output:'code', codeLanguage:format, html:s, language:lang, fileName:prefix });
+      const component = 'import React from "react";\n\nexport default function GoldOfferWebsite() {\n  const page = '+jsString(page)+';\n  const css = '+jsString(pageCss)+';\n  return <><style>{css}</style><main dangerouslySetInnerHTML={{ __html: page }} /></>;\n}\n';
+      switch(format) {
+        case 'fullstack': return res.json({ output: 'code', codeLanguage: 'fullstack', language: lang, fileName: 'goldoffer-fullstack.zip', files: goFullstackFiles({ name, lang, page: cleanHtml, offers, faq: j.faq, cssVars, pageCss: (aiPage && aiPage.css) || '' }) });
+        case 'react': return res.json(snip(component,'GoldOfferWebsite.jsx'));
+        case 'react-ts': return res.json(snip(component.replace('export default function GoldOfferWebsite() {','export default function GoldOfferWebsite(): React.JSX.Element {'),'GoldOfferWebsite.tsx'));
+        case 'vue': {
+          const vue = '<script setup>\nconst page = '+jsString(page)+';\n</script>\n\n<template>\n  <main v-html="page"></main>\n</template>\n\n<style>\n'+pageCss+'\n</style>\n';
+          return res.json(snip(vue,'GoldOfferWebsite.vue'));
+        }
+        case 'svelte': {
+          const svelte = '<script>\n  import { onMount } from "svelte";\n  const page = '+jsString(page)+';\n  const css = '+jsString(pageCss)+';\n  onMount(() => {\n    const style = document.createElement("style");\n    style.textContent = css;\n    document.head.appendChild(style);\n    return () => style.remove();\n  });\n</script>\n\n<main>{@html page}</main>\n';
+          return res.json(snip(svelte,'GoldOfferWebsite.svelte'));
+        }
+        case 'astro': {
+          const astro = '---\nconst page = '+jsString(page)+';\n---\n<!doctype html>\n<html lang="'+esc(lang)+'">\n<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>'+esc(name)+'</title><style is:global>'+pageCss+'</style></head>\n<body><Fragment set:html={page} /></body>\n</html>\n';
+          return res.json(snip(astro,'index.astro'));
+        }
+        case 'php': return res.json(snip('<?php\n// Serve this file with: php -S localhost:8000\nheader("Content-Type: text/html; charset=utf-8");\necho base64_decode("'+b64+'");\n','index.php'));
+        case 'python': return res.json(snip('from flask import Flask, Response\nimport base64\n\napp = Flask(__name__)\nPAGE = base64.b64decode("'+b64+'").decode("utf-8")\n\n@app.get("/")\ndef home():\n    return Response(PAGE, mimetype="text/html")\n\nif __name__ == "__main__":\n    app.run(debug=False, port=8000)\n','app.py'));
+        case 'node': return res.json(snip('const http = require("node:http");\nconst page = Buffer.from("'+b64+'", "base64");\nhttp.createServer((req, res) => {\n  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });\n  res.end(page);\n}).listen(8000, () => console.log("GoldOffer page: http://localhost:8000"));\n','goldoffer-site.js'));
+        case 'go': return res.json(snip('package main\n\nimport (\n "encoding/base64"\n "log"\n "net/http"\n)\n\nfunc main() {\n data, err := base64.StdEncoding.DecodeString("'+b64+'")\n if err != nil { log.Fatal(err) }\n http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {\n  w.Header().Set("Content-Type", "text/html; charset=utf-8")\n  _, _ = w.Write(data)\n })\n log.Fatal(http.ListenAndServe(":8000", nil))\n}\n','main.go'));
+        case 'java': return res.json(snip('import com.sun.net.httpserver.HttpServer;\nimport java.net.InetSocketAddress;\nimport java.util.Base64;\n\npublic class GoldOfferSite {\n  public static void main(String[] args) throws Exception {\n    byte[] page = Base64.getDecoder().decode("'+b64+'");\n    HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);\n    server.createContext("/", exchange -> {\n      exchange.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");\n      exchange.sendResponseHeaders(200, page.length);\n      try (var out = exchange.getResponseBody()) { out.write(page); }\n    });\n    server.start();\n    System.out.println("GoldOffer page: http://localhost:8000");\n  }\n}\n','GoldOfferSite.java'));
+        case 'csharp': return res.json(snip('// Put this file in a .NET web project as Program.cs\n// Create it with: dotnet new web\nusing System.Text;\nvar builder = WebApplication.CreateBuilder(args);\nvar app = builder.Build();\nvar html = Encoding.UTF8.GetString(Convert.FromBase64String("'+b64+'"));\napp.MapGet("/", () => Results.Content(html, "text/html; charset=utf-8"));\napp.Run();\n','Program.cs'));
+        case 'html': default: return res.json({ output:'code',codeLanguage:'html',html:file,language:lang,fileName:'index.html' });
       }
-      return res.json({ output:'code',codeLanguage:'html',html:file,language:lang });
+    }
+    // The AI call can finish after the user navigated away or canceled the request.
+    if (clientGone) return;
+    // Recheck quota after the long AI request (another tab may have published meanwhile).
+    if (isFree && await User.exists({ ownerId: root._id, aiGenerated: true })) {
+      return res.status(409).json({ message: 'An AI website was published during this generation. Check My websites to open or delete it.' });
     }
     const email = `site-${root._id}-${Date.now().toString(36)}@sites.goldoffer.local`;
     const pick = (v, obj, d) => (Object.keys(obj).includes(v) ? v : d);
@@ -4649,13 +5289,26 @@ Write all visible texts in ${languageName}. Use only facts the owner gave: do no
     });
     sub.slug = await uniqueSlug(req.body.slug || name, sub._id);
     await sub.save();
-    const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
-    for (let i = 0; i < offers.length; i++) {
-      const o = offers[i] || {};
-      if (!cleanStr(o.title, 120)) continue;
-      await Offer.create({ userId: sub._id, title: cleanStr(o.title, 120), price: Math.max(0, Number(o.price) || 0), description: cleanStr(o.description, 400), order: i });
+    try {
+      const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
+      for (let i = 0; i < offers.length; i++) {
+        if (clientGone) break;
+        const o = offers[i] || {};
+        if (!cleanStr(o.title, 120)) continue;
+        await Offer.create({ userId: sub._id, title: cleanStr(o.title, 120), price: Math.max(0, Number(o.price) || 0), description: cleanStr(o.description, 400), order: i });
+      }
+      if (clientGone) {
+        // Canceled before the response: undo only this newly-created AI website.
+        await Offer.deleteMany({ userId: sub._id });
+        await User.deleteOne({ _id: sub._id, ownerId: root._id, aiGenerated: true });
+        return;
+      }
+      res.json({ site: { id: String(sub._id), slug: sub.slug, siteName: sub.siteName, siteUrl: `${PUBLIC_BASE}/site/${sub.slug}` }, token: signToken(sub), user: publicUser(sub) });
+    } catch (saveError) {
+      await Offer.deleteMany({ userId: sub._id }).catch(() => {});
+      await User.deleteOne({ _id: sub._id, ownerId: root._id, aiGenerated: true }).catch(() => {});
+      throw saveError;
     }
-    res.json({ site: { id: String(sub._id), slug: sub.slug, siteName: sub.siteName, siteUrl: `${PUBLIC_BASE}/site/${sub.slug}` }, token: signToken(sub), user: publicUser(sub) });
   } catch (e) {
     console.error('AI generate error', e.response ? JSON.stringify(e.response.data) : e.message);
     if (e.response) {
@@ -4684,6 +5337,12 @@ const GOAutoRun = mongoose.model('GOAutoRun', new mongoose.Schema({
   status: { type: String, default: 'running' }, failures: { type: [{ step: Number, type: { type: String }, message: String, _id: false }], default: [] },
   at: { type: Date, default: Date.now, expires: 2592000 }
 }).index({ autoId: 1, ref: 1 }, { unique: true }));
+// One-time source export on Free plan. Separate from hosted AI sites.
+// Intentionally no expiry: deleting a website never restores this export.
+const GOFreeCodeExport = mongoose.model('GOFreeCodeExport', new mongoose.Schema({
+  sellerId: { type: mongoose.Schema.Types.ObjectId, required: true, unique: true, index: true },
+  createdAt: { type: Date, default: Date.now }
+}));
 const GOAiUsage = mongoose.model('GOAiUsage', new mongoose.Schema({
   sellerId: mongoose.Schema.Types.ObjectId, day: String, count: { type: Number, default: 0 }, tokens: { type: Number, default: 0 }, handoffs: { type: Number, default: 0 }, blocked: { type: Number, default: 0 },
   at: { type: Date, default: Date.now, expires: 7776000 }
@@ -4909,7 +5568,8 @@ app.get('/api/plan', authenticateToken, async (req, res) => {
     const L = limitsOf(root);
     const ids = [root._id, ...(await User.find({ ownerId: root._id }).select('_id').lean()).map(x => x._id)];
     const [offers, usage] = await Promise.all([Offer.countDocuments({ userId: req.user.id }), GOAiUsage.findOne({ sellerId: root._id, day: monthKey() }).lean()]);
-    res.json({ plan: planOf(root), limits: L, plans: PLANS, usage: { offers, sites: ids.length, aiGen: usage ? usage.count : 0 } });
+    const freeCodeUsed = planOf(root) === 'free' ? !!(await GOFreeCodeExport.exists({ sellerId: root._id })) : null;
+    res.json({ plan: planOf(root), limits: L, plans: PLANS, usage: { offers, sites: ids.length, aiGen: usage ? usage.count : 0, freeCodeUsed }, freeBenefits: { sourceCodeGenerations: 1, simultaneousAiLinks: 1, deleteLinkToCreateAnother: true } });
   } catch (e) { res.status(500).json({ message: 'Could not load plan.' }); }
 });
 
@@ -5005,7 +5665,7 @@ function findFile(name) {
   return candidates.find(p => fs.existsSync(p));
 }
 
-const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases', '/ai-sites', '/pro', '/login', '/signup'];
+const PAGE_ROUTES = ['/business', '/analytics', '/settings', '/', '/how-it-works', '/features', '/professions', '/pricing', '/about', '/contact', '/build', '/dashboard', '/messages', '/reviews', '/privacy', '/terms', '/reset', '/studio', '/customers', '/calendar', '/orders', '/system', '/releases', '/ai-sites', '/pro', '/login', '/signup', '/brochure', '/code'];
 app.get(PAGE_ROUTES, (req, res) => {
   const file = findFile('index.html');
   if (!file) return res.send('GoldOffer API is running.');
@@ -5013,9 +5673,10 @@ app.get(PAGE_ROUTES, (req, res) => {
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+    "worker-src 'self' blob:",
     "script-src-attr 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' data: https: blob:",
     "media-src 'self'",
     "connect-src 'self' https://cdn.jsdelivr.net https://en.wikipedia.org",
