@@ -27,7 +27,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:'],
       formAction: ["'self'"]
@@ -4291,7 +4291,7 @@ function renderMessagesPage(user) {
 const SITE_CSP = [
   "default-src 'self'",
   "script-src 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data: https:",
   "frame-src 'self' https://www.google.com",
@@ -5073,7 +5073,7 @@ app.put('/api/brochure', authenticateToken, async (req, res) => {
 // Deployment diagnostic: confirms this server release includes both feature APIs.
 app.get('/api/goldoffer-features', (req, res) => {
   res.set('Cache-Control', 'no-store');
-  res.json({ service: 'GoldOffer', featureApiVersion: '2026-11-04-pro-studio', brochure: true, codeProjects: true, monaco: true, brochureFlipbook: true });
+  res.json({ service: 'GoldOffer', featureApiVersion: '2026-11-04-monaco-csp-fix', brochure: true, codeProjects: true, monaco: true, brochureFlipbook: true });
 });
 
 // ---------- Code editor: projects (folders of files) saved per account ----------
