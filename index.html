@@ -2432,7 +2432,7 @@ body[data-page="code"] #v-code .go-term-input{background:#141414!important}
 <main class="view" id="v-aisites"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">AI WEBSITE GENERATOR</span><h1>My websites</h1><p>Describe a business and AI builds a new website with its own link.</p></div></div>
 
   <div class="panel" id="aiPaywall" style="display:none;text-align:center"><div style="font-size:2rem">\uD83D\uDD12</div><h2>AI website generator is locked</h2><p style="opacity:.8">You need a paid plan to create websites with AI. Upgrade to unlock it.</p><button class="btn" type="button" onclick="payNow('pro')">Get Pro \u00b7 EUR 19.99 / month</button> <button class="btn-ghost" type="button" onclick="payNow('agency')">Get Agency \u00b7 EUR 99 / month</button></div>
-  <div class="go-free-guide" id="goFreeGuide" aria-live="polite"><div><strong>FREE · Source code</strong><span id="goFreeCodeStatus">1 generation available</span><small>One download generation. Deleting a site does not reset it.</small></div><div><strong>FREE · Published link</strong><span id="goFreeLinkStatus">1 active AI website allowed</span><small>Delete your AI website to free its slot and publish another.</small></div></div>
+  <div class="go-free-guide" id="goFreeGuide" aria-live="polite"><div><strong id="goAiQuotaTitle">Checking plan…</strong><span id="goFreeCodeStatus">Loading allowance…</span><small id="goAiQuotaNote">Your plan and usage are checked with the server.</small></div><div><strong id="goAiSitesTitle">Published websites</strong><span id="goFreeLinkStatus">Loading sites…</span><small id="goAiSitesNote">Website availability depends on your account plan.</small></div></div>
   <div class="panel" id="aiFormPanel"><h2>Create a new website</h2>
     <div class="ai-form"><input id="aiName" maxlength="60" placeholder="Website name (e.g. Sunny Barber)"><textarea id="aiDesc" rows="5" maxlength="1500" placeholder="Describe the business: what you do, services, prices, city, style you like..."></textarea>
     <select id="aiLang" onchange="this.dataset.chosen='1'" aria-label="Language for AI generated site"><option value="en">English</option><option value="bg">Bulgarian</option><option value="es">Spanish</option><option value="de">German</option><option value="fr">French</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="tr">Turkish</option><option value="ro">Romanian</option><option value="el">Greek</option><option value="ar">Arabic</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="hi">Hindi</option><option value="uk">Ukrainian</option><option value="pl">Polish</option><option value="nl">Dutch</option><option value="sv">Swedish</option><option value="sq">Albanian</option><option value="ab">Abkhazian</option><option value="aa">Afar</option><option value="af">Afrikaans</option><option value="ak">Akan</option><option value="am">Amharic</option><option value="an">Aragonese</option><option value="hy">Armenian</option><option value="as">Assamese</option><option value="av">Avaric</option><option value="ae">Avestan</option><option value="ay">Aymara</option><option value="az">Azerbaijani</option><option value="bm">Bambara</option><option value="bn">Bangla</option><option value="ba">Bashkir</option><option value="eu">Basque</option><option value="be">Belarusian</option><option value="bi">Bislama</option><option value="bs">Bosnian</option><option value="br">Breton</option><option value="my">Burmese</option><option value="ca">Catalan</option><option value="ch">Chamorro</option><option value="ce">Chechen</option><option value="zh-Hans">Chinese (Simplified)</option><option value="zh-Hant">Chinese (Traditional)</option><option value="cu">Church Slavic</option><option value="cv">Chuvash</option><option value="kw">Cornish</option><option value="co">Corsican</option><option value="cr">Cree</option><option value="hr">Croatian</option><option value="cs">Czech</option><option value="da">Danish</option><option value="dv">Divehi</option><option value="dz">Dzongkha</option><option value="en-GB">English (United Kingdom)</option><option value="en-US">English (United States)</option><option value="eo">Esperanto</option><option value="et">Estonian</option><option value="ee">Ewe</option><option value="fo">Faroese</option><option value="fj">Fijian</option><option value="fi">Finnish</option><option value="fr-CA">French (Canada)</option><option value="ff">Fula</option><option value="gl">Galician</option><option value="lg">Ganda</option><option value="ka">Georgian</option><option value="gn">Guarani</option><option value="gu">Gujarati</option><option value="ht">Haitian Creole</option><option value="ha">Hausa</option><option value="he">Hebrew</option><option value="hz">Herero</option><option value="ho">Hiri Motu</option><option value="hu">Hungarian</option><option value="is">Icelandic</option><option value="io">Ido</option><option value="ig">Igbo</option><option value="id">Indonesian</option><option value="ia">Interlingua</option><option value="ie">Interlingue</option><option value="iu">Inuktitut</option><option value="ik">Inupiaq</option><option value="ga">Irish</option><option value="jv">Javanese</option><option value="kl">Kalaallisut</option><option value="kn">Kannada</option><option value="kr">Kanuri</option><option value="ks">Kashmiri</option><option value="kk">Kazakh</option><option value="km">Khmer</option><option value="ki">Kikuyu</option><option value="rw">Kinyarwanda</option><option value="kv">Komi</option><option value="kg">Kongo</option><option value="kj">Kuanyama</option><option value="ku">Kurdish</option><option value="ky">Kyrgyz</option><option value="lo">Lao</option><option value="la">Latin</option><option value="lv">Latvian</option><option value="li">Limburgish</option><option value="ln">Lingala</option><option value="lt">Lithuanian</option><option value="lu">Luba-Katanga</option><option value="lb">Luxembourgish</option><option value="mk">Macedonian</option><option value="mg">Malagasy</option><option value="ms">Malay</option><option value="ml">Malayalam</option><option value="mt">Maltese</option><option value="gv">Manx</option><option value="mr">Marathi</option><option value="mh">Marshallese</option><option value="mn">Mongolian</option><option value="mi">Māori</option><option value="na">Nauru</option><option value="nv">Navajo</option><option value="ng">Ndonga</option><option value="ne">Nepali</option><option value="nd">North Ndebele</option><option value="se">Northern Sami</option><option value="no">Norwegian</option><option value="nb">Norwegian Bokmål</option><option value="nn">Norwegian Nynorsk</option><option value="ny">Nyanja</option><option value="oc">Occitan</option><option value="or">Odia</option><option value="oj">Ojibwa</option><option value="om">Oromo</option><option value="os">Ossetic</option><option value="pi">Pali</option><option value="ps">Pashto</option><option value="fa">Persian</option><option value="pt-BR">Portuguese (Brazil)</option><option value="pt-PT">Portuguese (Portugal)</option><option value="pa">Punjabi</option><option value="qu">Quechua</option><option value="rm">Romansh</option><option value="rn">Rundi</option><option value="sm">Samoan</option><option value="sg">Sango</option><option value="sa">Sanskrit</option><option value="sc">Sardinian</option><option value="gd">Scottish Gaelic</option><option value="sr">Serbian</option><option value="sr-Latn">Serbian (Latin)</option><option value="sh">Serbo-Croatian</option><option value="sn">Shona</option><option value="ii">Sichuan Yi</option><option value="sd">Sindhi</option><option value="si">Sinhala</option><option value="sk">Slovak</option><option value="sl">Slovenian</option><option value="so">Somali</option><option value="nr">South Ndebele</option><option value="st">Southern Sotho</option><option value="es-MX">Spanish (Mexico)</option><option value="su">Sundanese</option><option value="sw">Swahili</option><option value="ss">Swati</option><option value="tl">Tagalog</option><option value="ty">Tahitian</option><option value="tg">Tajik</option><option value="ta">Tamil</option><option value="tt">Tatar</option><option value="te">Telugu</option><option value="th">Thai</option><option value="bo">Tibetan</option><option value="ti">Tigrinya</option><option value="to">Tongan</option><option value="ts">Tsonga</option><option value="tn">Tswana</option><option value="tk">Turkmen</option><option value="tw">Twi</option><option value="ur">Urdu</option><option value="ug">Uyghur</option><option value="uz">Uzbek</option><option value="ve">Venda</option><option value="vi">Vietnamese</option><option value="vo">Volapük</option><option value="wa">Walloon</option><option value="cy">Welsh</option><option value="fy">Western Frisian</option><option value="wo">Wolof</option><option value="xh">Xhosa</option><option value="yi">Yiddish</option><option value="yo">Yoruba</option><option value="za">Zhuang</option><option value="zu">Zulu</option></select>
@@ -2640,29 +2640,34 @@ const RTL_RE = /^(ar|he|fa|ur|ps|sd|ug|yi|dv)(-|$)/;
   const pats = PANEL_PAT.map(p => [new RegExp(p[0], 'i'), p[1]]);
   let map = {}, pending = new Set(), timer = null, loaded = '';
   const orig = new WeakMap(); let busy = false;
-  function load() { if (loaded === PANEL_LANG) return; loaded = PANEL_LANG; map = {}; if (PANEL_LANG === 'bg') { map = bgMap; return; } if (PANEL_LANG === 'en') return; try { const c = JSON.parse(localStorage.getItem('pmap_' + PANEL_LANG) || '{}'); Object.keys(c).forEach(k => map[k.toLowerCase()] = c[k]); } catch (e) {} }
-  function tr(t) { const k = t.replace(/\s+/g, ' ').trim(); if (!k || k.length > 200) return null; const m = map[k.toLowerCase()]; if (m) return t.replace(k, m);
-    if (PANEL_LANG === 'bg') for (const p of pats) if (p[0].test(k)) return t.replace(k, k.replace(p[0], p[1]));
-    if (PANEL_LANG !== 'bg' && PANEL_LANG !== 'en' && k.length > 1 && k.length <= 90 && /\p{L}/u.test(k) && !/[@\d]/.test(k)) { pending.add(k); clearTimeout(timer); timer = setTimeout(flush, 700); }
+  function load() { if (loaded === PANEL_LANG) return; loaded = PANEL_LANG; map = {}; if (PANEL_LANG === 'en') return; if (PANEL_LANG === 'bg') Object.assign(map, bgMap); try { const c = JSON.parse(localStorage.getItem('pmap_' + PANEL_LANG) || '{}'); Object.keys(c).forEach(k => map[k.toLowerCase()] = c[k]); } catch (e) {} }
+  const outs = new Set();
+  function tr(t) { const k = t.replace(/\s+/g, ' ').trim(); if (!k || k.length > 600 || outs.has(k)) return null; const m = map[k.toLowerCase()]; if (m) { outs.add(m.replace(/\s+/g, ' ').trim()); return t.replace(k, m); }
+    if (PANEL_LANG === 'bg') for (const p of pats) if (p[0].test(k)) { const rr = k.replace(p[0], p[1]); outs.add(rr); return t.replace(k, rr); }
+    if (PANEL_LANG !== 'en' && k.length > 1 && /\p{L}/u.test(k) && !/^(https?:\/\/|www\.)\S+$/i.test(k) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(k) && !(PANEL_LANG === 'bg' && !/[A-Za-z]/.test(k))) { pending.add(k); clearTimeout(timer); timer = setTimeout(flush, 700); }
     return null; }
   async function flush() {
-    const lang = PANEL_LANG; if (lang === 'bg' || lang === 'en' || !S.token) { pending.clear(); return; }
-    const list = [...pending].slice(0, 400); pending.clear(); if (!list.length) return;
+    const lang = PANEL_LANG; if (lang === 'en' || !S.token) { pending.clear(); return; }
+    const all = [...pending].filter(k => !map[k.toLowerCase()]); const list = all.slice(0, 300); pending.clear(); all.slice(300).forEach(k => pending.add(k)); if (pending.size) { clearTimeout(timer); timer = setTimeout(flush, 1500); } if (!list.length) return;
     let store = {}; try { store = JSON.parse(localStorage.getItem('pmap_' + lang) || '{}'); } catch (e) {}
     try { for (let i = 0; i < list.length; i += 150) { const d = await api('/api/i18n/panel', { method: 'POST', body: JSON.stringify({ lang, strings: list.slice(i, i + 150) }) }); Object.assign(store, d.map || {}); }
       try { localStorage.setItem('pmap_' + lang, JSON.stringify(store)); } catch (e) {}
       if (lang === PANEL_LANG) { Object.keys(store).forEach(k => map[k.toLowerCase()] = store[k]); panelTranslate(); } } catch (e) {}
   }
   function node(n) {
-    if (n.nodeType === 3) { const p = n.parentNode; if (!p || /^(SCRIPT|STYLE|TEXTAREA|CODE|OPTION)$/.test(p.nodeName) || (p.closest && p.closest('[data-notr],iframe'))) return;
+    if (n.nodeType === 3) { const p = n.parentNode; if (!p || /^(SCRIPT|STYLE|TEXTAREA)$/.test(p.nodeName) || (p.closest && p.closest('[data-notr],iframe'))) return;
       if (PANEL_LANG !== 'en') { const cur = n.nodeValue; if (orig.has(n) && orig.get(n).t === cur) return; const r = tr(cur); if (r !== null && r !== cur) { orig.set(n, { en: cur, t: r }); n.nodeValue = r; } }
       else if (orig.has(n)) { const o = orig.get(n); if (n.nodeValue === o.t) n.nodeValue = o.en; orig.delete(n); }
       return; }
     if (n.nodeType !== 1 || /^(SCRIPT|STYLE|IFRAME)$/.test(n.nodeName) || (n.closest && n.closest('[data-notr]'))) return;
-    if (n.hasAttribute && n.hasAttribute('placeholder') && PANEL_LANG !== 'en') { const v = n.getAttribute('placeholder'), r = tr(v); if (r !== null && r !== v) n.setAttribute('placeholder', r); }
+    if (PANEL_LANG !== 'en' && n.hasAttribute) { ['placeholder', 'title', 'aria-label', 'alt'].forEach(a => { if (n.hasAttribute(a)) { const v = n.getAttribute(a), r = tr(v); if (r !== null && r !== v) n.setAttribute(a, r); } }); if (n.nodeName === 'INPUT' && /^(button|submit)$/i.test(n.type) && n.value) { const r = tr(n.value); if (r !== null && r !== n.value) n.value = r; } }
+    if (n.shadowRoot) watch(n.shadowRoot);
     for (let c = n.firstChild; c; c = c.nextSibling) node(c);
   }
-  window.panelTranslate = function () { load(); busy = true; try { node(document.body); } catch (e) {} busy = false; };
+  const roots = new WeakSet();
+  function watch(root) { if (roots.has(root)) return; roots.add(root); try { new MutationObserver(ms => { if (busy) return; load(); busy = true; try { ms.forEach(m => { m.addedNodes.forEach(node); if (m.type === 'characterData') node(m.target); }); } catch (e) {} busy = false; }).observe(root, { childList: true, subtree: true, characterData: true }); } catch (e) {} const pb = busy; busy = true; try { for (let c = root.firstChild; c; c = c.nextSibling) node(c); } catch (e) {} busy = pb; }
+  window.panelWatch = watch;
+  window.panelTranslate = function () { load(); busy = true; try { node(document.body); document.querySelectorAll('*').forEach(e => { if (e.shadowRoot) watch(e.shadowRoot); }); } catch (e) {} busy = false; };
   new MutationObserver(ms => { if (busy) return; load(); busy = true; try { ms.forEach(m => { m.addedNodes.forEach(node); if (m.type === 'characterData') node(m.target); }); } catch (e) {} busy = false; }).observe(document.body, { childList: true, subtree: true, characterData: true });
   window.addEventListener('DOMContentLoaded', () => { if (PANEL_LANG !== 'en') { document.documentElement.lang = PANEL_LANG; document.documentElement.dir = RTL_RE.test(PANEL_LANG) ? 'rtl' : 'ltr'; panelTranslate(); } });
 })();
@@ -2680,11 +2685,35 @@ async function loadSites() {
   try { const d = await api('/api/my-sites'); S.sitesInfo = d;
     const guide = $('goFreeGuide');
     if (guide) {
-      guide.hidden = d.plan !== 'free';
-      if (d.plan === 'free') {
+      guide.hidden = false;
+      const plan = d.plan || 'free';
+      if (S.user && d.planLimits) {
+        // Use the server's family-wide effective plan, even when a child site is selected.
+        S.user.plan = plan;
+        S.user.planLimits = d.planLimits;
+        if (plan !== 'free') S.user.subscriptionStatus = 'active';
+      }
+      if (plan === 'free') {
+        $('goAiQuotaTitle').textContent = 'FREE · Source code';
         $('goFreeCodeStatus').textContent = d.freeCodeUsed ? 'Used · 0 of 1 remaining' : 'Available · 1 of 1';
         $('goFreeCodeStatus').classList.toggle('go-used', !!d.freeCodeUsed);
-        $('goFreeLinkStatus').textContent = d.freeLinkUsed ? 'Occupied by: ' + (d.freeActiveSite?.siteName || 'AI website') + ' · Open or Delete below' : 'Available · 0 of 1 active';
+        $('goAiQuotaNote').textContent = 'One lifetime code export. Deleting a website does not reset it.';
+        $('goAiSitesTitle').textContent = 'FREE · Published link';
+        $('goFreeLinkStatus').textContent = d.freeLinkUsed ? 'Occupied by: ' + (d.freeActiveSite?.siteName || 'AI website') : 'Available · 0 of 1 active';
+        $('goAiSitesNote').textContent = 'Delete your active AI website to free the slot.';
+        if (d.ownerStatus?.configuredOwnerEmail && !d.ownerStatus?.emailVerified) {
+          $('goAiQuotaNote').textContent = 'Owner email is not verified. Confirm it to activate Agency benefits.';
+        }
+      } else {
+        const cap = Math.max(0, Number(d.aiMonthlyLimit) || Number(d.planLimits?.aiGen) || 0);
+        const used = Math.max(0, Number(d.aiMonthlyUsed) || 0);
+        $('goAiQuotaTitle').textContent = plan.toUpperCase() + ' · AI generations / month';
+        $('goFreeCodeStatus').textContent = Math.max(0, cap - used) + ' of ' + cap + ' remaining';
+        $('goFreeCodeStatus').classList.remove('go-used');
+        $('goAiQuotaNote').textContent = used + ' used this calendar month · counts code and link generations.';
+        $('goAiSitesTitle').textContent = plan.toUpperCase() + ' · Website capacity';
+        $('goFreeLinkStatus').textContent = (d.sites?.length || 0) + ' of ' + (d.cap || d.planLimits?.sites || 0) + ' websites';
+        $('goAiSitesNote').textContent = 'Pro tools are unlocked on this plan. The main site counts toward capacity.';
       }
     }
     box.innerHTML = d.sites.map(x => '<div class="site-card' + (x.id === d.currentId ? ' cur' : '') + '"><div><b>' + esc(x.siteName) + '</b>' + (x.isMain ? ' · <span>Main site</span>' : '') + (x.aiGenerated ? ' · AI' : '') + '<br><small style="opacity:.7">' + esc(x.siteUrl || '—') + '</small></div><div class="acts">' + (x.siteUrl ? '<a class="btn-ghost" target="_blank" rel="noopener" href="' + esc(x.siteUrl) + '">Open</a>' : '') + (x.id === d.currentId ? '<span class="btn-ghost" data-notr>✓ Current</span>' : '<button class="btn-ghost" onclick="switchSite(\'' + x.id + '\')">Switch to this site</button>') + (!x.isMain ? '<button class="btn-ghost" onclick="deleteSite(\'' + x.id + '\')">Delete</button>' : '') + '</div></div>').join('');
@@ -2851,7 +2880,7 @@ const gpLocked = () => !!(S.user && S.user.planLimits && S.user.planLimits.proMo
 function proOpen(t) {
   if (!S.user) { openAuth('login'); return; }
   if (!GP.root) {
-    GP.root = $('gpHost').attachShadow({ mode: 'open' });
+    GP.root = $('gpHost').attachShadow({ mode: 'open' }); try { window.panelWatch && window.panelWatch(GP.root); } catch (e) {}
     GP.root.innerHTML = '<style>' + GP_CSS + '</style><div class="app"><aside class="side" id="gpSide"></aside><main class="main" id="gpMain"></main></div>';
     GP.root.addEventListener('click', gpClick); GP.root.addEventListener('change', gpChange); GP.root.addEventListener('input', gpInput);
     GP.root.addEventListener('dragstart', e => { const c = e.target.closest && e.target.closest('[data-deal]'); if (c) { GP.drag = c.dataset.deal; c.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', GP.drag); } catch (x) {} } });
