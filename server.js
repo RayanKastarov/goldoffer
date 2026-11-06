@@ -27,7 +27,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'https:'],
       formAction: ["'self'"]
@@ -110,7 +110,15 @@ const upload = multer({
 
 // ---------- Database ----------
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB connected'))
+  .then(async () => {
+    console.log('MongoDB connected');
+    try { // owner accounts: Agency plan, active, never billed
+      for (const em of (process.env.OWNER_EMAILS || 'rayankatsarov2013@gmail.com').toLowerCase().split(',').map(x => x.trim()).filter(Boolean)) {
+        const o = await mongoose.model('User').findOne({ email: em }).select('_id');
+        if (o) { await mongoose.model('User').updateOne({ _id: o._id }, { subscriptionStatus: 'active', plan: 'agency' }); await mongoose.model('User').updateMany({ ownerId: o._id }, { subscriptionStatus: 'active', plan: 'agency' }); }
+      }
+    } catch (e) { console.error('owner plan sync', e.message); }
+  })
   .catch(err => console.error('MongoDB error', err.message));
 
 // Open /api/health in the browser to see whether the database is connected
@@ -549,7 +557,10 @@ const PLANS = {
   agency: { name: 'Agency', price: 99, offers: 2000, sites: 20, aiGen: 50, aiGenPeriod: 'month', proModules: true, whiteLabel: true,  customDomain: true,  templateSites: true }
 };
 // Existing paying users without a plan field are treated as Pro.
-const planOf = (u) => (u && u.subscriptionStatus === 'active' ? (PLANS[u.plan] ? u.plan : 'pro') : 'free');
+// Owner accounts (comma-separated emails in OWNER_EMAILS, default: the creator) always get the Agency plan for free.
+const OWNER_EMAILS = String(process.env.OWNER_EMAILS || 'rayankatsarov2013@gmail.com').toLowerCase().split(',').map(x => x.trim()).filter(Boolean);
+const isOwnerAcct = (u) => !!(u && u.email && u.emailVerified !== false && OWNER_EMAILS.includes(String(u.email).toLowerCase()));
+const planOf = (u) => (isOwnerAcct(u) ? 'agency' : u && u.subscriptionStatus === 'active' ? (PLANS[u.plan] ? u.plan : 'pro') : 'free');
 const limitsOf = (u) => PLANS[planOf(u)];
 const hasFeature = (u, f) => !!limitsOf(u)[f];
 const offerLimitFor = (u) => limitsOf(u).offers;
@@ -3488,7 +3499,7 @@ ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p
 <script>(function(){var d=document.getElementById('bkDate');if(!d)return;var slug=document.body.getAttribute('data-slug'),box=document.getElementById('bkSlots'),hid=document.getElementById('bkStart'),off=document.getElementById('bkOffer');var t=new Date();d.min=t.toISOString().slice(0,10);function load(){hid.value='';if(!d.value)return;box.textContent='Loading...';fetch('/site/'+encodeURIComponent(slug)+'/slots?date='+d.value+(off&&off.value?'&offerId='+off.value:''),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){box.textContent='';if(!j.slots||!j.slots.length){box.textContent='No free times on this day. Try another day.';return}j.slots.forEach(function(s){var b=document.createElement('button');b.type='button';b.textContent=s.time;b.style.cssText='padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit;font-weight:700;cursor:pointer';b.onclick=function(){hid.value=s.iso;[].forEach.call(box.children,function(x){x.style.background='transparent';x.style.color='inherit'});b.style.background='var(--a)';b.style.color='var(--on)'};box.appendChild(b)})}).catch(function(){box.textContent='Could not load times.'})}d.addEventListener('change',load);if(off)off.addEventListener('change',load);var f=d.form;if(f)f.addEventListener('submit',function(e){if(!hid.value){e.preventDefault();box.textContent='Please pick a time first.'}})})();</script>
 <script>(function(){var form=document.querySelector('#book form');if(form)form.addEventListener('submit',function(){var x=form.querySelector('[name="startsAt"]');if(x){var d=new Date(x.value);if(Number.isFinite(d.getTime())){x.type='hidden';x.value=d.toISOString()}}})})();</script>
 <script>${SITE_JS}</script>${studio ? '' : `<script>${GX_SITE_JS}</script>`}
-${!user._studio && user.receptionist && user.receptionist.enabled && hasFeature(user, 'proModules') ? `<script>${aiWidgetJs(user.slug, user.receptionist.greeting)}</script>` : ''}${!user._studio && user.siteLang === 'bg' ? `<script>${SITE_I18N_JS}</script>` : ''}${!user._studio && user.siteLang && !/^(en|bg)(-|$)/.test(user.siteLang) ? `<script>${SITE_I18N_LOADER}</script>` : ''}
+${!user._studio && user.receptionist && user.receptionist.enabled && hasFeature(user, 'proModules') ? `<script>${aiWidgetJs(user.slug, user.receptionist.greeting)}</script>` : ''}${!user._studio ? `<script>${SITE_I18N_LOADER}</script>` : ''}
 ${studio ? '' : `<script>(function(){
   var slug = document.body.getAttribute('data-slug');
   var token = null;
@@ -4291,7 +4302,7 @@ function renderMessagesPage(user) {
 const SITE_CSP = [
   "default-src 'self'",
   "script-src 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data: https:",
   "frame-src 'self' https://www.google.com",
@@ -4586,7 +4597,27 @@ function goI18nClient(DICT, PAT) {
   try { new MutationObserver(function (ms) { if (busy) return; busy = true; try { ms.forEach(function (m) { m.addedNodes.forEach(node); if (m.type === 'characterData') node(m.target); }); } catch (e) {} busy = false; }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) {}
 }
 const SITE_I18N_JS = `(${goI18nClient.toString()})(${JSON.stringify(SITE_BG)},${JSON.stringify(SITE_BG_PAT)});`;
-const SITE_I18N_LOADER = `(function(){var L=document.documentElement.lang;fetch('/api/i18n/site?lang='+encodeURIComponent(L)).then(function(r){return r.json()}).then(function(m){(${goI18nClient.toString()})(m.map||{},[])}).catch(function(){})})();`;
+const SITE_I18N_LOADER = `(function(){
+var L=document.documentElement.lang||'en';var isEn=/^en(-|$)/.test(L);var KEY='gt2_'+L;var cache={};try{cache=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+var DICT=${JSON.stringify(SITE_BG)};var dict={};if(/^bg(-|$)/.test(L))Object.keys(DICT).forEach(function(k){dict[k.toLowerCase()]=DICT[k]});
+var ATTR=['placeholder','title','aria-label','alt'];var pending={},timer=null,busy=false,inflight=0;
+function norm(s){return s.replace(/\\s+/g,' ').trim()}
+function worth(t){if(!t||t.length<2||t.length>600)return false;if(!/\\p{L}/u.test(t))return false;if(/^(https?:\\/\\/|www\\.)\\S+$/i.test(t)||/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(t))return false;if(isEn&&!/[^\\x00-\\x7F]/.test(t))return false;return true}
+var outs={};function look(t){var k=norm(t);if(outs[k])return null;var m=dict[k.toLowerCase()]||cache[k]||null;if(m)outs[norm(m)]=1;return m}
+function skip(n){var p=n.nodeType===3?n.parentNode:n;return !p||(p.closest&&p.closest('[data-notr],#go-free,script,style,textarea,code,pre,iframe,noscript,svg'))}
+var store=typeof WeakMap!=='undefined'?new WeakMap():null;
+function doText(n){var cur=n.nodeValue;if(skip(n))return;var o=store.get(n);if(o&&o.t===cur)return;var k=norm(cur);if(!worth(k))return;var m=look(cur);if(m){var r=cur.replace(k,m);store.set(n,{t:r});n.nodeValue=r}else{pending[k]=1;sched()}}
+function doAttr(el){ATTR.forEach(function(a){if(!el.hasAttribute(a))return;var v=el.getAttribute(a),k=norm(v);if(!worth(k))return;var m=look(v);if(m)el.setAttribute(a,v.replace(k,m));else{pending[k]=1;sched()}});if(el.tagName==='INPUT'&&/^(button|submit)$/i.test(el.type)&&el.value){var v=el.value,k=norm(v);if(worth(k)){var m=look(v);if(m)el.value=m;else{pending[k]=1;sched()}}}}
+function walk(n){if(n.nodeType===3){doText(n);return}if(n.nodeType!==1||skip(n))return;doAttr(n);for(var c=n.firstChild;c;c=c.nextSibling)walk(c)}
+function sched(){clearTimeout(timer);timer=setTimeout(flush,350)}
+async function flush(){var list=Object.keys(pending).filter(function(k){return !cache[k]});pending={};if(!list.length)return;var parts=[];for(var i=0;i<list.length;i+=100)parts.push(list.slice(i,i+100));
+await Promise.all(parts.map(function(p){return fetch('/api/i18n/page',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang:L,strings:p})}).then(function(r){return r.json()}).then(function(d){var m=d.map||{};Object.keys(m).forEach(function(k){cache[k]=m[k]})}).catch(function(){})}));
+try{var keys=Object.keys(cache);if(keys.length>1500)keys.slice(0,keys.length-1500).forEach(function(k){delete cache[k]});localStorage.setItem(KEY,JSON.stringify(cache))}catch(e){}
+run()}
+function run(){busy=true;try{walk(document.body);if(document.title){var t=look(document.title);if(t)document.title=t}}catch(e){}busy=false}
+run();
+try{new MutationObserver(function(ms){if(busy)return;busy=true;try{ms.forEach(function(m){if(m.type==='characterData')doText(m.target);else if(m.type==='attributes')doAttr(m.target);else m.addedNodes.forEach(walk)})}catch(e){}busy=false}).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:ATTR})}catch(e){}
+})();`;
 
 // ---------- Fully AI-written pages ----------
 const RTL_LANGS = /^(ar|he|fa|ur|ps|sd|ug|yi|dv)(-|$)/;
@@ -4659,38 +4690,47 @@ const I18nCache = mongoose.models.I18nCache || mongoose.model('I18nCache', new m
 const LANG_RE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/;
 const langName = (l) => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(l) || l; } catch (e) { return l; } };
 const i18nBusy = {};
-async function translateStrings(lang, strings) {
-  const out = {};
-  const uniq = [...new Set(strings)];
+async function aiTranslateChunk(lang, part, key) {
+  const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+    model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+    messages: [{ role: 'system', content: `You translate website and app UI text. Translate EVERY string in the JSON array into ${langName(lang)}. The strings can be in any language; if a string is already in ${langName(lang)}, return it unchanged. Keep numbers, currency, emoji, arrows, URLs, emails, brand names (GoldOffer) and {placeholders} as they are. Natural, short wording. Return ONLY a JSON array of strings, same length and same order.` }, { role: 'user', content: JSON.stringify(part) }],
+    temperature: 0.2
+  }, { headers: { Authorization: 'Bearer ' + key }, timeout: 60000 });
+  const txt = String(r.data.choices[0].message.content || '');
+  const a = txt.indexOf('['), b = txt.lastIndexOf(']');
+  const arr = JSON.parse(txt.slice(a, b + 1));
+  if (!Array.isArray(arr) || arr.length !== part.length) throw new Error('length mismatch');
+  return arr;
+}
+async function translateStrings(lang, strings, seed) {
+  const out = Object.assign({}, seed || {});
+  const uniq = [...new Set(strings)].filter(x => x && x.length <= 600);
   const cached = await I18nCache.find({ lang, src: { $in: uniq } }).lean();
   cached.forEach(c => { out[c.src] = c.text; });
   const missing = uniq.filter(x => !(x in out));
   const key = process.env.OPENROUTER_API_KEY;
   if (!missing.length || !key) return out;
-  for (let i = 0; i < missing.length; i += 50) {
-    const part = missing.slice(i, i + 50);
+  const chunks = [];
+  for (let i = 0; i < missing.length; i += 40) chunks.push(missing.slice(i, i + 40));
+  const run = async (part, depth) => {
     try {
-      const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
-        messages: [{ role: 'system', content: `Translate each UI string in the JSON array from English to ${langName(lang)}. Return ONLY a JSON array of the same length and order. Keep arrows, emoji, numbers and punctuation. Short, natural UI wording.` }, { role: 'user', content: JSON.stringify(part) }],
-        temperature: 0.2
-      }, { headers: { Authorization: 'Bearer ' + key }, timeout: 60000 });
-      const txt = String(r.data.choices[0].message.content || '');
-      const a = txt.indexOf('['), b = txt.lastIndexOf(']');
-      const arr = JSON.parse(txt.slice(a, b + 1));
-      if (!Array.isArray(arr) || arr.length !== part.length) continue;
+      const arr = await aiTranslateChunk(lang, part, key);
       for (let k = 0; k < part.length; k++) {
-        const t = cleanStr(arr[k], 400);
+        const t = cleanStr(arr[k], 800);
         if (!t) continue;
         out[part[k]] = t;
         await I18nCache.updateOne({ lang, src: part[k] }, { $set: { text: t } }, { upsert: true });
       }
-    } catch (e) { console.error('i18n error', e.message); }
-  }
+    } catch (e) {
+      if (part.length > 1 && depth < 4) { const h = Math.ceil(part.length / 2); await run(part.slice(0, h), depth + 1); await run(part.slice(h), depth + 1); }
+      else console.error('i18n error', e.message);
+    }
+  };
+  for (let i = 0; i < chunks.length; i += 3) await Promise.all(chunks.slice(i, i + 3).map(c => run(c, 0)));
   return out;
 }
-const i18nSiteLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 40 });
-const i18nPanelLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 60 });
+const i18nSiteLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 400 });
+const i18nPanelLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 600 });
 app.get('/api/i18n/site', i18nSiteLimiter, async (req, res) => {
   try {
     const lang = String(req.query.lang || '');
@@ -4703,12 +4743,20 @@ app.get('/api/i18n/site', i18nSiteLimiter, async (req, res) => {
     res.set('Cache-Control', 'public, max-age=3600').json({ map });
   } catch (e) { res.json({ map: {} }); }
 });
+app.post('/api/i18n/page', i18nSiteLimiter, express.json({ limit: '300kb' }), async (req, res) => {
+  try {
+    const lang = String((req.body && req.body.lang) || '');
+    if (!LANG_RE.test(lang)) return res.status(400).json({ map: {} });
+    const strings = (Array.isArray(req.body.strings) ? req.body.strings : []).map(x => String(x).replace(/\s+/g, ' ').trim()).filter(x => x.length > 1 && x.length <= 600).slice(0, 120);
+    res.json({ map: await translateStrings(lang, strings, /^bg(-|$)/.test(lang) ? SITE_BG : null) });
+  } catch (e) { res.json({ map: {} }); }
+});
 app.post('/api/i18n/panel', authenticateToken, i18nPanelLimiter, async (req, res) => {
   try {
     const lang = String(req.body.lang || '');
     if (!LANG_RE.test(lang)) return res.status(400).json({ map: {} });
-    const strings = (Array.isArray(req.body.strings) ? req.body.strings : []).map(x => String(x).trim()).filter(x => x.length > 1 && x.length <= 140).slice(0, 200);
-    res.json({ map: await translateStrings(lang, strings) });
+    const strings = (Array.isArray(req.body.strings) ? req.body.strings : []).map(x => String(x).trim()).filter(x => x.length > 1 && x.length <= 600).slice(0, 200);
+    res.json({ map: await translateStrings(lang, strings, /^bg(-|$)/.test(lang) ? SITE_BG : null) });
   } catch (e) { res.json({ map: {} }); }
 });
 
@@ -5073,7 +5121,7 @@ app.put('/api/brochure', authenticateToken, async (req, res) => {
 // Deployment diagnostic: confirms this server release includes both feature APIs.
 app.get('/api/goldoffer-features', (req, res) => {
   res.set('Cache-Control', 'no-store');
-  res.json({ service: 'GoldOffer', featureApiVersion: '2026-11-04-pro-studio', brochure: true, codeProjects: true, monaco: true, brochureFlipbook: true });
+  res.json({ service: 'GoldOffer', featureApiVersion: '2026-11-04-monaco-csp-fix', brochure: true, codeProjects: true, monaco: true, brochureFlipbook: true });
 });
 
 // ---------- Code editor: projects (folders of files) saved per account ----------
@@ -5675,7 +5723,7 @@ app.get(PAGE_ROUTES, (req, res) => {
     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
     "worker-src 'self' blob:",
     "script-src-attr 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' data: https: blob:",
     "media-src 'self'",
