@@ -5709,7 +5709,7 @@ function receptionistOfferAnswer(question, offers) {
     return String(o.title || '').trim() + (Number.isFinite(price) && price > 0 ? ` — €${price}` : '');
   });
   const more = matching.length > items.length ? (bg ? ' и още' : ' and more') : '';
-  return (bg ? (askAll ? 'Предлагаме: ' : 'Да, имаме: ') : (askAll ? 'We offer: ' : 'Yes, we have: ')) + items.join(', ') + more + '.';
+  return (bg ? (askAll ? 'Разбира се! В момента предлагаме: ' : 'Да, с удоволствие! Имаме: ') : (askAll ? 'Of course! We currently offer: ' : 'Yes, happy to help! We have: ')) + items.join(', ') + more + '.';
 }
 
 // Reliable answers for basic business questions without a model call.
@@ -5765,19 +5765,19 @@ function receptionistCompositeReply(question, offers, inventory, history) {
     const count = m ? ({ две:2, два:2, '2':2, три:3, '3':3, един:1, една:1, '1':1 }[m[1]]) : null;
     const otherOne = /(?:една|един|1)\s+от\s+друг/i.test(q);
     if (count && otherOne) {
-      lines.push(bg ? `${count} бр. „${cheaper.title}“ и 1 бр. „${other.title}“ струват общо ${eur(count * amount(cheaper) + amount(other))}.` : `${count} × ${cheaper.title} and 1 × ${other.title} cost ${eur(count * amount(cheaper) + amount(other))} in total.`);
+      lines.push(bg ? `Разбира се! За ${count} бр. „${cheaper.title}“ и 1 бр. „${other.title}“ общата сума ще бъде ${eur(count * amount(cheaper) + amount(other))}.` : `Of course! ${count} × ${cheaper.title} and 1 × ${other.title} would come to ${eur(count * amount(cheaper) + amount(other))} in total.`);
       const sc = qty(cheaper), so = qty(other);
       if (sc !== null && so !== null) {
-        if (sc >= count && so >= 1) lines.push(bg ? 'Има достатъчно наличност и от двата продукта.' : 'Both products have enough stock.');
-        else lines.push(bg ? `Няма достатъчно наличност за цялата заявка: „${cheaper.title}“ — ${sc} бр.; „${other.title}“ — ${so} бр.` : `Not enough stock for the full request: ${cheaper.title} ${sc}, ${other.title} ${so}.`);
-      } else lines.push(bg ? 'Не мога да потвърдя наличността на всички продукти.' : 'I cannot confirm stock for every item.');
+        if (sc >= count && so >= 1) lines.push(bg ? 'Добрата новина е, че разполагаме с необходимите бройки и от двата продукта.' : 'Good news — we have enough of both items in stock.');
+        else lines.push(bg ? `За съжаление, не можем да потвърдим цялата заявка: от „${cheaper.title}“ имаме ${sc} бр., а от „${other.title}“ — ${so} бр.` : `Unfortunately, we don't have enough for the full request: ${cheaper.title} — ${sc} available, ${other.title} — ${so} available.`);
+      } else lines.push(bg ? 'За съжаление, нямаме потвърдена наличност за всички артикули — собственикът може да я уточни.' : 'Unfortunately, stock has not been confirmed for every item; the owner can clarify.');
       return { answer: lines.join(' '), handoff: false };
     }
   }
-  if (prices && pa !== null && pb !== null) lines.push(bg ? `По един брой от „${a.title}“ и „${b.title}“ струват общо ${eur(pa + pb)}.` : `One ${a.title} and one ${b.title} cost ${eur(pa + pb)} in total.`);
+  if (prices && pa !== null && pb !== null) lines.push(bg ? `Разбира се! По един брой от „${a.title}“ и „${b.title}“ ще струват общо ${eur(pa + pb)}.` : `Of course! One ${a.title} and one ${b.title} would cost ${eur(pa + pb)} in total.`);
   if (stock) {
     const one = o => { const n = qty(o); return n === null ? (bg ? 'наличността не е потвърдена' : 'stock not confirmed') : n === 0 ? (bg ? 'изчерпан' : 'out of stock') : (bg ? `${n} бр. налични` : `${n} in stock`); };
-    lines.push(bg ? `Наличности: „${a.title}“ — ${one(a)}; „${b.title}“ — ${one(b)}.` : `Stock: ${a.title} — ${one(a)}; ${b.title} — ${one(b)}.`);
+    lines.push(bg ? `За наличността: „${a.title}“ — ${one(a)}, а „${b.title}“ — ${one(b)}.` : `As for availability, ${a.title} is ${one(a)} and ${b.title} is ${one(b)}.`);
   }
   if (comparison && sa !== null && sb !== null) lines.push(bg ? (sa === sb ? 'И двата продукта са с еднаква наличност.' : `Повече бройки има от „${sa > sb ? a.title : b.title}“.`) : (sa === sb ? 'They have equal stock.' : `${sa > sb ? a.title : b.title} has more units.`));
   return lines.length ? { answer: lines.join(' '), handoff: false } : null;
@@ -5799,11 +5799,11 @@ function receptionistFactsReply(question, offers, user, inventory, history, offe
   const whereAsk = /(?:от\s*къде|откъде|къде\s+(?:се намира|е|сте)|в кой град|where (?:is|are|located)|what city)/i.test(q) && /(?:продавач|магазин|бизнес|намира|сте|seller|shop|business|you|location|city|град|е)/i.test(q);
   if (countAsk) {
     const n = Number.isInteger(offerCount) ? offerCount : entries.length;
-    return { answer: bg ? `В момента предлагаме ${n} ${n === 1 ? 'оферта' : 'оферти'}.` : `We currently have ${n} offers on the website.`, handoff: false };
+    return { answer: bg ? `Разбира се! В момента имаме ${n} ${n === 1 ? 'оферта' : 'оферти'} в сайта.` : `Of course! We currently have ${n} offers on the website.`, handoff: false };
   }
   if (whereAsk) {
     const location = [user.city, user.address].map(x => String(x || '').trim()).filter(Boolean).join(', ');
-    return location ? { answer: bg ? `Намираме се в ${location}.` : `The business lists this location: ${location}.`, handoff: false }
+    return location ? { answer: bg ? `Разбира се! Намираме се в ${location}.` : `Of course! We're located in ${location}.`, handoff: false }
       : { answer: bg ? 'Нямам посочен град или адрес на продавача. Мога да ви насоча към собственика.' : 'No seller location is listed. I can connect you with the owner.', handoff: true };
   }
   if (!stockAsk) return null;
@@ -5855,7 +5855,7 @@ function receptionistFactsReply(question, offers, user, inventory, history, offe
     const raw = stock ? (typeof stock.get === 'function' ? stock.get(String(offer._id)) : stock[String(offer._id)]) : undefined;
     return raw === undefined || raw === null || raw === '' || !Number.isFinite(Number(raw));
   });
-  return { answer: parts.join('; ') + '.', handoff: unknown };
+  return { answer: (bg ? 'Разбира се! Проверих наличностите: ' : 'Of course! Here is the current stock: ') + parts.join('; ') + '.', handoff: unknown };
 }
 
 app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), async (req, res) => {
