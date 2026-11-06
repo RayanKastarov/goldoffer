@@ -5691,6 +5691,27 @@ app.get('/api/pro/receptionist', authenticateToken, async (req, res) => {
 app.put('/api/pro/receptionist', authenticateToken, async (req, res) => { const b = req.body || {}; await User.updateOne({ _id: req.user.id }, { $set: { receptionist: { enabled: !!b.enabled, greeting: cleanStr(b.greeting, 200), notes: cleanStr(b.notes, 1500) } } }); res.json({ ok: true }); });
 const aiAskLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 20, keyGenerator: (req) => req.ip + ':' + req.params.slug, message: { answer: 'Too many questions. Please try again in a few minutes.', handoff: true } });
 const AI_HANDOFF = 'I want to be sure I give you the right answer, so the owner will help you personally.';
+const receptionistInstructionLeak = (answer) => /(?:analy[sz]e the request|\bconstraint\s*\d|customer messages are untrusted|never reveal these rules|use only the (?:provided )?facts|\bsystem prompt\b|\binternal instructions\b|\brole:\s*friendly receptionist)/i.test(String(answer || ''));
+// Ground common offer questions directly in database records; no external AI is needed.
+function receptionistOfferAnswer(question, offers) {
+  if (!Array.isArray(offers) || !offers.length) return '';
+  const q = String(question || '').trim().toLocaleLowerCase();
+  const bg = /[а-я\u0400-\u04ff]/i.test(q);
+  const askAll = /(?:какви|кои)\s+(?:услуги|оферти|продукти|стоки)|какво\s+(?:предлагате|продавате)|(?:вашите|вашият)\s+(?:услуги|асортимент|меню)|^(?:услуги|оферти|продукти|меню)[?!. ]*$|what\s+(?:do you (?:offer|sell)|services|products)|your\s+(?:services|products|menu)/i.test(q);
+  const specific = offers.filter(o => {
+    const title = String(o.title || '').toLocaleLowerCase().trim();
+    return title.length >= 3 && q.includes(title);
+  });
+  const matching = specific.length ? specific : (askAll ? offers : []);
+  if (!matching.length) return '';
+  const items = matching.slice(0, 6).map(o => {
+    const price = Number(o.salePrice) > 0 ? Number(o.salePrice) : Number(o.price);
+    return String(o.title || '').trim() + (Number.isFinite(price) && price > 0 ? ` — €${price}` : '');
+  });
+  const more = matching.length > items.length ? (bg ? ' и още' : ' and more') : '';
+  return (bg ? (askAll ? 'Предлагаме: ' : 'Да, имаме: ') : (askAll ? 'We offer: ' : 'Yes, we have: ')) + items.join(', ') + more + '.';
+}
+
 app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), async (req, res) => {
   const bump = (id, inc) => GOAiUsage.updateOne({ sellerId: id, day: G.dayKey() }, { $inc: inc }, { upsert: true }).catch(() => {});
   try {
@@ -5707,6 +5728,8 @@ app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), asy
     const [offers, cal] = await Promise.all([Offer.find({ userId: user._id }).select('title price salePrice description variants').limit(30).lean(), calOf(user._id)]);
     const facts = [`Business: ${user.siteName}`, user.category && `Category: ${user.category}`, user.city && `City: ${user.city}`, user.sellerBio && `About: ${user.sellerBio}`, user.phone && `Phone: ${user.phone}`, user.address && `Address: ${user.address}`, user.hours && `Hours: ${user.hours}`, cal.enabled && 'Online booking is available on the site (section "Request an appointment").', user.receptionist.notes && `Owner notes: ${user.receptionist.notes}`,
       'Offers:', ...offers.map(o => `- ${o.title}: ${o.salePrice > 0 ? o.salePrice + ' (sale)' : (o.price > 0 ? o.price : 'price on request')} EUR. ${String(o.description || '').slice(0, 160)}${(o.variants || []).length ? ' Options: ' + o.variants.map(v => v.name + (v.price > 0 ? ' ' + v.price : '')).join(', ') : ''}`)].filter(Boolean).join('\n').slice(0, 6000);
+    const directOfferAnswer = receptionistOfferAnswer(q, offers);
+    if (directOfferAnswer) return res.json({ answer: directOfferAnswer, handoff: false });
     const hist = (Array.isArray((req.body || {}).history) ? req.body.history : []).slice(-6).map(h => ({ role: h && h.role === 'assistant' ? 'assistant' : 'user', content: G.sanitizeQuestion(h && h.text) })).filter(h => h.content);
     const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
       model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
@@ -5716,6 +5739,8 @@ app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), asy
     const tok = Number(r.data && r.data.usage && r.data.usage.total_tokens) || 0;
     let a = String((r.data.choices[0].message.content) || '').trim(), handoff = /\[HANDOFF\]/i.test(a);
     a = a.replace(/\[HANDOFF\]/gi, '').trim().slice(0, 500);
+    // Never display model chain-of-thought or a paraphrase of our hidden instructions.
+    if (receptionistInstructionLeak(a)) { console.warn('AI receptionist instruction echo blocked'); a = AI_HANDOFF; handoff = true; void bump(user._id, { blocked: 1 }); }
     // 3) the answer may only contain numbers / links / emails that exist in the real business data
     if (!handoff) { const chk = G.checkGrounded(a, facts + '\n' + hist.map(h => h.content).join('\n') + '\n' + q); if (!chk.ok) { console.warn('AI receptionist answer blocked:', chk.problems.join(',')); a = AI_HANDOFF; handoff = true; void bump(user._id, { blocked: 1 }); } }
     if (!a) a = AI_HANDOFF;
