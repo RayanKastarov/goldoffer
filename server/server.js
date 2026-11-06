@@ -5712,6 +5712,40 @@ function receptionistOfferAnswer(question, offers) {
   return (bg ? (askAll ? 'Предлагаме: ' : 'Да, имаме: ') : (askAll ? 'We offer: ' : 'Yes, we have: ')) + items.join(', ') + more + '.';
 }
 
+// Reliable answers for basic business questions without a model call.
+function receptionistFactsReply(question, offers, user, inventory, history, offerCount) {
+  const q = String(question || '').toLocaleLowerCase('bg').trim();
+  const bg = /[а-я\u0400-\u04ff]/i.test(q);
+  const stockAsk = /(?:наличност|наличн[аио]|има ли (?:го|я|ги) (?:още|в момента)|изчерпан|на склад|in stock|available|sold out)/i.test(q);
+  const countAsk = /(?:колко|брой|how many)\s+(?:(?:активни|общо|различни|имате)\s+)?(?:оферт[иа]|продукт[аи]|артикул[аи]|стоки|offers|products|items)/i.test(q);
+  const whereAsk = /(?:от\s*къде|откъде|къде\s+(?:се намира|е|сте)|в кой град|where (?:is|are|located)|what city)/i.test(q) && /(?:продавач|магазин|бизнес|намира|сте|seller|shop|business|you|location|city|град|е)/i.test(q);
+  if (countAsk) {
+    const n = Number.isInteger(offerCount) ? offerCount : offers.length;
+    return { answer: bg ? `В момента имаме ${n} ${n === 1 ? 'оферта' : 'оферти'} в сайта.` : `We currently have ${n} offers on the website.`, handoff: false };
+  }
+  if (whereAsk) {
+    const location = [user.city, user.address].map(x => String(x || '').trim()).filter(Boolean).join(', ');
+    return location ? { answer: bg ? `Бизнесът е посочил следното местоположение: ${location}.` : `The business lists this location: ${location}.`, handoff: false }
+      : { answer: bg ? 'Нямам посочен град или адрес на продавача. Мога да ви насоча към собственика.' : 'No seller location is listed. I can connect you with the owner.', handoff: true };
+  }
+  if (!stockAsk) return null;
+  const titleMatch = (text) => offers.find(o => String(o.title || '').trim().length >= 2 && String(text || '').toLocaleLowerCase('bg').includes(String(o.title).trim().toLocaleLowerCase('bg')));
+  let offer = titleMatch(q);
+  if (!offer && Array.isArray(history)) {
+    for (let i = history.length - 1; i >= 0; i--) {
+      offer = titleMatch(history[i] && history[i].text);
+      if (offer) break;
+    }
+  }
+  if (!offer) return { answer: bg ? 'За кой продукт питате дали е в наличност?' : 'Which product would you like me to check?', handoff: false };
+  const raw = inventory && inventory.stock ? (typeof inventory.stock.get === 'function' ? inventory.stock.get(String(offer._id)) : inventory.stock[String(offer._id)]) : undefined;
+  if (raw === undefined || raw === null || raw === '') return { answer: bg ? `Имаме оферта „${offer.title}“, но нямам потвърдена информация за наличността. Попитайте собственика.` : `We list ${offer.title}, but live stock is not confirmed. Please ask the owner.`, handoff: true };
+  const qty = Number(raw);
+  if (!Number.isFinite(qty)) return { answer: bg ? `Нямам потвърдена наличност за „${offer.title}“.` : `I cannot confirm the stock for ${offer.title}.`, handoff: true };
+  if (qty <= 0) return { answer: bg ? `„${offer.title}“ в момента е изчерпан(а).` : `${offer.title} is currently out of stock.`, handoff: false };
+  return { answer: bg ? `Да, „${offer.title}“ е в наличност (${Math.floor(qty)} бр.).` : `Yes, ${offer.title} is in stock (${Math.floor(qty)} available).`, handoff: false };
+}
+
 app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), async (req, res) => {
   const bump = (id, inc) => GOAiUsage.updateOne({ sellerId: id, day: G.dayKey() }, { $inc: inc }, { upsert: true }).catch(() => {});
   try {
@@ -5725,9 +5759,16 @@ app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), asy
     if (G.looksLikeInjection(q)) { void bump(user._id, { blocked: 1 }); return res.json({ answer: 'I can only help with questions about this business.', handoff: false }); }
     // 2) hard daily limit per business (atomic)
     if (!(await G.takeQuota(GOAiUsage, user._id, aiCapFor(user)))) return res.json({ answer: 'The assistant is resting for today. Please message the owner directly.', handoff: true });
-    const [offers, cal] = await Promise.all([Offer.find({ userId: user._id }).select('title price salePrice description variants').limit(30).lean(), calOf(user._id)]);
+    const [offers, cal, inventory] = await Promise.all([Offer.find({ userId: user._id }).select('title price salePrice description variants').limit(30).lean(), calOf(user._id), ShopSetting.findOne({ sellerId: user._id }).select('stock').lean()]);
     const facts = [`Business: ${user.siteName}`, user.category && `Category: ${user.category}`, user.city && `City: ${user.city}`, user.sellerBio && `About: ${user.sellerBio}`, user.phone && `Phone: ${user.phone}`, user.address && `Address: ${user.address}`, user.hours && `Hours: ${user.hours}`, cal.enabled && 'Online booking is available on the site (section "Request an appointment").', user.receptionist.notes && `Owner notes: ${user.receptionist.notes}`,
       'Offers:', ...offers.map(o => `- ${o.title}: ${o.salePrice > 0 ? o.salePrice + ' (sale)' : (o.price > 0 ? o.price : 'price on request')} EUR. ${String(o.description || '').slice(0, 160)}${(o.variants || []).length ? ' Options: ' + o.variants.map(v => v.name + (v.price > 0 ? ' ' + v.price : '')).join(', ') : ''}`)].filter(Boolean).join('\n').slice(0, 6000);
+    const questionHistory = Array.isArray((req.body || {}).history) ? (req.body || {}).history.slice(-6) : [];
+    const offerCount = /(?:колко|брой|how many)\s+/i.test(q) ? await Offer.countDocuments({ userId: user._id }) : offers.length;
+    const simpleAnswer = receptionistFactsReply(q, offers, user, inventory, questionHistory, offerCount);
+    if (simpleAnswer) {
+      if (simpleAnswer.handoff) { void bump(user._id, { handoffs: 1 }); await pushNote(user._id, 'ai', 'ai-' + Date.now(), 'AI receptionist needs you', q.slice(0, 120), '/messages'); }
+      return res.json(simpleAnswer);
+    }
     const directOfferAnswer = receptionistOfferAnswer(q, offers);
     if (directOfferAnswer) return res.json({ answer: directOfferAnswer, handoff: false });
     const hist = (Array.isArray((req.body || {}).history) ? req.body.history : []).slice(-6).map(h => ({ role: h && h.role === 'assistant' ? 'assistant' : 'user', content: G.sanitizeQuestion(h && h.text) })).filter(h => h.content);

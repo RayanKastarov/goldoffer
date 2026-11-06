@@ -2891,6 +2891,7 @@ function proOpen(t) {
     GP.root = $('gpHost').attachShadow({ mode: 'open' }); try { window.panelWatch && window.panelWatch(GP.root); } catch (e) {}
     GP.root.innerHTML = '<style>' + GP_CSS + '</style><div class="app"><aside class="side" id="gpSide"></aside><main class="main" id="gpMain"></main></div>';
     GP.root.addEventListener('click', gpClick); GP.root.addEventListener('change', gpChange); GP.root.addEventListener('input', gpInput);
+    GP.root.addEventListener('keydown', e => { if (e.target && e.target.id === 'chatQ' && e.key === 'Enter' && !e.isComposing) { e.preventDefault(); const send = GP.root.querySelector('button[data-a="chat"]'); if (send && !send.disabled) send.click(); } });
     GP.root.addEventListener('dragstart', e => { const c = e.target.closest && e.target.closest('[data-deal]'); if (c) { GP.drag = c.dataset.deal; c.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', GP.drag); } catch (x) {} } });
     GP.root.addEventListener('dragend', e => { GP.root.querySelectorAll('.drag,.over').forEach(x => x.classList.remove('drag', 'over')); });
     GP.root.addEventListener('dragover', e => { const c = e.target.closest && e.target.closest('[data-stage]'); if (c && GP.drag) { e.preventDefault(); GP.root.querySelectorAll('.over').forEach(x => x !== c && x.classList.remove('over')); c.classList.add('over'); } });
