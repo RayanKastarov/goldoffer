@@ -3567,7 +3567,7 @@ async function deleteSite(id) {
     document.body.classList.toggle('logged', !!S.user);
     if (S.user) {
       const nm = [S.user.firstName, S.user.lastName].filter(Boolean).join(' ');
-      a.innerHTML = (S.user.ownerId ? '<button class="btn-ghost" onclick="backToMain()">← Main site</button>' : '') + '<span class="who hide-m" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span>' + bellHtml() + '<a class="btn-ghost hide-m" href="/messages" data-link>Messages<span class="badge-msg who-badge" style="display:none"></span></a><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><a class="btn-ghost go-nav-settings" href="/settings" data-link>⚙ Settings</a><button class="btn-ghost" onclick="logout()">Log out</button>';
+      a.innerHTML = '<span class="who hide-m" style="cursor:pointer" title="Click to change your name" onclick="editName()">' + esc(nm || 'Add your name') + '</span>' + bellHtml() + '<a class="btn-ghost hide-m" href="/messages" data-link>Messages<span class="badge-msg who-badge" style="display:none"></span></a><a class="btn-ghost" href="/dashboard" data-link>Dashboard</a><a class="btn-ghost go-nav-settings" href="/settings" data-link>⚙ Settings</a><button class="btn-ghost" onclick="logout()">Log out</button>';
       setTimeout(() => { if (S.user) { loadInbox(); startBell(); } }, 400);
     } else {
       a.innerHTML = '<button class="btn-ghost" onclick="openAuth(\'login\')">Log in</button><button class="btn" onclick="openAuth(\'signup\')">Get started</button>';
