@@ -569,7 +569,7 @@ const monthKey = () => 'gen-' + new Date().toISOString().slice(0, 7);
 const builtWith = (u, extra) => (hasFeature(u, 'whiteLabel') ? '' : `<span>Built with <a href="${PUBLIC_BASE}"${extra || ''}>GoldOffer Studio</a></span>`);
 const publicUser = (u) => ({
   id: u._id, firstName: u.firstName, lastName: u.lastName, email: u.email,
-  subscriptionStatus: u.subscriptionStatus, plan: planOf(u), planLimits: limitsOf(u), siteName: u.siteName, sellerBio: u.sellerBio || '', verificationStatus: u.verificationStatus || 'none', slug: u.slug,
+  subscriptionStatus: isOwnerAcct(u) ? 'active' : u.subscriptionStatus, plan: planOf(u), planLimits: limitsOf(u), siteName: u.siteName, sellerBio: u.sellerBio || '', verificationStatus: u.verificationStatus || 'none', slug: u.slug,
   category: u.category, city: u.city, theme: u.theme, layout: u.layout || 'signature', font: u.font, published: u.published,
   siteUrl: u.slug && u.published ? `${PUBLIC_BASE}/site/${u.slug}` : null,
   offerLimit: offerLimitFor(u),
@@ -5564,9 +5564,9 @@ app.post('/api/pro/coupons', authenticateToken, async (req, res) => {
 app.put('/api/pro/coupons/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GOCoupon.updateOne({ _id: req.params.id, sellerId: req.user.id }, { $set: { active: !!(req.body || {}).active } }); res.json({ ok: true }); });
 app.delete('/api/pro/coupons/:id', authenticateToken, async (req, res) => { if (!proId(req, res)) return; await GOCoupon.deleteOne({ _id: req.params.id, sellerId: req.user.id }); res.json({ ok: true }); });
 // --- AI Receptionist
-const aiCapFor = (u) => (u.subscriptionStatus === 'active' ? (Number(process.env.AI_DAILY_CAP_PAID) || 300) : (Number(process.env.AI_DAILY_CAP_FREE) || 40));
+const aiCapFor = (u) => (u.subscriptionStatus === 'active' || isOwnerAcct(u) ? (Number(process.env.AI_DAILY_CAP_PAID) || 300) : (Number(process.env.AI_DAILY_CAP_FREE) || 40));
 app.get('/api/pro/receptionist', authenticateToken, async (req, res) => {
-  const u = await User.findById(req.user.id).select('receptionist subscriptionStatus').lean();
+  const u = await User.findById(req.user.id).select('receptionist subscriptionStatus email emailVerified').lean();
   const use = await GOAiUsage.findOne({ sellerId: req.user.id, day: G.dayKey() }).lean();
   res.json({ receptionist: (u && u.receptionist) || { enabled: false, greeting: '', notes: '' }, aiReady: !!process.env.OPENROUTER_API_KEY && process.env.AI_RECEPTIONIST_DISABLED !== '1', usage: { today: (use && use.count) || 0, cap: aiCapFor(u || {}), tokens: (use && use.tokens) || 0, handoffs: (use && use.handoffs) || 0, blocked: (use && use.blocked) || 0 } });
 });
