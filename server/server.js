@@ -5292,13 +5292,40 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
 Rules for html: a body fragment only. No html/head/body/script/style/iframe/form tags, no inline event handlers, no external images: make visuals with CSS gradients, emoji or inline SVG. Structure: a hero with a big headline and a call-to-action link href="#offers"; an about/story section; 3 benefit cards; then <section id="offers"> with a heading and exactly the text {{OFFERS}}; a FAQ section containing exactly {{FAQ}}; a section id="contact" containing exactly {{CONTACT}}; a short footer. Never write the offer cards, FAQ items or contact details yourself, the server replaces the placeholders.
 Rules for css: plain CSS for that html, mobile-first with media queries, bold distinctive typography and layout (not a generic template). Use var(--a), var(--b), var(--bg), var(--panel), var(--text) for colors (they come from your palette). Also style the classes .ai-offers .ai-offer .ai-offer-img .ai-offer-title .ai-offer-desc .ai-offer-price .ai-faq .ai-contact if you want to change their look.
 Write all visible texts in ${languageName}. Use only facts the owner gave: do not invent addresses, phone numbers, reviews, awards or statistics. Prices only if the owner mentioned them, otherwise 0.`;
-    const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
-      messages: [{ role: 'system', content: sys }, { role: 'user', content: `Business name: ${name}\nDescription: ${desc}` }],
-      temperature: 0.8, max_tokens: 7000
-    }, { headers: { Authorization: 'Bearer ' + key }, timeout: 100000 });
-    const j = extractJson(r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message && r.data.choices[0].message.content);
-    if (!j) return res.status(502).json({ message: 'AI answered in an unexpected way. Please try again.' });
+    // Some models return fenced, truncated or otherwise invalid JSON despite a 200 response.
+    // Log only response metadata, never prompts, generated site content or API credentials.
+    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+    let j = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (clientGone) return;
+      const compact = attempt === 1;
+      const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+        model,
+        messages: [{ role: 'system', content: compact
+          ? sys + '\nIMPORTANT: Your previous reply was not parseable JSON. Return a SINGLE valid JSON object. Keep HTML under 3500 characters, CSS under 2500 characters, use simple concise text and escape all quotation marks and newlines inside JSON strings. Include all requested fields and placeholders.'
+          : sys }, { role: 'user', content: `Business name: ${name}\nDescription: ${desc}` }],
+        temperature: compact ? 0.35 : 0.6,
+        max_tokens: compact ? 6500 : 8500
+      }, { headers: { Authorization: 'Bearer ' + key }, timeout: compact ? 80000 : 110000 });
+      const choice = r.data && r.data.choices && r.data.choices[0];
+      const raw = choice && choice.message && choice.message.content;
+      const content = typeof raw === 'string' ? raw : Array.isArray(raw)
+        ? raw.map(part => typeof part === 'string' ? part : String(part && part.text || '')).join('') : '';
+      j = extractJson(content);
+      if (j && typeof j === 'object' && !Array.isArray(j) && typeof j.html === 'string' && j.html.trim().length > 20) break;
+      j = null;
+      console.warn('AI site JSON validation failed', {
+        attempt: attempt + 1,
+        model,
+        finishReason: choice && choice.finish_reason || 'unknown',
+        contentLength: content.length,
+        responseChoices: Array.isArray(r.data && r.data.choices) ? r.data.choices.length : 0,
+        providerErrorCode: r.data && r.data.error && r.data.error.code || null
+      });
+    }
+    if (!j) return res.status(502).json({
+      message: 'AI returned an incomplete or invalid website response after a retry. Please try a shorter description or a different AI model. Check Render logs for AI site JSON validation failed.'
+    });
     const cleanHtml = aiCleanHtml(j.html);
     const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
     // Export choice: create an offline standalone file, without storing another website.
