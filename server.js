@@ -114,8 +114,8 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('MongoDB connected');
     try { // owner accounts: Agency plan, active, never billed
       for (const em of (process.env.OWNER_EMAILS || 'rayankatsarov2013@gmail.com').toLowerCase().split(',').map(x => x.trim()).filter(Boolean)) {
-        const o = await mongoose.model('User').findOne({ email: em }).select('_id');
-        if (o) { await mongoose.model('User').updateOne({ _id: o._id }, { subscriptionStatus: 'active', plan: 'agency' }); await mongoose.model('User').updateMany({ ownerId: o._id }, { subscriptionStatus: 'active', plan: 'agency' }); }
+        const o = await mongoose.model('User').findOne({ email: em }).select('_id emailVerified');
+        if (o && o.emailVerified !== false) { await mongoose.model('User').updateOne({ _id: o._id }, { subscriptionStatus: 'active', plan: 'agency' }); await mongoose.model('User').updateMany({ ownerId: o._id }, { subscriptionStatus: 'active', plan: 'agency' }); }
       }
     } catch (e) { console.error('owner plan sync', e.message); }
   })
@@ -562,6 +562,19 @@ const OWNER_EMAILS = String(process.env.OWNER_EMAILS || 'rayankatsarov2013@gmail
 const isOwnerAcct = (u) => !!(u && u.email && u.emailVerified !== false && OWNER_EMAILS.includes(String(u.email).toLowerCase()));
 const planOf = (u) => (isOwnerAcct(u) ? 'agency' : u && u.subscriptionStatus === 'active' ? (PLANS[u.plan] ? u.plan : 'pro') : 'free');
 const limitsOf = (u) => PLANS[planOf(u)];
+// Authoritative owner entitlement repair, only after proof of mailbox ownership.
+// A child site inherits its verified parent's plan; environment names alone never
+// grant permissions to a still-unverified account.
+async function syncVerifiedOwnerPlan(root) {
+  if (!root || !isOwnerAcct(root)) return root;
+  if (root.plan !== 'agency' || root.subscriptionStatus !== 'active') {
+    await User.updateOne({ _id: root._id }, { $set: { plan: 'agency', subscriptionStatus: 'active' } });
+    root.plan = 'agency'; root.subscriptionStatus = 'active';
+  }
+  await User.updateMany({ ownerId: root._id, $or: [{ plan: { $ne: 'agency' } }, { subscriptionStatus: { $ne: 'active' } }] }, { $set: { plan: 'agency', subscriptionStatus: 'active' } });
+  return root;
+}
+
 const hasFeature = (u, f) => !!limitsOf(u)[f];
 const offerLimitFor = (u) => limitsOf(u).offers;
 const planFromPrice = (priceId) => (priceId && priceId === process.env.STRIPE_PRICE_AGENCY ? 'agency' : 'pro');
@@ -669,6 +682,7 @@ app.post('/api/auth/verify', authLimiter, async (req, res) => {
     user.verifyExpires = undefined;
     user.verifyAttempts = 0;
     await user.save();
+    await syncVerifiedOwnerPlan(user);
     res.json({ token: signToken(user), user: publicUser(user) });
   } catch (err) {
     console.error('Verify error', err.message);
@@ -795,9 +809,14 @@ app.post('/api/auth/reset', authLimiter, async (req, res) => {
 });
 
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
-  const user = await User.findById(req.user.id);
+  let user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ message: 'User not found' });
-  res.json({ user: publicUser(user) });
+  const root = user.ownerId ? await User.findById(user.ownerId) : user;
+  if (root) {
+    await syncVerifiedOwnerPlan(root);
+    if (user.ownerId && isOwnerAcct(root)) user = await User.findById(req.user.id);
+  }
+  res.json({ user: publicUser(user), ownerStatus: { mainAccount: !user.ownerId, emailVerified: root ? root.emailVerified !== false : false, configuredOwnerEmail: !!(root && OWNER_EMAILS.includes(String(root.email || '').toLowerCase())), effectivePlan: root ? planOf(root) : 'free' } });
 });
 
 // Change the name shown in the top bar
@@ -4765,7 +4784,8 @@ const aiSiteLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 12, message: { 
 const familyOf = async (userId) => {
   const me = await User.findById(userId);
   if (!me) return null;
-  return me.ownerId ? await User.findById(me.ownerId) : me;
+  const root = me.ownerId ? await User.findById(me.ownerId) : me;
+  return syncVerifiedOwnerPlan(root);
 };
 const SITE_CAP = (root) => limitsOf(root).sites;
 const cleanStr = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').trim().slice(0, n);
@@ -4784,8 +4804,18 @@ app.get('/api/my-sites', authenticateToken, async (req, res) => {
     const all = [root, ...subs];
     const freeCodeUsed = planOf(root) === 'free' ? !!(await GOFreeCodeExport.exists({ sellerId: root._id })) : null;
     const freeLinkUsed = subs.filter(x => x.aiGenerated).length;
+    const monthUsage = await GOAiUsage.findOne({ sellerId: root._id, day: monthKey() }).select('count').lean();
+    const currentPlan = planOf(root);
     res.json({
       freeCodeUsed, freeLinkUsed, freeLinkLimit: 1,
+      aiMonthlyUsed: (monthUsage && monthUsage.count) || 0,
+      aiMonthlyLimit: currentPlan === 'free' ? null : limitsOf(root).aiGen,
+      ownerStatus: {
+        mainAccount: String(req.user.id) === String(root._id),
+        emailVerified: root.emailVerified !== false,
+        configuredOwnerEmail: OWNER_EMAILS.includes(String(root.email || '').toLowerCase()),
+        ownerAgencyActive: isOwnerAcct(root)
+      },
       freeActiveSite: subs.find(x => x.aiGenerated) ? { id: String(subs.find(x => x.aiGenerated)._id), siteName: subs.find(x => x.aiGenerated).siteName || 'AI website', slug: subs.find(x => x.aiGenerated).slug, siteUrl: subs.find(x => x.aiGenerated).slug ? `${PUBLIC_BASE}/site/${subs.find(x => x.aiGenerated).slug}` : null } : null,
       currentId: String(req.user.id), rootId: String(root._id), cap: SITE_CAP(root), plan: planOf(root), planLimits: limitsOf(root), canTemplate: hasFeature(root, 'templateSites'), aiReady: !!process.env.OPENROUTER_API_KEY,
       sites: all.map(u => ({ id: String(u._id), siteName: u.siteName || 'Untitled', slug: u.slug, published: !!u.published, aiGenerated: !!u.aiGenerated, isMain: String(u._id) === String(root._id), siteUrl: u.slug ? `${PUBLIC_BASE}/site/${u.slug}` : null }))
@@ -4798,7 +4828,8 @@ app.post('/api/my-sites/:id/token', authenticateToken, async (req, res) => {
     const root = await familyOf(req.user.id);
     const target = await User.findById(req.params.id);
     if (!root || !target || (String(target._id) !== String(root._id) && String(target.ownerId) !== String(root._id))) return res.status(403).json({ message: 'Not allowed.' });
-    res.json({ token: signToken(target), user: publicUser(target) });
+    const currentTarget = isOwnerAcct(root) ? await User.findById(target._id) : target;
+    res.json({ token: signToken(currentTarget), user: publicUser(currentTarget) });
   } catch (e) { res.status(500).json({ message: 'Could not switch site.' }); }
 });
 
