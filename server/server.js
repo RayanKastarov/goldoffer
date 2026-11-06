@@ -5249,6 +5249,50 @@ app.post('/api/code/ai', authenticateToken, async (req, res) => {
 });
 
 
+// GoldOffer AI v3: the model writes a SHORT content brief, not a giant JSON-escaped
+// HTML/CSS document. Server-owned HTML/CSS removes JSON truncation as a failure mode
+// for both publish-link and export-code paths.
+function goAiBuildPage(brief, siteName, description, lang) {
+  const str = (v, limit = 200) => cleanStr(v, limit);
+  const safe = v => esc(str(v, 700));
+  const list = (v, max) => Array.isArray(v) ? v.filter(x => x && typeof x === 'object').slice(0, max) : [];
+  const paletteIn = brief.palette && typeof brief.palette === 'object' ? brief.palette : {};
+  const dark = /luxur|premium|cinemat|dark|black|night|noir|automotiv|detail|barber|автомоб|лукс|черн/i.test(siteName + ' ' + description);
+  const defaults = dark
+    ? { a:'#dfbc75', b:'#a77c41', bg:'#0b1018', panel:'#18212c', text:'#f7f2e9' }
+    : { a:'#2563eb', b:'#0e7490', bg:'#f7f9fc', panel:'#ffffff', text:'#17243b' };
+  const hex = (key) => /^#[\da-f]{6}$/i.test(String(paletteIn[key] || '')) ? String(paletteIn[key]) : defaults[key];
+  const palette = Object.fromEntries(['a','b','bg','panel','text'].map(k => [k,hex(k)]));
+  const heading = str(brief.heroHeadline, 95) || siteName;
+  const subtitle = str(brief.heroSubheadline, 240) || str(brief.bio, 240) || description;
+  const about = str(brief.bio, 500) || description;
+  const eyebrow = str(brief.eyebrow, 56) || str(brief.category, 56) || 'Thoughtfully crafted';
+  const offersHeading = str(brief.offersHeading, 90) || 'Our services';
+  const aboutHeading = str(brief.aboutHeading, 90) || 'Our story';
+  const benefits = list(brief.benefits, 3).map((b,i) => ({
+    title: str(b.title,70) || 'Attention to detail',
+    description: str(b.description,190) || 'Thoughtful service, built around your needs.',
+    index:i+1
+  }));
+  if (!benefits.length) benefits.push({title:'Thoughtful service',description:about,index:1});
+  const cards = benefits.map(b => `<article class="goa-benefit"><span class="goa-index">0${b.index}</span><h3>${safe(b.title)}</h3><p>${safe(b.description)}</p></article>`).join('');
+  const siteHtml = `<div class="goa-site"><header class="goa-nav"><a class="goa-logo" href="#home">${safe(siteName)}</a><nav aria-label="Sections"><a href="#about">${safe(aboutHeading)}</a><a href="#offers">${safe(offersHeading)}</a><a href="#contact">Contact</a></nav><a class="goa-navcta" href="#offers">Explore <span aria-hidden="true">↗</span></a></header>
+  <main id="home"><section class="goa-hero"><div class="goa-art" aria-hidden="true"><div class="goa-orb"></div><div class="goa-ring"></div><div class="goa-beam"></div></div><div class="goa-hero-inner"><p class="goa-eyebrow"><span class="goa-star">✦</span> ${safe(eyebrow)}</p><h1>${safe(heading)}</h1><p class="goa-sub">${safe(subtitle)}</p><div class="goa-actions"><a class="goa-btn" href="#offers">Explore ${safe(offersHeading)} <span aria-hidden="true">↗</span></a><a class="goa-textlink" href="#about">Discover our story <span aria-hidden="true">→</span></a></div></div><div class="goa-hero-bottom"><span>DESIGNED TO STAND APART</span><span>${safe(siteName)}</span></div></section>
+  <section id="about" class="goa-about goa-section"><div class="goa-kicker">01 / WHO WE ARE</div><div><h2>${safe(aboutHeading)}</h2><p>${safe(about)}</p></div></section>
+  <section class="goa-benefits goa-section"><div class="goa-kicker">02 / WHY CHOOSE US</div><div class="goa-benefitgrid">${cards}</div></section>
+  <section id="offers" class="goa-products goa-section"><div class="goa-kicker">03 / CURATED FOR YOU</div><div class="goa-headingrow"><h2>${safe(offersHeading)}</h2><p>${safe(str(brief.offersIntro,190) || 'Explore what we can create together.')}</p></div>{{OFFERS}}</section>
+  <section class="goa-faq goa-section"><div class="goa-kicker">04 / QUESTIONS</div><h2>${safe(str(brief.faqHeading,90) || 'Good to know')}</h2>{{FAQ}}</section>
+  <section id="contact" class="goa-contact goa-section"><div class="goa-contact-orb" aria-hidden="true"></div><div class="goa-kicker">05 / LET’S CONNECT</div><h2>${safe(str(brief.contactHeadline,110) || 'Something great starts here.')}</h2><p>${safe(str(brief.contactSubheadline,190) || 'Get in touch to learn more.')}</p>{{CONTACT}}<a class="goa-btn" href="#offers">Browse offerings <span aria-hidden="true">↗</span></a></section></main>
+  <footer class="goa-footer"><span>${safe(siteName)}</span><span>Made with care · Built with GoldOffer Studio</span><a href="#home">Back to top ↑</a></footer></div>`;
+  const css = `.goa-site{--goa-accent:var(--a);color:var(--text);background:var(--bg);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+.goa-site *{box-sizing:border-box}.goa-site a{text-decoration:none;color:inherit}.goa-site h1,.goa-site h2,.goa-site h3{font-family:Georgia,"Times New Roman",serif;letter-spacing:-.045em;line-height:1.04}.goa-site p{line-height:1.75}
+.goa-nav{max-width:1300px;margin:auto;padding:25px 5%;display:flex;align-items:center;gap:25px;justify-content:space-between}.goa-logo{font-weight:850;letter-spacing:-.03em;font-size:1.15rem;max-width:45%}.goa-nav nav{display:flex;gap:24px;align-items:center;font-size:.8rem;opacity:.8}.goa-navcta{padding:11px 17px;border:1px solid currentColor;border-radius:30px;font-size:.8rem;font-weight:700}
+.goa-hero{min-height:610px;min-height:75svh;position:relative;display:flex;flex-direction:column;justify-content:center;isolation:isolate;background:linear-gradient(130deg,var(--bg),var(--panel))}.goa-art{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;opacity:.85}.goa-orb{position:absolute;width:70vw;height:70vw;min-width:480px;min-height:480px;right:-18%;top:-27%;background:radial-gradient(circle at 36% 36%,var(--a),var(--b) 24%,transparent 66%);filter:blur(36px);opacity:.34}.goa-ring{position:absolute;right:8%;top:6%;width:40vw;height:40vw;min-width:260px;min-height:260px;border:1px solid var(--a);border-radius:50%;transform:rotate(-25deg) skewY(14deg);opacity:.35}.goa-beam{position:absolute;right:-12%;bottom:18%;width:65%;height:1px;background:linear-gradient(90deg,transparent,var(--a),transparent);transform:rotate(-22deg);box-shadow:0 0 30px 6px var(--a);opacity:.5}.goa-hero-inner{width:min(1200px,90%);margin:85px auto 70px;position:relative;z-index:1}.goa-eyebrow,.goa-kicker{font-size:.72rem;font-weight:850;letter-spacing:.19em;text-transform:uppercase;color:var(--a)}.goa-star{font-size:1.4rem;vertical-align:middle}.goa-hero h1{font-size:clamp(3.5rem,8.8vw,8rem);max-width:900px;margin:28px 0}.goa-sub{font-size:clamp(1.02rem,1.7vw,1.3rem);max-width:620px;opacity:.84}.goa-actions{display:flex;align-items:center;gap:28px;flex-wrap:wrap;margin-top:36px}.goa-btn{display:inline-flex;gap:20px;align-items:center;justify-content:space-between;background:var(--a);color:#111827!important;font-weight:800;padding:16px 25px;border-radius:5px;font-size:.9rem;box-shadow:0 12px 32px #0002}.goa-textlink{font-size:.9rem;font-weight:700;border-bottom:1px solid var(--a);padding:9px 0}.goa-hero-bottom{display:flex;justify-content:space-between;padding:22px 5%;font-size:.64rem;letter-spacing:.12em;font-weight:700;opacity:.65;border-top:1px solid currentColor}
+.goa-section{width:min(1180px,90%);margin:auto;padding:105px 0}.goa-section h2{font-size:clamp(2.5rem,5vw,4.7rem);margin:0 0 22px}.goa-about{display:grid;grid-template-columns:1fr 2fr;gap:30px}.goa-about p{max-width:700px;font-size:1.1rem;opacity:.8}.goa-benefits{border-top:1px solid currentColor}.goa-benefitgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:30px}.goa-benefit{background:var(--panel);border:1px solid color-mix(in srgb,var(--text) 16%,transparent);padding:33px 27px;min-height:240px}.goa-index{font-size:.73rem;color:var(--a);font-weight:800}.goa-benefit h3{font-size:1.9rem;margin:38px 0 10px}.goa-benefit p{font-size:.9rem;opacity:.78}.goa-products{border-top:1px solid currentColor}.goa-headingrow{display:flex;align-items:end;justify-content:space-between;gap:30px;margin:24px 0 32px}.goa-headingrow p{max-width:310px;opacity:.75}.goa-site .ai-offers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.goa-site .ai-offer{transition:transform .2s;overflow:hidden;border-radius:14px}.goa-site .ai-offer:hover{transform:translateY(-5px)}.goa-site .ai-offer-body{padding:24px}.goa-site .ai-offer-title{font-size:1.2rem}.goa-site .ai-offer-img{aspect-ratio:16/10;background:linear-gradient(135deg,var(--a),var(--b))}.goa-faq{border-top:1px solid currentColor}.goa-site .ai-faq details{border:1px solid color-mix(in srgb,var(--text) 18%,transparent);border-radius:5px;padding:20px 24px}.goa-contact{position:relative;padding:80px 6%;width:min(1180px,90%);margin:30px auto 95px;background:var(--panel);border:1px solid color-mix(in srgb,var(--a) 35%,transparent);overflow:hidden}.goa-contact-orb{position:absolute;right:-80px;top:-130px;width:300px;height:300px;border:1px solid var(--a);border-radius:50%;opacity:.3}.goa-contact h2{position:relative;max-width:750px}.goa-contact p{max-width:540px}.goa-contact .ai-contact{margin:24px 0}.goa-footer{border-top:1px solid color-mix(in srgb,var(--text) 22%,transparent);padding:38px 5%;display:flex;gap:20px;flex-wrap:wrap;align-items:center;justify-content:space-between;font-size:.83rem}.goa-footer span:first-child{font-weight:800}
+@media(max-width:760px){.goa-nav{gap:12px;padding:17px 5%}.goa-logo{max-width:64%}.goa-nav nav{display:none}.goa-navcta{font-size:.75rem;padding:9px 12px}.goa-hero{min-height:590px}.goa-hero-inner{margin:55px auto}.goa-hero h1{font-size:clamp(2.9rem,12vw,4.9rem);overflow-wrap:anywhere}.goa-hero-bottom{gap:20px}.goa-section{padding:75px 0}.goa-about{grid-template-columns:1fr;gap:20px}.goa-benefitgrid,.goa-site .ai-offers{grid-template-columns:1fr}.goa-headingrow{display:block}.goa-contact{padding:60px 6%;margin-bottom:45px}.goa-footer{flex-direction:column;align-items:flex-start}}`;
+  return { ...brief, siteName, bio:about, palette, html:siteHtml, css, offers:list(brief.offers,6), faq:list(brief.faq,6) };
+}
+
 app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
   // If the browser cancels a generation, never consume its link slot at the end.
   // A completed site remains accessible in My websites even if its response was missed.
@@ -5288,43 +5332,59 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
       if (!(await G.takeQuota(GOAiUsage, root._id, genCap, monthKey()))) return res.status(402).json({ message: `You used all ${genCap} AI generations for this month on the ${limitsOf(root).name} plan.`, upgrade: true });
       res.on('finish', () => { if (res.statusCode >= 400) G.releaseQuota(GOAiUsage, root._id, monthKey()).catch(() => {}); });
     }
-    const sys = `You are a senior web designer. Create a UNIQUE, modern, mobile-first one-page website for a small business. Reply with ONE JSON object only, no markdown fences. Fields: siteName (string), category (string), city (string or ""), bio (2-3 sentences), announcement (short string or ""), palette {a,b,bg,panel,text} (hex colors with strong contrast: a=accent, b=second accent, bg=page background, panel=card background, text=text color), offers (array of 3-6 {title, price (number, 0 if unknown), description}), faq (array of 3 {question, answer}), css (string), html (string).
-Rules for html: a body fragment only. No html/head/body/script/style/iframe/form tags, no inline event handlers, no external images: make visuals with CSS gradients, emoji or inline SVG. Structure: a hero with a big headline and a call-to-action link href="#offers"; an about/story section; 3 benefit cards; then <section id="offers"> with a heading and exactly the text {{OFFERS}}; a FAQ section containing exactly {{FAQ}}; a section id="contact" containing exactly {{CONTACT}}; a short footer. Never write the offer cards, FAQ items or contact details yourself, the server replaces the placeholders.
-Rules for css: plain CSS for that html, mobile-first with media queries, bold distinctive typography and layout (not a generic template). Use var(--a), var(--b), var(--bg), var(--panel), var(--text) for colors (they come from your palette). Also style the classes .ai-offers .ai-offer .ai-offer-img .ai-offer-title .ai-offer-desc .ai-offer-price .ai-faq .ai-contact if you want to change their look.
-Write all visible texts in ${languageName}. Use only facts the owner gave: do not invent addresses, phone numbers, reviews, awards or statistics. Prices only if the owner mentioned them, otherwise 0.`;
-    // Some models return fenced, truncated or otherwise invalid JSON despite a 200 response.
-    // Log only response metadata, never prompts, generated site content or API credentials.
+    // Short structured generation: keep design/code assembly on the server.
+    // This avoids asking the model to JSON-escape thousands of bytes of HTML/CSS.
+    const sys = `You are an expert brand designer and website copywriter. Reply ONLY with one valid SMALL JSON object. Do not write HTML, CSS or JavaScript.
+Keys: category (string), city (string or empty), bio (2 short sentences), announcement (short or empty), eyebrow (short string), heroHeadline (bold evocative 3-8 words), heroSubheadline (1-2 sentences), aboutHeading (short), offersHeading (short), offersIntro (short), faqHeading (short), contactHeadline (short), contactSubheadline (short), benefits (3 objects {title,description}), offers (3-6 objects {title,price:number,description}), faq (3 objects {question,answer}), palette (object with a,b,bg,panel,text as six-digit #RRGGBB colors).
+All user-visible text must be written in ${languageName}. Pick a visual tone matching the business. For premium/luxury brands choose a dark base with sophisticated accents, for other brands use an appropriate readable palette. Use strong color contrast. Only use supplied facts; never invent client reviews, awards, addresses, phone numbers, statistics or prices. If price is not given, use 0. Keep JSON compact under 4500 characters. No markdown.`;
     const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
     let j = null;
+    let diagnostics = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       if (clientGone) return;
-      const compact = attempt === 1;
-      const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      const payload = {
         model,
-        messages: [{ role: 'system', content: compact
-          ? sys + '\nIMPORTANT: Your previous reply was not parseable JSON. Return a SINGLE valid JSON object. Keep HTML under 3500 characters, CSS under 2500 characters, use simple concise text and escape all quotation marks and newlines inside JSON strings. Include all requested fields and placeholders.'
-          : sys }, { role: 'user', content: `Business name: ${name}\nDescription: ${desc}` }],
-        temperature: compact ? 0.35 : 0.6,
-        max_tokens: compact ? 6500 : 8500
-      }, { headers: { Authorization: 'Bearer ' + key }, timeout: compact ? 80000 : 110000 });
+        messages: [{ role:'system', content:sys }, { role:'user', content:`Business name: ${name}\nDescription: ${desc}` }],
+        temperature: attempt ? 0.2 : 0.45,
+        max_tokens: attempt ? 1900 : 2400
+      };
+      // JSON mode is supported by many OpenRouter chat models. Retry without it
+      // if a provider rejects the response_format parameter.
+      if (attempt === 0) payload.response_format = { type:'json_object' };
+      let r;
+      try {
+        r = await axios.post('https://openrouter.ai/api/v1/chat/completions', payload,
+          { headers: { Authorization:'Bearer ' + key }, timeout:85000 });
+      } catch (err) {
+        if (attempt === 0 && err.response && [400,422].includes(err.response.status)) {
+          console.warn('AI brief JSON mode unavailable; retrying without response_format', { model, status:err.response.status });
+          continue;
+        }
+        throw err;
+      }
       const choice = r.data && r.data.choices && r.data.choices[0];
       const raw = choice && choice.message && choice.message.content;
       const content = typeof raw === 'string' ? raw : Array.isArray(raw)
         ? raw.map(part => typeof part === 'string' ? part : String(part && part.text || '')).join('') : '';
-      j = extractJson(content);
-      if (j && typeof j === 'object' && !Array.isArray(j) && typeof j.html === 'string' && j.html.trim().length > 20) break;
-      j = null;
-      console.warn('AI site JSON validation failed', {
-        attempt: attempt + 1,
-        model,
-        finishReason: choice && choice.finish_reason || 'unknown',
-        contentLength: content.length,
-        responseChoices: Array.isArray(r.data && r.data.choices) ? r.data.choices.length : 0,
-        providerErrorCode: r.data && r.data.error && r.data.error.code || null
-      });
+      const obj = extractJson(content);
+      diagnostics = {
+        attempt:attempt + 1, model,
+        finishReason:choice && choice.finish_reason || 'unknown',
+        contentLength:content.length,
+        hasObject:!!obj,
+        responseChoices:Array.isArray(r.data && r.data.choices) ? r.data.choices.length : 0,
+        providerErrorCode:r.data && r.data.error && r.data.error.code || null
+      };
+      if (obj && typeof obj === 'object' && !Array.isArray(obj)
+          && (typeof obj.heroHeadline === 'string' || typeof obj.bio === 'string' || Array.isArray(obj.offers))) {
+        j = goAiBuildPage(obj, name, desc, lang);
+        break;
+      }
+      console.warn('AI site brief validation failed', diagnostics);
     }
     if (!j) return res.status(502).json({
-      message: 'AI returned an incomplete or invalid website response after a retry. Please try a shorter description or a different AI model. Check Render logs for AI site JSON validation failed.'
+      message:'AI provider did not return a valid website brief. No site was published. Try a different OPENROUTER_MODEL if this continues.',
+      diagnostic:{ finishReason:diagnostics && diagnostics.finishReason, contentLength:diagnostics && diagnostics.contentLength, responseChoices:diagnostics && diagnostics.responseChoices }
     });
     const cleanHtml = aiCleanHtml(j.html);
     const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
