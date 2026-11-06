@@ -297,6 +297,13 @@
     .plan li { padding: 10px 0; border-top: 1px solid var(--lline); font-size: .96rem; }
     .plan.pro li { border-top-color: rgba(255,255,255,.14); }
     .plan.pro .btn { background: #fff; color: #0b0e14; }
+    .plan[data-current-plan="true"] { outline: 2px solid #346bdc; outline-offset: 3px; }
+    .plan .go-current-plan { display: none; text-align: center; background: #eaf3ff; color: #17458a; font-size: .9rem; font-weight: 750; border-radius: 10px; padding: 12px 14px; margin-top: auto; }
+    .plan.pro .go-current-plan { background: #21345e; color: #e9f0ff; }
+    .plan[data-current-plan="true"] .go-current-plan { display: block; }
+    .plan[data-current-plan="true"] [data-plan-action] { display: none; }
+    [data-plan-action][hidden], [data-live-upgrade][hidden] { display: none !important; }
+
     .price-note { color: var(--lmute); font-size: .88rem; margin-top: 22px; max-width: 70ch; }
     .faq { max-width: 920px; margin-top: 80px; }
     .faq h2 { font-size: 2.2rem; margin-bottom: 20px; }
@@ -2020,7 +2027,7 @@ body[data-page="code"] #v-code .go-term-input{background:#141414!important}
         <div class="st rv"><div class="n">4</div><div><h3>Publish</h3><p>You get a public link anyone can open, and you can change its name. Requests arrive in your dashboard.</p>
           <span class="urlpill">goldoffer.onrender.com/site/<b>your-business</b></span></div></div>
       </div>
-      <div style="margin-top:56px"><button class="btn btn-dark btn-lg" type="button" onclick="cta()">Start building</button></div>
+      <div style="margin-top:56px"><button class="btn btn-dark btn-lg" type="button" onclick="cta()" data-plan-action="free">Start building</button><div class="go-current-plan" aria-label="Your current plan">✓ Your current plan</div></div>
     </div>
   </div>
 </main>
@@ -2069,15 +2076,15 @@ body[data-page="code"] #v-code .go-term-input{background:#141414!important}
     <div class="page-head"><h1>Start free. Pay when you grow.</h1><p>The free plan is a complete website. Upgrade when you need more offers, sites or AI.</p></div>
     <div class="section" style="padding-top:10px">
       <div class="plans">
-        <div class="plan rv"><h3>Free</h3><div class="price">EUR 0</div><div class="sub2">No card needed</div>
+        <div class="plan rv" data-pricing-plan="free"><h3>Free</h3><div class="price">EUR 0</div><div class="sub2">No card needed</div>
           <ul><li>1 website on an onrender.com link</li><li>Up to 3 offers</li><li>Request form and dashboard</li><li>No Pro tools, no AI, no custom domain</li><li>"Built with GoldOffer Studio" badge</li></ul>
           <button class="btn btn-dark btn-block" style="margin-top:0" type="button" onclick="cta()">Start building</button></div>
-        <div class="plan pro rv" style="--d:100ms"><h3>Pro</h3><div class="price">EUR 19.99 <small>/ month</small></div><div class="sub2">For growing businesses</div>
+        <div class="plan pro rv" style="--d:100ms" data-pricing-plan="pro"><h3>Pro</h3><div class="price">EUR 19.99 <small>/ month</small></div><div class="sub2">For growing businesses</div>
           <ul><li>CRM, Automations, Calendar & AI</li><li>Up to 500 offers</li><li>Up to 3 websites</li><li>3 AI website generations / month</li><li>onrender.com link, with badge</li></ul>
-          <button class="btn btn-block" style="margin-top:0" type="button" onclick="proCta('pro')">Get Pro</button></div>
-        <div class="plan rv" style="--d:200ms"><h3>Agency</h3><div class="price">EUR 99 <small>/ month</small></div><div class="sub2">For teams and agencies</div>
+          <button class="btn btn-block" style="margin-top:0" type="button" onclick="proCta('pro')" data-plan-action="pro">Get Pro</button><div class="go-current-plan" aria-label="Your current plan">✓ Your current plan</div></div>
+        <div class="plan rv" style="--d:200ms" data-pricing-plan="agency"><h3>Agency</h3><div class="price">EUR 99 <small>/ month</small></div><div class="sub2">For teams and agencies</div>
           <ul><li>Everything in Pro</li><li>Up to 2000 offers</li><li>Up to 20 websites in one profile</li><li>50 AI generations / month</li><li>Real custom domains</li><li>White-label: no GoldOffer badge</li><li>Create sites from templates</li></ul>
-          <button class="btn btn-dark btn-block" style="margin-top:0" type="button" onclick="proCta('agency')">Get Agency</button></div>
+          <button class="btn btn-dark btn-block" style="margin-top:0" type="button" onclick="proCta('agency')" data-plan-action="agency">Get Agency</button><div class="go-current-plan" aria-label="Your current plan">✓ Your current plan</div></div>
       </div>
       <p class="price-note">Free and Pro sites live on an onrender.com link. Real custom domains (for example yourbusiness.com) and white-label are part of Agency.</p>
       <div class="faq">
@@ -2227,8 +2234,8 @@ body[data-page="code"] #v-code .go-term-input{background:#141414!important}
               <label>Change the address name</label>
               <div class="row" style="flex-wrap:nowrap"><input type="text" id="slugInput" placeholder="my-business"><button class="btn" onclick="changeSlug()">Save</button></div>
             </div>
-            <button class="btn btn-block" onclick="payNow('pro')">Pro: EUR 19.99 / month · More tools</button>
-            <button class="btn-ghost btn-block" style="margin-top:8px" onclick="payNow('agency')">Agency: EUR 99 / month · 20 sites</button>
+            <button class="btn btn-block" data-live-upgrade="pro" onclick="payNow('pro')">Pro: EUR 19.99 / month · More tools</button>
+            <button class="btn-ghost btn-block" data-live-upgrade="agency" style="margin-top:8px" onclick="payNow('agency')">Agency: EUR 99 / month · 20 sites</button>
             <p class="note" id="planNote">Free and Pro sites are hosted on an onrender.com link. Custom domains are an Agency feature.</p>
           </div>
         </div>
@@ -2691,6 +2698,7 @@ async function loadSites() {
         // Use the server's family-wide effective plan, even when a child site is selected.
         S.user.plan = plan;
         S.user.planLimits = d.planLimits;
+        updatePlanUi();
         if (plan !== 'free') S.user.subscriptionStatus = 'active';
       }
       if (plan === 'free') {
@@ -3145,6 +3153,33 @@ async function deleteSite(id) {
 
   const S = { photos: {}, token: localStorage.getItem('token'), user: null, offers: [], category: '', theme: 'gold', layout: 'signature', font: 'sans', mode: 'signup', chart: null };
   const $ = (id) => document.getElementById(id);
+  // Display plans based on authenticated server profile, never on a local owner-email guess.
+  function goActivePlan() {
+    if (!S.user) return null;
+    const p = String(S.user.plan || '').toLowerCase();
+    return (S.user.subscriptionStatus === 'active' && (p === 'pro' || p === 'agency')) ? p : 'free';
+  }
+  function updatePlanUi() {
+    const active = goActivePlan();
+    document.querySelectorAll('[data-pricing-plan]').forEach(card => {
+      const plan = card.getAttribute('data-pricing-plan');
+      const isCurrent = active === plan;
+      card.dataset.currentPlan = String(isCurrent);
+      const action = card.querySelector('[data-plan-action]');
+      // Agency already includes Pro: do not offer a downgrade checkout.
+      if (action) action.hidden = isCurrent || (active === 'agency' && plan === 'pro');
+    });
+    document.querySelectorAll('[data-live-upgrade]').forEach(button => {
+      button.hidden = active === 'agency' || active === 'pro';
+    });
+    const note = $('planNote');
+    if (note) {
+      note.textContent = active === 'agency' ? '✓ Agency plan active — Pro tools, 20 websites and custom domains are included.'
+        : active === 'pro' ? '✓ Pro plan active — Pro tools and up to 3 websites are included.'
+        : 'Free and Pro sites are hosted on an onrender.com link. Custom domains are an Agency feature.';
+    }
+  }
+
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
   const money = (n) => Number(n || 0).toFixed(2);
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -3215,6 +3250,7 @@ async function deleteSite(id) {
     document.title = TITLES[name];
     document.body.dataset.page = name;
     currentPage = name;
+    updatePlanUi();
     window.scrollTo(0, 0);
     document.querySelectorAll('.menu a.ml').forEach(a => a.classList.toggle('active', a.getAttribute('href') === finalPath));
     if (name === 'dashboard') loadDashboard();
@@ -3526,6 +3562,7 @@ async function deleteSite(id) {
 
   // ---------- Auth ----------
   function renderAuth() {
+    updatePlanUi();
     const a = $('authArea');
     document.body.classList.toggle('logged', !!S.user);
     if (S.user) {
@@ -3938,7 +3975,7 @@ async function deleteSite(id) {
     const url = S.user.siteUrl;
     $('siteUrlBox').innerHTML = '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url) + '</a>';
     $('slugInput').value = S.user.slug || '';
-    renderPreview(); goStep(4);
+    renderPreview(); goStep(4); updatePlanUi();
   }
   function copyUrl() { navigator.clipboard.writeText(S.user.siteUrl).then(() => notify('Link copied.')); }
   let goQrLoading = null;
