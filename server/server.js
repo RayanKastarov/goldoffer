@@ -3476,6 +3476,100 @@ body .card .in a:hover{text-decoration:underline!important}
 @media(max-width:680px){body .bar{left:8px!important;right:8px!important;top:8px!important}body .bar nav a{padding:7px 10px!important}}
 </style>`;
 
+// Mobile-width corrections for the public storefront (including existing AI pages).
+// This is CSS-only; it does not hide content or alter the scroll scripts.
+const GO_PUBLIC_MOBILE_LAYOUT_CSS = `<style id="go-public-mobile-layout-2026">
+@media (max-width: 800px) {
+  html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+  body .cine-hero, body .story-shell, body .story-stick,
+  body .cine-feature, body .reveal-band, body .wrap,
+  body .findus, body .goa-site, body .goa-site main,
+  body .goa-site section { box-sizing: border-box; min-width: 0; max-width: 100%; }
+
+  /* Hero: the content and the photo must stack, not sit in a narrow left column. */
+  body .cine-hero { width: 100%; overflow: hidden; padding: 98px 0 32px; }
+  body .cine-wrap, body .layout-aurora .cine-wrap {
+    display: grid; grid-template-columns: minmax(0, 1fr) !important;
+    width: calc(100% - 28px); max-width: 100%; gap: 18px;
+    margin-inline: auto; padding: 0;
+  }
+  body .cine-copy { width: 100%; max-width: 100%; min-width: 0; padding: 0; }
+  body .cine-copy h1, body .layout-aurora .cine-copy h1 {
+    font-size: clamp(1.8rem, 9vw, 3rem) !important;
+    line-height: 1.1; max-width: 100% !important;
+    overflow-wrap: anywhere;
+  }
+  body .cine-sub, body .cine-eyebrow { max-width: 100%; overflow-wrap: anywhere; }
+  body .cine-meta, body .offer-pills, body .cine-copy .actions {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: flex-start; max-width: 100%;
+  }
+  body .cine-meta span, body .offer-pills a, body .cine-copy .abtn {
+    max-width: 100%; white-space: normal; overflow-wrap: anywhere;
+  }
+  body .cine-visual, body .layout-aurora .cine-visual {
+    width: 100%; min-width: 0; max-width: 100%;
+    min-height: 310px; margin: 0; overflow: hidden;
+  }
+  body .layout-aurora .main-screen, body .main-screen {
+    left: 18px; right: 18px; top: 28px; bottom: 32px;
+    border-radius: 20px;
+  }
+  body .float-card { width: 68px; height: 68px; border-radius: 14px; }
+  body .fc-a { left: 0; top: 8px; }
+  body .fc-b { right: 0; top: 78px; }
+  body .fc-c { right: 16px; bottom: 0; width: 60px; height: 60px; }
+  body .screen-caption { left: 24px; right: 24px; bottom: 6px;
+    max-width: calc(100% - 48px); padding: 8px; gap: 4px;
+    flex-wrap: wrap; }
+
+  /* The story/photo and all feature cards occupy the phone width. */
+  body .story-shell { height: auto; }
+  body .story-stick { position: relative; height: auto; top: auto; }
+  body .story-canvas, body .layout-aurora .story-canvas {
+    display: grid; grid-template-columns: minmax(0,1fr) !important;
+    width: calc(100% - 24px); max-width: 100%;
+    margin: 0 auto; transform: none !important; border-radius: 20px;
+  }
+  body .story-media { width: 100%; min-width: 0; min-height: 250px; }
+  body .story-panel { width: 100%; min-width: 0; padding: 20px; }
+  body .story-panel h2, body .sec-head h2 { font-size: clamp(1.5rem, 7vw, 2.1rem); overflow-wrap: anywhere; }
+  body .story-stats { grid-template-columns: minmax(0, 1fr); }
+  body .feature-grid, body .layout-aurora .feature-grid {
+    display: grid; grid-template-columns: minmax(0,1fr) !important;
+    max-width: 100%; gap: 14px;
+  }
+  body .feature-card, body .wrap, body .glass, body .about,
+  body .grid, body #goOfferGrid { min-width: 0; max-width: 100%; }
+  body .feature-card { padding: 20px; min-height: 0; }
+  body .wrap { width: 100%; padding-left: 16px; padding-right: 16px; }
+  body .about { grid-template-columns: minmax(0,1fr); }
+  body .grid, body #goOfferGrid { grid-template-columns: minmax(0,1fr); }
+  body .card img, body .story-media img, body .story-media video,
+  body .feature-card img, body .goa-site img, body iframe {
+    max-width: 100%;
+  }
+
+  /* AI-generated pages share the same mobile viewport. */
+  body .goa-site { width: 100%; }
+  body .goa-site .goa-nav, body .goa-site .goa-section,
+  body .goa-site .goa-hero-inner, body .goa-site .goa-contact {
+    max-width: 100%; min-width: 0;
+  }
+  body .goa-site .goa-section, body .goa-site .goa-hero-inner {
+    width: calc(100% - 28px); margin-inline: auto;
+  }
+  body .goa-site .goa-about, body .goa-site .goa-benefitgrid,
+  body .goa-site .ai-offers {
+    display: grid; grid-template-columns: minmax(0, 1fr) !important;
+  }
+  body .goa-site h1 { font-size: clamp(1.9rem, 9vw, 3rem) !important;
+    line-height: 1.12; overflow-wrap: anywhere; }
+  body .goa-site h2 { font-size: clamp(1.5rem, 7vw, 2.2rem) !important;
+    line-height: 1.15; overflow-wrap: anywhere; }
+}
+</style>`;
+
 function pageShell(user, { title, desc, body, cls, page }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
@@ -3512,6 +3606,7 @@ body #goOfferGrid{gap:22px!important}
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
 ${GO_PUBLIC_LIGHT_FIX_CSS}
+${GO_PUBLIC_MOBILE_LAYOUT_CSS}
 ${GD.freeHtml(D, page)}
 <script type="application/json" id="go-design">${JSON.stringify(D || {}).replace(/</g, '\\u003c')}</script><script>${GO_APPLY_JS}</script>${studio ? `<script>(${goStudioClient.toString()})(${goDesignCore.toString()})</script>` : ''}
 ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
