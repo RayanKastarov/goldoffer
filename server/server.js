@@ -3567,6 +3567,42 @@ const GO_PUBLIC_MOBILE_LAYOUT_CSS = `<style id="go-public-mobile-layout-2026">
     line-height: 1.12; overflow-wrap: anywhere; }
   body .goa-site h2 { font-size: clamp(1.5rem, 7vw, 2.2rem) !important;
     line-height: 1.15; overflow-wrap: anywhere; }
+
+  /* Mobile story callout: keep the pink block inset, rounded and readable. */
+  body .reveal-band.wrap {
+    width: calc(100% - 28px) !important;
+    max-width: calc(100% - 28px) !important;
+    margin: 12px auto 24px !important;
+    padding: 18px 0 10px !important;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  body .reveal-band .copylines {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 16px 0 0 !important;
+    padding: 22px 18px !important;
+    border-radius: 24px !important;
+    overflow: hidden;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: 14px;
+  }
+  body .reveal-band .copyline,
+  body .reveal-band .copyline.on {
+    max-width: 100% !important;
+    width: 100%;
+    font-size: clamp(16px, 4.3vw, 19px) !important;
+    line-height: 1.5 !important;
+    letter-spacing: 0 !important;
+    color: #17293d !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
+    transform: none !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+    white-space: normal;
+  }
 }
 </style>`;
 
