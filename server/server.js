@@ -3606,6 +3606,61 @@ const GO_PUBLIC_MOBILE_LAYOUT_CSS = `<style id="go-public-mobile-layout-2026">
 }
 </style>`;
 
+// Readable mobile story text: text wraps inside the rounded callout instead of being clipped.
+const GO_STORY_TEXT_WRAP_CSS = `<style id="go-public-story-text-wrap">
+@media (max-width: 720px) {
+  body .reveal-band.wrap {
+    width: calc(100% - 28px) !important;
+    max-width: calc(100% - 28px) !important;
+    margin: 12px auto 24px !important;
+    padding: 18px 0 10px !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  body .reveal-band .copylines {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 16px 0 0 !important;
+    padding: 20px 18px !important;
+    border-radius: 24px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    gap: 14px !important;
+  }
+  body .reveal-band .copyline,
+  body .reveal-band .copyline.on {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    text-overflow: clip !important;
+    -webkit-line-clamp: unset !important;
+    font-size: clamp(16px, 4.2vw, 19px) !important;
+    line-height: 1.5 !important;
+    letter-spacing: normal !important;
+    color: #17293d !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
+    transform: none !important;
+  }
+  body .reveal-band .sec-head { min-width: 0; flex-wrap: wrap; }
+  body .reveal-band .sec-head span { white-space: normal !important; overflow-wrap: anywhere; }
+}
+</style>`;
+
 function pageShell(user, { title, desc, body, cls, page }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
@@ -3643,6 +3698,7 @@ ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.anno
 ${body}
 ${GO_PUBLIC_LIGHT_FIX_CSS}
 ${GO_PUBLIC_MOBILE_LAYOUT_CSS}
+${GO_STORY_TEXT_WRAP_CSS}
 ${GD.freeHtml(D, page)}
 <script type="application/json" id="go-design">${JSON.stringify(D || {}).replace(/</g, '\\u003c')}</script><script>${GO_APPLY_JS}</script>${studio ? `<script>(${goStudioClient.toString()})(${goDesignCore.toString()})</script>` : ''}
 ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
