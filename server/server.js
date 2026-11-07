@@ -4671,11 +4671,48 @@ img{max-width:100%;height:auto}a{color:inherit}
 .ai-offers{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}.ai-offer{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden}
 .ai-offer{position:relative}.ai-offer-img{aspect-ratio:4/3;width:100%;object-fit:cover;display:block;background:linear-gradient(135deg,var(--a),var(--b))}.go-ai-stock{position:absolute;top:12px;left:12px;z-index:3;margin:0!important;display:inline-block;background:#e8f9f0;color:#087b45;border:1px solid #a9e5c4;font-size:12px;letter-spacing:.06em;border-radius:999px;padding:6px 11px;font-weight:800}.go-ai-stock.is-out{background:#fff0f0;color:#bd3144;border-color:#f3bdc4}.ai-offer-body{padding:16px}.ai-offer-title{margin:0 0 6px;font-size:1.1rem}.ai-offer-desc{margin:0 0 10px;opacity:.8;font-size:.92rem}.ai-offer-price{font-weight:800;color:var(--a)}
 .ai-faq details{border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin:8px 0;background:var(--panel)}.ai-faq summary{cursor:pointer;font-weight:700}.ai-contact{display:grid;gap:8px}.ai-contact a{text-decoration:underline}
-.ai-float{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:80}.ai-float a{display:inline-block;padding:11px 18px;border-radius:999px;background:var(--a);color:var(--on);font-weight:800;text-decoration:none;box-shadow:0 8px 24px #0005}
+.ai-float{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:80}.ai-float{display:flex;flex-direction:column;gap:8px;align-items:flex-end}.ai-float a{display:inline-block;padding:11px 18px;border-radius:999px;background:var(--a);color:var(--on);font-weight:800;text-decoration:none;box-shadow:0 8px 24px #0005}
 .go-public-announcement{margin:12px auto!important;max-width:1100px}`;
 }
 const AI_STORE_CSS = `<style id="go-ai-accessible-cards">body .ai-offer{background:#fff!important;color:#182b47!important;border:1px solid #d7e2f1!important}body .ai-offer-body,body .ai-offer-title{color:#182b47!important;-webkit-text-fill-color:#182b47!important}body .ai-offer-desc{color:#435b79!important;-webkit-text-fill-color:#435b79!important;opacity:1!important}body .ai-offer-price{color:#1f56ac!important;-webkit-text-fill-color:#1f56ac!important}body .ai-offer .go-ai-stock{position:absolute!important;top:12px!important;left:12px!important;right:auto!important;bottom:auto!important;color:#075d35!important;background:#e6f8ee!important;-webkit-text-fill-color:#075d35!important}body .go-ai-stock.is-out{background:#b91c39!important;color:#fff!important;-webkit-text-fill-color:#fff!important}body #goAISearch{color:#172d4b!important;background:#fff!important}</style>`;
 const AI_READABILITY_SCRIPT = "<script id=\"go-ai-accessible-contrast\">(function(){\nfunction rgb(c){var m=String(c).match(/^rgba?\\(\\s*(\\d+)[ ,]+(\\d+)[ ,]+(\\d+)(?:[ ,/]+([\\d.]+))?/i);return m?[+m[1],+m[2],+m[3],m[4]===undefined?1:+m[4]]:null}\nfunction lum(c){var a=c.slice(0,3).map(function(v){v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*a[0]+.7152*a[1]+.0722*a[2]}\nfunction ratio(a,b){var x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}\nfunction effectiveBackground(el){var chain=[],p=el;while(p&&p.nodeType===1){chain.unshift(p);p=p.parentElement}var out=[255,255,255];for(var j=0;j<chain.length;j++){var st=getComputedStyle(chain[j]);if(st.backgroundImage&&st.backgroundImage!=='none')return null;var v=rgb(st.backgroundColor);if(v&&v[3]>0){var a=v[3];out=[v[0]*a+out[0]*(1-a),v[1]*a+out[1]*(1-a),v[2]*a+out[2]*(1-a)]}}return out}\nfunction fix(){document.querySelectorAll('main h1,main h2,main h3,main h4,main p,main span,main small,main li,main a,main label,main strong,section h1,section h2,section h3,section p,section a,header a,nav a,.ai-offer-title,.ai-offer-desc,.ai-offer-price').forEach(function(el){if(el.closest('.go-ai-stock,.ai-float,.go-owner-banner,button,[role=button]'))return;var cs=getComputedStyle(el);if(cs.visibility==='hidden'||cs.display==='none'||parseFloat(cs.opacity)<.65)return;var bg=effectiveBackground(el);if(!bg)return;var fg=rgb(cs.color);if(!fg)return;var thresh=parseFloat(cs.fontSize)>=24?3:4.5;if(ratio(fg,bg)>=thresh)return;var dark=[20,33,54],light=[255,255,255],best=ratio(dark,bg)>=ratio(light,bg)?dark:light;el.style.setProperty('color','rgb('+best.join(',')+')','important');el.style.setProperty('-webkit-text-fill-color','rgb('+best.join(',')+')','important');if(el.tagName==='A')el.style.textDecorationThickness='2px'})}\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fix);else fix();window.addEventListener('load',fix,{once:true});\n})();</script>";
+// Responsive corrections for AI-published pages only; no scripts, no layout hiding.
+const AI_PUBLIC_MOBILE_CSS = `<style id="go-ai-published-mobile-fix">
+html{max-width:100%;overflow-x:clip}body{max-width:100%;overflow-x:clip}
+body .goa-site,body .goa-site main,body .goa-site section,body .goa-site header,body .goa-site footer{max-width:100%;min-width:0}
+body .goa-site *{min-width:0}
+body .goa-site h1,body .goa-site h2,body .goa-site h3,body .goa-site p,body .goa-site a,body .goa-site span,body .goa-site .goa-logo{overflow-wrap:break-word;word-break:normal;hyphens:auto}
+body .goa-site img,body .goa-site video,body .goa-site svg{max-width:100%;height:auto}
+body .goa-site .goa-nav,body .goa-site .goa-hero-inner,body .goa-site .goa-section{min-width:0}
+body .goa-site .goa-benefitgrid,body .goa-site .ai-offers{min-width:0}
+body .goa-site .goa-about>*,body .goa-site .goa-headingrow>*,body .goa-site .goa-benefitgrid>*,body .goa-site .ai-offers>*{min-width:0}
+.go-ai-booking{max-width:780px;width:calc(100% - 32px);margin:48px auto;padding:28px;border-radius:20px;background:var(--panel);color:var(--text);border:1px solid var(--line)}
+.go-ai-booking form{display:grid;gap:12px}.go-ai-booking input,.go-ai-booking select,.go-ai-booking textarea{width:100%;max-width:100%;padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}.go-ai-booking button[type=submit]{background:var(--a);color:var(--on);border:0;border-radius:10px;padding:14px 18px;font:inherit;font-weight:700;cursor:pointer}.go-ai-booking #bkSlots{display:flex;flex-wrap:wrap;gap:8px;min-height:38px}
+@media(max-width:760px){
+body .goa-site .goa-nav{width:100%;padding:14px 16px!important;gap:10px!important;flex-wrap:wrap!important}
+body .goa-site .goa-logo{max-width:100%!important;flex:1 1 50%;font-size:clamp(.95rem,4.5vw,1.15rem)!important}
+body .goa-site .goa-navcta{max-width:100%;font-size:.75rem!important;padding:9px 12px!important}
+body .goa-site .goa-hero{min-height:0!important;padding:30px 0 20px}
+body .goa-site .goa-hero-inner{width:calc(100% - 36px)!important;margin:36px auto!important}
+body .goa-site .goa-hero h1{font-size:clamp(2rem,9vw,3.4rem)!important;line-height:1.12!important;letter-spacing:-.035em!important;max-width:100%!important;overflow-wrap:anywhere!important}
+body .goa-site .goa-section h2,body .goa-site .goa-contact h2{font-size:clamp(1.7rem,7.2vw,2.6rem)!important;line-height:1.16!important;max-width:100%!important;overflow-wrap:anywhere!important}
+body .goa-site .goa-benefit h3{font-size:clamp(1.3rem,5.6vw,1.85rem)!important;overflow-wrap:anywhere!important}
+body .goa-site .goa-hero-bottom{flex-wrap:wrap;gap:8px;font-size:.6rem}
+body .goa-site .goa-section{width:calc(100% - 36px)!important;padding:52px 0!important}
+body .goa-site .goa-about,body .goa-site .goa-benefitgrid,body .goa-site .ai-offers{display:grid!important;grid-template-columns:minmax(0,1fr)!important}
+body .goa-site .goa-headingrow{display:block!important}
+body .goa-site .goa-benefit{padding:22px 20px;min-height:0}
+body .goa-site .goa-benefit h3{margin:18px 0 8px}
+body .goa-site .goa-contact{width:calc(100% - 36px)!important;padding:36px 20px!important;margin:16px auto 45px!important}
+body .goa-site .goa-btn,body .goa-site .goa-navcta{white-space:normal!important;text-align:center}
+body .goa-site .goa-actions{gap:14px}
+body .goa-site .ai-offer-body{padding:16px!important}
+body .goa-site .goa-footer{padding:26px 18px!important}
+.go-ai-booking{width:calc(100% - 28px);padding:20px 15px;margin:35px auto}
+}
+@media(prefers-reduced-motion:reduce){body .goa-site *{scroll-behavior:auto!important;animation:none!important}}
+</style>`;
+
 function renderAiSite(user, offers, sent) {
   const slug = esc(user.slug);
   const offersHtml = offers.length ? `<div class="ai-offers">${offers.map(o => {
@@ -4698,7 +4735,24 @@ function renderAiSite(user, offers, sent) {
   html = html.replace(/\{\{OFFERS\}\}/g, offersHtml).replace(/\{\{FAQ\}\}/g, faqHtml).replace(/\{\{CONTACT\}\}/g, contactHtml);
   if (!hadOffers) html += `<section id="offers" style="padding:40px 18px;max-width:1100px;margin:auto">${offersHtml}</section>`;
   const aiSearch = `<div style="max-width:1050px;margin:24px auto;padding:12px"><input id="goAISearch" type="search" placeholder="Search products in any language..." aria-label="Search products" style="width:100%;padding:14px;border:1px solid #bac3d1;border-radius:10px"></div><script>(function(){var i=document.getElementById('goAISearch'),cards=[].slice.call(document.querySelectorAll('.ai-offer')),timer,seq=0;if(!i)return;i.addEventListener('input',function(){clearTimeout(timer);var q=i.value.trim(),v=++seq;if(!q){cards.forEach(x=>x.style.display='');return}timer=setTimeout(async function(){try{var r=await fetch('/site/'+encodeURIComponent(document.body.dataset.slug)+'/search.json?q='+encodeURIComponent(q)),d=await r.json();if(v!==seq)return;var ids=new Set(d.ids);cards.forEach(x=>x.style.display=ids.has(x.getAttribute('href').split('/').pop())?'':'none')}catch(e){}},500)})})();</script>`;
-  const body = `${aiSearch}${html}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>` + AI_STORE_CSS + AI_READABILITY_SCRIPT;
+  // Reuse the real calendar endpoints, slot picker and booking handler already used by normal sites.
+  // Only show booking controls if the business has enabled appointments in Calendar.
+  const bookingHtml = user.bookingEnabled ? `<section class="go-ai-booking" id="book" aria-labelledby="goAiBookTitle">
+    <h2 id="goAiBookTitle">Book an appointment</h2><p>Choose a date and an available time. Your request goes directly to this business.</p><p id="goAiBookingStatus" hidden role="status"></p>
+    <form method="POST" action="/site/${slug}/appointment">
+      <label>Your name <input name="customer" required maxlength="80" autocomplete="name"></label>
+      <label>Contact details <input name="contact" required maxlength="140" autocomplete="email"></label>
+      <label>Service (optional)<select name="offerId" id="bkOffer"><option value="">Any service</option>${offers.map(o => `<option value="${esc(String(o._id))}">${esc(o.title)}</option>`).join('')}</select></label>
+      <label>Pick a date <input type="date" id="bkDate" required></label>
+      <div id="bkSlots" role="group" aria-label="Available appointment times">Choose a date to see available times.</div>
+      <input type="hidden" name="startsAt" id="bkStart" required>
+      <label>Notes (optional)<textarea name="note" maxlength="500" rows="2"></textarea></label>
+      <label style="display:flex;gap:9px;align-items:flex-start"><input type="checkbox" name="consent" value="1" required style="width:auto;margin-top:5px"> <span>I agree to be contacted about this booking. <a href="${PUBLIC_BASE}/privacy">Privacy Policy</a></span></label>
+      <button type="submit">Request appointment</button>
+    </form></section>` : '';
+  const bookingLink = user.bookingEnabled ? `<a href="#book">Book a time</a>` : '';
+  const bookingSuccess = user.bookingEnabled ? `<script>(function(){if(new URLSearchParams(location.search).get('booking')==='1'){var e=document.getElementById('goAiBookingStatus');if(e){e.hidden=false;e.textContent='Your appointment was received. The business will contact you if anything needs clarification.';}}})();</script>` : '';
+  const body = `${aiSearch}${html}${bookingHtml}<nav class="ai-float">${bookingLink}<a href="/site/${slug}/messages">Messages</a></nav>` + AI_STORE_CSS + AI_PUBLIC_MOBILE_CSS + AI_READABILITY_SCRIPT + bookingSuccess;
   return pageShell(user, { title: user.siteName, desc: String(user.sellerBio || user.siteName).slice(0, 160), body, page: 'home' });
 }
 
@@ -5783,6 +5837,41 @@ function receptionistCompositeReply(question, offers, inventory, history) {
   return lines.length ? { answer: lines.join(' '), handoff: false } : null;
 }
 
+function receptionistQuantityPriceReply(question, offers, inventory) {
+  const raw = String(question || '').trim();
+  const q = raw.toLocaleLowerCase('bg');
+  if (!/(?:колко|струва|струват|сумата|платя|цена|cost|total|price|pay)/i.test(q)) return null;
+  const nMatch = q.match(/(?:^|\s)([1-9]\d{0,2})\s*(?:бр\.?\s*)?([\p{L}][\p{L}\p{M}-]*)/u);
+  if (!nMatch) return null;
+  const count = Number(nMatch[1]);
+  const term = nMatch[2];
+  const norm = v => String(v || '').toLocaleLowerCase('bg').replace(/[^\p{L}\p{N}]/gu, '');
+  const matches = (offers || []).filter(o => {
+    const title = norm(o.title);
+    const word = norm(term);
+    if (!title || title.length < 4 || !word) return false;
+    const stem = /[аяоеи]$/u.test(title) ? title.slice(0,-1) : title;
+    return word === title || (stem.length >= 3 && word.startsWith(stem) && word.length <= title.length + 4);
+  });
+  if (matches.length !== 1) return null;
+  const offer = matches[0];
+  const price = Number(offer.salePrice) > 0 ? Number(offer.salePrice) : Number(offer.price);
+  const bg = /[а-я\u0400-\u04ff]/i.test(q);
+  if (!Number.isFinite(price) || price <= 0) return { answer: bg ? `За „${offer.title}“ няма потвърдена цена. Мога да ви насоча към собственика.` : `I don't have a confirmed price for ${offer.title}; the owner can help.`, handoff: true };
+  const money = x => `€${(Math.round(x * 100) / 100).toFixed(2)}`;
+  const st = inventory && inventory.stock;
+  const qtyRaw = st && st[String(offer._id)];
+  const qty = qtyRaw === undefined || qtyRaw === null || qtyRaw === '' ? null : Number(qtyRaw);
+  const total = money(count * price);
+  let answer = bg ? `Разбира се! ${count} бр. „${offer.title}“ по ${money(price)} ще струват общо ${total}.` : `Of course! ${count} × ${offer.title} at ${money(price)} each comes to ${total}.`;
+  if (qty !== null && Number.isFinite(qty) && qty >= 0) {
+    const available = Math.floor(qty);
+    if (available < count) answer += bg ? ` За съжаление, в момента има само ${available} бр. — не достигат ${count - available}.` : ` Unfortunately, only ${available} are in stock, so ${count - available} more would be needed.`;
+    else answer += bg ? ` Добрата новина е, че имаме достатъчно бройки (${available} налични).` : ` Good news — ${available} are in stock, enough for that quantity.`;
+  } else answer += bg ? ' Нямам потвърдена информация за наличността.' : ' I cannot confirm stock availability.';
+  return { answer, handoff: false };
+}
+
 function receptionistFactsReply(question, offers, user, inventory, history, offerCount) {
   const q = String(question || '').toLocaleLowerCase('bg').trim();
   const bg = /[а-я\u0400-\u04ff]/i.test(q);
@@ -5876,6 +5965,10 @@ app.post('/site/:slug/ai-ask', aiAskLimiter, express.json({ limit: '8kb' }), asy
       `Listed offers: ${offers.length}`, 'Offers:', ...offers.map(o => `- ${o.title}: ${o.salePrice > 0 ? o.salePrice + ' (sale)' : (o.price > 0 ? o.price : 'price on request')} EUR. ${String(o.description || '').slice(0, 160)}${(o.variants || []).length ? ' Options: ' + o.variants.map(v => v.name + (v.price > 0 ? ' ' + v.price : '')).join(', ') : ''}${inventory && inventory.stock && Number.isFinite(Number(inventory.stock[String(o._id)])) ? ' Stock: ' + Number(inventory.stock[String(o._id)]) : ''}`)].filter(Boolean).join('\n').slice(0, 6000);
     const questionHistory = Array.isArray((req.body || {}).history) ? (req.body || {}).history.slice(-6) : [];
     const offerCount = /(?:колко|брой|how many)\s+/i.test(q) ? await Offer.countDocuments({ userId: user._id }) : offers.length;
+    // Exact arithmetic for quantity/price questions, including inflected Bulgarian nouns
+    // ("8 питки" referring to the offer "Питка"). Never turn an estimate into an order.
+    const quantityAnswer = receptionistQuantityPriceReply(q, offers, inventory);
+    if (quantityAnswer) return res.json(quantityAnswer);
     const compositeAnswer = receptionistCompositeReply(q, offers, inventory, questionHistory);
     if (compositeAnswer) return res.json(compositeAnswer);
     const simpleAnswer = receptionistFactsReply(q, offers, user, inventory, questionHistory, offerCount);
