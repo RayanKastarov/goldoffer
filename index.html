@@ -1675,6 +1675,45 @@ body[data-page="code"] #v-code .go-term-input{background:#141414!important}
 }
 @media(prefers-reduced-motion:reduce){#v-code .ce-side{transition:none!important}}
 </style>
+<style id="go-ref-ui">
+/* Reference UI (dashboard look): light canvas, white rounded cards, black pill actions, soft pills */
+body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspace,#v-customers .go-workspace{background:#f3f4f6!important;color:#111827!important;border-radius:24px;padding:24px!important}
+#v-orders .go-workhead h1,#v-calendar .go-workhead h1,#v-customers .go-workhead h1{color:#111827!important;font-weight:800;letter-spacing:-.02em}
+#v-orders .go-workhead p,#v-calendar .go-workhead p,#v-customers .go-workhead p,.go-kicker{color:#6b7280!important}
+.go-work-link,.go-work-link-primary{border-radius:999px!important;border:1px solid #e5e7eb!important;background:#fff!important;color:#111827!important;font-weight:600}
+.go-work-link-primary{background:#111827!important;color:#fff!important;border-color:#111827!important}
+#v-orders .go-order-stats>*,#v-calendar .go-workspace [class*="stat"]{background:#fff!important;border:1px solid #eef0f3!important;border-radius:18px!important;color:#111827!important;box-shadow:none!important}
+#v-orders .go-order-toolbar,#v-orders .wk-board>*,#v-calendar .go-workspace>div>div,#v-customers .go-workspace>div>div{border-radius:18px}
+#v-orders .go-order-toolbar{background:#fff!important;border:1px solid #eef0f3!important;padding:12px 16px!important}
+#v-orders .wk-in,#v-calendar .wk-in,#v-customers .wk-in{background:#f3f4f6!important;border:1px solid #e5e7eb!important;border-radius:12px!important;color:#111827!important}
+#v-orders .wk-board table,#v-customers table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border-radius:18px;overflow:hidden;color:#111827}
+#v-orders th,#v-customers th{background:#f9fafb!important;color:#6b7280!important;font-size:12px;text-transform:none;font-weight:600;text-align:left;padding:14px 16px}
+#v-orders td,#v-customers td{padding:14px 16px;border-top:1px solid #f1f2f4;color:#111827!important}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700}
+.pill.Complete,.pill.Completed,.pill.Done{background:#dcfce7!important;color:#166534!important}
+.pill.Pending,.pill.New{background:#fef3c7!important;color:#92400e!important}
+.pill.Cancelled,.pill.Canceled,.pill.Declined{background:#fee2e2!important;color:#991b1b!important}
+#v-orders button,#v-calendar .go-workspace button:not(.on){border-radius:999px}
+/* Inbox: 3-column chat look */
+.mx{background:#fff!important;border:1px solid #eef0f3!important;border-radius:24px!important;overflow:hidden;color:#111827}
+.mx-side{background:#fff!important;border-right:1px solid #f1f2f4!important}
+.mx-main{background:#f9fafb!important}
+.mx-list>*{border-radius:14px!important}
+.mx-list>*:hover,.mx-list>.on,.mx-list>.active{background:#eef2ff!important}
+.mx-head{background:#fff!important;border-bottom:1px solid #f1f2f4!important}
+.mx-av{background:#111827!important;color:#fff!important;border-radius:50%!important}
+/* Customers / CRM list */
+#v-customers .go-workspace{background:#f5f8ff!important}
+#v-customers button.on,#v-customers .go-work-link-primary{background:#2563eb!important;border-color:#2563eb!important;color:#fff!important}
+/* Studio editor: dark Framer-style panels */
+.stu{background:#0b0b0d!important;color:#e5e7eb!important}
+.stu-side{background:#141416!important;border-left:1px solid #26262a!important}
+.stu-top{background:#141416!important;border-bottom:1px solid #26262a!important}
+.stu-tabs button{border-radius:8px!important;background:transparent!important;color:#9ca3af!important}
+.stu-tabs button.on{background:#26262a!important;color:#fff!important}
+.stu-top button[class*="pub"],.stu-top .stu-publish,.stu-top .primary{background:#2f7cf6!important;color:#fff!important;border-radius:10px!important;border:0!important;font-weight:700}
+.stu-modal .stu-card{background:#141416!important;border:1px solid #26262a!important;border-radius:16px!important}
+</style>
 </head>
 <body class="theme-neon-blue font-sans" id="top" data-page="home">
 <nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/pro" data-link data-t="pro"><i>⚡</i>Pro</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
