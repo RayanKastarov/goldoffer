@@ -1795,6 +1795,24 @@ body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspa
 @media(max-width:900px){#v-calendar #calBody{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:700px){#v-orders .go-workspace,#v-calendar .go-workspace,#v-customers .go-workspace{padding:15px!important;border-radius:16px!important}#v-orders .go-order-toolbar{padding:12px!important}#v-orders #ordStatus{max-width:100%!important;flex:1}#v-orders .go-order-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}#v-calendar #calBody>.wk-panel{padding:14px!important}#v-calendar #calBody .wk-hrs{grid-template-columns:40px 20px minmax(0,1fr) minmax(0,1fr);gap:5px}#v-calendar #calBody .wk-hrs input{font-size:12px!important;padding:7px 3px!important}#studio .stu-top{padding:7px!important}#studio .stu-stage{padding:8px!important}}
 </style>
+<style id="go-crm-calendar-dark-fix">
+/* 2026-11-08: CRM + Calendar back to dark theme to match the rest */
+#v-calendar .go-workspace,#v-customers .go-workspace{background:#0f131a!important;color:#eef2f7!important;border:1px solid #202733!important;box-shadow:0 24px 60px rgba(0,0,0,.22)!important}
+#v-calendar .go-workhead h1,#v-customers .go-workhead h1{color:#f8fbff!important}
+#v-calendar .go-workhead p,#v-customers .go-workhead p,#v-calendar .go-kicker,#v-customers .go-kicker{color:#9eaabe!important}
+#v-calendar .wk-panel,#v-customers .wk-panel,#v-calendar #calBody>div,#v-customers #cusBody>div{background:#151b24!important;border:1px solid #273140!important;border-radius:18px!important;color:#ecf2fa!important;box-shadow:none!important}
+#v-calendar .wk-row,#v-customers .wk-row{border-bottom:1px solid #222c3b!important}
+#v-calendar .wk-row b,#v-customers .wk-row b,#v-calendar .wk-panel h3,#v-customers .wk-panel h3{color:#f8fbff!important}
+#v-calendar .wk-row small,#v-customers .wk-row small,#v-calendar .wk-grid label,#v-calendar .wk-panel label,#v-customers .wk-panel p,#v-customers .wk-panel small{color:#9aa6ba!important}
+#v-calendar .wk-in,#v-customers .wk-in,#v-calendar .wk-grid input,#v-calendar .wk-grid select,#v-calendar .wk-panel textarea,#v-customers #cusQ{background:#0f1520!important;border:1px solid #303949!important;color:#eef2f7!important}
+#v-calendar .wk-in::placeholder,#v-customers .wk-in::placeholder,#v-calendar input::placeholder,#v-customers input::placeholder,#v-calendar textarea::placeholder{color:#7f8a9d!important;opacity:1}
+#v-calendar button.btn,#v-calendar button.btn-ghost,#v-calendar .wk-act button,#v-customers button.btn-ghost,#v-customers .go-work-link-primary{border-radius:999px!important}
+#v-calendar button.btn,#v-calendar .wk-act button.pri,#v-customers button.on,#v-customers .go-work-link-primary{background:#f3f4f6!important;color:#111827!important;border:1px solid #f3f4f6!important}
+#v-calendar button.btn-ghost,#v-calendar .wk-act button:not(.pri),#v-customers button.btn-ghost{background:transparent!important;color:#eef2f7!important;border:1px solid #394559!important}
+#v-customers .stu-card,#cusM .stu-card{background:#151b24!important;border:1px solid #273140!important;color:#eef2f7!important}
+#v-customers .stu-card input,#v-customers .stu-card select,#cusM .stu-card input,#cusM .stu-card select{background:#0f1520!important;border:1px solid #303949!important;color:#eef2f7!important}
+#v-customers .stu-card h3,#cusM .stu-card h3{color:#f8fbff!important}
+</style>
 </head>
 <body class="theme-neon-blue font-sans" id="top" data-page="home">
 <nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/pro" data-link data-t="pro"><i>⚡</i>Pro</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
@@ -2382,7 +2400,7 @@ body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspa
   <div class="stu-main">
     <div class="stu-stage" id="stuStage"><div class="stu-hint" id="stuHint">Click anything to select it &middot; drag to move &middot; double-click text to type &middot; corner handle resizes</div><div class="stu-wrap" id="stuWrap"><iframe id="stuFrame" title="Your website"></iframe></div></div>
     <aside class="stu-side">
-      <div class="stu-tabs"><button data-t="el" class="on" onclick="stuTab('el')">Element</button><button data-t="site" onclick="stuTab('site')">Whole site</button><button data-t="add" onclick="stuTab('add')">Add</button></div>
+      <div class="stu-tabs"><button data-t="el" class="on" onclick="stuTab('el')">Element</button><button data-t="site" onclick="stuTab('site')">Whole site</button><button data-t="offers" onclick="stuTab('offers')">Offers</button><button data-t="add" onclick="stuTab('add')">Add</button></div>
       <div class="stu-pane" id="stuPane"></div>
     </aside>
   </div>
@@ -4824,6 +4842,7 @@ function stuGrad(prop) { stuSet(prop, 'linear-gradient(' + ($('ga' + prop).value
 function stuRender() {
   const pane = $('stuPane'); if (!pane) return;
   if (ST.tab === 'site') return stuSiteTab(pane);
+  if (ST.tab === 'offers') return stuOffersTab(pane);
   if (ST.tab === 'add') { pane.innerHTML = '<h5>Add anything, anywhere</h5><p style="color:#8a97ad;margin-bottom:10px">New items float on top of the page. Drag them wherever you want, then style them in the Element tab.</p><div class="stu-tg" style="flex-direction:column"><button onclick="stuAdd(\'text\')">+ Text or heading</button><button onclick="stuAdd(\'btn\')">+ Button (link)</button><button onclick="stuAddImage()">+ Image (upload)</button><button onclick="stuAdd(\'shape\')">+ Shape / colored block</button></div><h5>Tips</h5><p style="color:#8a97ad;line-height:1.5">Phone mode keeps its own positions for added items. Switch to Phone, then drag to fix how it looks on mobile.</p>'; return; }
   const s = ST.sel;
   if (!s) { pane.innerHTML = '<div class="stu-pill">Nothing selected</div><p style="color:#8a97ad;line-height:1.6">Click any text, picture, button or box on your site. Then change its color, font, size, position, effects and more. Double-click text to retype it. Use <b>Whole site</b> for global colors, fonts and effects.</p>'; return; }
@@ -4862,6 +4881,21 @@ function stuRender() {
   pane.innerHTML = h;
 }
 function stuMoveAxis(i, val) { const cur = String(stuStyle().translate || '0px 0px').split(/\s+/).map(x => parseFloat(x) || 0); cur[i] = parseFloat(val) || 0; stuSet('translate', (cur[0] || 0) + 'px ' + (cur[1] || 0) + 'px'); }
+function stuOffersTab(pane) {
+  const list = Array.isArray(ST.offers) ? ST.offers : [];
+  if (!list.length) {
+    pane.innerHTML = `<h5>Offers</h5><p style="color:#8a97ad;line-height:1.6">No offers yet. Add your first offer from the Offers section, then come back here to design its page.</p><div class="stu-tg" style="flex-direction:column"><button onclick="stuGo('/offers')">Open all offers page</button></div>`;
+    return;
+  }
+  const cards = list.map(function(o){
+    var title = esc((o && o.title) ? o.title : 'Untitled offer');
+    var desc = esc((o && o.description) ? String(o.description).slice(0, 80) : '');
+    var price = Number(o && o.salePrice > 0 ? o.salePrice : (o && o.price) || 0).toFixed(2);
+    return `<div class="stu-v" style="display:block"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="min-width:0"><b style="display:block;word-break:break-word">${title}</b><small style="display:block;color:#8a97ad;margin-top:4px">${desc || ('EUR ' + price)}</small></div><span style="white-space:nowrap;color:#8a97ad">EUR ${price}</span></div><div class="stu-tg" style="margin-top:10px"><button onclick="stuGo('/offer/${o._id}')">Edit page</button><button onclick="window.open(API + '/site/' + encodeURIComponent(ST.slug) + '/offer/${o._id}', '_blank')">Open live</button></div></div>`;
+  }).join('');
+  pane.innerHTML = `<h5>Offers</h5><p style="color:#8a97ad;line-height:1.6;margin-bottom:12px">Open any offer page directly from Studio. This makes it faster to style the text, photos and buttons of a specific offer.</p><div class="stu-tg" style="flex-direction:column;gap:10px"><button onclick="stuGo('/offers')">Open all offers page</button>${cards}</div>`;
+}
+
 function stuSiteTab(pane) {
   const v = ST.D.v, fo = (k) => '<option value="">Default</option>' + ST.fonts.map(f => '<option value="' + f[0] + '"' + (v[k] === f[0] ? ' selected' : '') + '>' + f[1] + ' - ' + f[3] + '</option>').join('');
   const cr = (l, k, d) => '<div class="stu-r"><label>' + l + '</label><input type="color" value="' + (v[k] || d) + '" oninput="stuSetV(\'' + k + '\',this.value)"><button class="stu-x" onclick="stuSetV(\'' + k + '\',null)">clear</button></div>';
