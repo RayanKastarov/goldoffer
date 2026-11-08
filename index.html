@@ -1713,105 +1713,6 @@ body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspa
 .stu-tabs button.on{background:#26262a!important;color:#fff!important}
 .stu-top button[class*="pub"],.stu-top .stu-publish,.stu-top .primary{background:#2f7cf6!important;color:#fff!important;border-radius:10px!important;border:0!important;font-weight:700}
 .stu-modal .stu-card{background:#141416!important;border:1px solid #26262a!important;border-radius:16px!important}
-
-/* GoldOffer 2026 workspace polish — existing real data and actions, no demo screens */
-#v-orders .go-workspace,#v-calendar .go-workspace,#v-customers .go-workspace{max-width:1370px!important;background:#f5f7fa!important;color:#18212b!important;padding:clamp(16px,3vw,34px)!important;border-radius:24px!important}
-#v-orders .go-workhead,#v-calendar .go-workhead,#v-customers .go-workhead{padding:5px 4px 14px}
-#v-orders .go-workhead h1,#v-calendar .go-workhead h1,#v-customers .go-workhead h1{font-size:clamp(29px,3vw,43px)!important;font-weight:750!important;line-height:1.12!important}
-#v-orders .go-order-stats{gap:14px;margin:0 0 18px}
-#v-orders .go-order-stat{background:#fff!important;color:#16212f!important;border:1px solid #e5ebf1!important;box-shadow:0 5px 18px rgba(25,45,74,.035)!important;border-radius:16px!important}
-#v-orders .go-order-stat strong{color:#142336!important}
-#v-orders .go-order-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;background:#fff!important;border:1px solid #e5ebf1!important;padding:15px!important;margin:0!important;border-radius:18px 18px 0 0!important}
-#v-orders .go-order-toolbar label{color:#52637a!important}
-#v-orders #ordQ{flex:1;min-width:180px;max-width:410px!important}
-#v-orders #ordStatus{min-width:154px!important;width:auto!important;max-width:210px!important}
-#v-orders .go-order-toolbar span{font-size:12px;color:#738198!important}
-#v-orders .wk-board{display:block!important;overflow:visible!important;padding:0!important;max-width:100%!important}
-#v-orders .go-order-table-wrap{overflow-x:auto;max-width:100%;background:#fff;border:1px solid #e5ebf1;border-top:0;border-radius:0 0 18px 18px}
-#v-orders .go-order-table{width:100%;border-collapse:collapse;min-width:760px;font-size:13px;background:#fff;color:#18212b}
-#v-orders .go-order-table th{padding:15px 16px!important;background:#f8fafc!important;color:#758295!important;font-size:11px!important;font-weight:700!important;white-space:nowrap;text-align:left}
-#v-orders .go-order-table td{padding:14px 16px!important;border-top:1px solid #edf0f3!important;color:#243344!important;vertical-align:middle}
-#v-orders .go-order-table tbody tr:hover{background:#f8fbff}
-#v-orders .go-order-table td b,#v-orders .go-order-table td strong{color:#1d2936;font-weight:700}
-#v-orders .go-order-table td small{display:block;color:#8290a2;font-size:11px;margin-top:4px;max-width:190px;overflow-wrap:anywhere}
-#v-orders .go-order-empty{text-align:center;color:#76849a!important;padding:42px!important}
-#v-orders .go-status{display:inline-flex;align-items:center;border-radius:8px;padding:5px 10px;font-weight:700;font-size:11px;white-space:nowrap;background:#eff4ff;color:#3157a0}
-#v-orders .go-status-Pending{background:#fff4e8;color:#ac641c}
-#v-orders .go-status-Accepted,#v-orders .go-status-Processing{background:#eaf3ff;color:#2461ac}
-#v-orders .go-status-Completed{background:#e9f9ef;color:#20854b}
-#v-orders .go-status-Cancelled{background:#fff0f1;color:#c74757}
-#v-orders .go-order-table .wk-act{margin:0;gap:5px;flex-wrap:wrap}
-#v-orders .go-order-table .wk-act button{background:#f2f5f9!important;border:1px solid #e2e8f0!important;color:#36516c!important;padding:7px 10px!important;font-size:11px!important;border-radius:8px!important;white-space:nowrap}
-#v-orders .go-order-table .wk-act button.pri{background:#1677f2!important;border-color:#1677f2!important;color:#fff!important}
-#v-calendar #calBody{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,.94fr);align-items:start;gap:18px}
-#v-calendar #calBody>.wk-panel{min-width:0;margin:0;background:#fff!important;border:1px solid #e4eaf1!important;color:#233148!important;box-shadow:0 7px 22px rgba(28,47,75,.04);border-radius:20px!important;padding:22px!important}
-#v-calendar #calBody h3,#v-calendar #calBody h4{color:#1c2d40!important;letter-spacing:-.02em}
-#v-calendar #calBody .wk-grid{gap:12px}
-#v-calendar #calBody .wk-grid label,#v-calendar #calBody label{color:#53647d!important}
-#v-calendar #calBody input:not([type=checkbox]),#v-calendar #calBody select,#v-calendar #calBody textarea{background:#f8fafc!important;border:1px solid #dce4ee!important;color:#182b40!important;border-radius:10px!important;color-scheme:light;padding:10px!important;max-width:100%;min-width:0}
-#v-calendar #calBody .wk-hrs{border-bottom:1px solid #edf1f5;padding:6px 0;grid-template-columns:56px 24px minmax(0,1fr) minmax(0,1fr)}
-#v-calendar #calBody .wk-hrs b{color:#334155!important}
-#v-calendar #calBody .wk-row{border-bottom:1px solid #edf1f5!important;flex-wrap:wrap;min-width:0}
-#v-calendar #calBody .wk-row b{color:#213148!important}
-#v-calendar #calBody .wk-row small{color:#6e7c8e!important;overflow-wrap:anywhere}
-#v-calendar #calBody .wk-chip.ok{background:#e7f8ed!important;color:#168347!important}
-#v-calendar #calBody .wk-chip.warn{background:#fff3df!important;color:#ad6b16!important}
-#v-calendar #calBody button.btn{background:#078cc0!important;color:#fff!important;border:0!important;border-radius:11px!important}
-#v-calendar #calBody button.btn-ghost,#v-calendar #calBody .wk-act button{background:#f3f7fb!important;color:#285170!important;border:1px solid #dce6f0!important;border-radius:10px!important}
-#v-customers #cusBody .wk-panel{background:#fff!important;border:1px solid #e2eaf4!important;border-radius:18px!important;padding:12px 20px!important}
-#v-customers #cusBody .wk-row{border-bottom:1px solid #edf1f7!important;align-items:center;color:#1d304c!important}
-#v-customers #cusBody .wk-row b{color:#1c2a40!important}
-#v-customers #cusBody .wk-row small{color:#68788d!important}
-#v-customers #cusBody button{background:#f2f7ff!important;color:#2064ad!important;border:1px solid #d6e7ff!important;border-radius:10px!important}
-/* Inbox — preserve conversation selection, calls, chat composer and mobile list mode */
-#v-messages .mx{background:#fff!important;border:1px solid #e2e8ef!important;border-radius:21px!important;box-shadow:0 12px 40px rgba(25,47,78,.08)!important}
-#v-messages .mx-side{background:#fdfefe!important}
-#v-messages .mx-sh,#v-messages .mx-head{background:#fff!important;border-bottom:1px solid #edf1f6!important}
-#v-messages .mx-list{background:#fff}
-#v-messages .conv-item{margin:4px 8px!important;border-radius:12px!important;border:1px solid transparent!important}
-#v-messages .conv-item.on{background:#edf5ff!important;border-color:#d8e8fc!important}
-#v-messages .mx-main{background:#fbfcff!important}
-#v-messages .mx-body{background:linear-gradient(180deg,#fcfdff,#f6f8fe)!important}
-#v-messages .mx-title b,#v-messages .mx-mid b{color:#192b42!important}
-#v-messages .mx-head .mx-btn{color:#38506f!important;border-color:#e0e7ef!important;background:#fff!important}
-#v-messages .mx-head .mx-btn.call{color:#fff!important;background:#2279df!important;border-color:#2279df!important}
-#v-messages .mx-send{background:#237ce8!important;color:#fff!important}
-/* Studio: existing real editor; target actual Publish button class */
-#studio.stu{background:#0d0e10!important;color:#f3f4f6!important}
-#studio .stu-top{background:#17181b!important;border-bottom:1px solid #2a2d32!important;padding:11px 15px!important;gap:9px!important}
-#studio .stu-b,#studio .stu-s{background:#282a2e!important;color:#f3f4f6!important;border:1px solid #373b41!important;border-radius:10px!important;padding:9px 13px!important}
-#studio .stu-top .stu-b.pri{background:#1888ff!important;border-color:#1888ff!important;color:#fff!important;font-weight:800!important;box-shadow:0 4px 16px rgba(20,119,234,.24)}
-#studio .stu-seg{background:#25272b!important;border-color:#3a3c41!important}
-#studio .stu-seg button{background:transparent!important;color:#b3b6bd!important}
-#studio .stu-seg button.on{background:#41454c!important;color:#fff!important}
-#studio .stu-stage{background:#111214!important;padding:22px!important}
-#studio .stu-wrap iframe{border:1px solid #34383e!important;box-shadow:0 20px 70px rgba(0,0,0,.55)!important}
-#studio .stu-side{background:#1a1b1e!important;border-left:1px solid #32353a!important}
-#studio .stu-tabs{background:#1b1d20!important;border-bottom-color:#363a40!important;gap:5px;padding:9px!important}
-#studio .stu-tabs button{border-radius:9px!important;padding:11px 5px!important;border:0!important}
-#studio .stu-tabs button.on{background:#30343b!important;color:#fff!important}
-#studio .stu-pane{background:#1a1b1e!important}
-#studio .stu-r input,#studio .stu-r select{background:#24262a!important;border-color:#393d45!important;color:#fff!important}
-@media(max-width:900px){#v-calendar #calBody{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:700px){#v-orders .go-workspace,#v-calendar .go-workspace,#v-customers .go-workspace{padding:15px!important;border-radius:16px!important}#v-orders .go-order-toolbar{padding:12px!important}#v-orders #ordStatus{max-width:100%!important;flex:1}#v-orders .go-order-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}#v-calendar #calBody>.wk-panel{padding:14px!important}#v-calendar #calBody .wk-hrs{grid-template-columns:40px 20px minmax(0,1fr) minmax(0,1fr);gap:5px}#v-calendar #calBody .wk-hrs input{font-size:12px!important;padding:7px 3px!important}#studio .stu-top{padding:7px!important}#studio .stu-stage{padding:8px!important}}
-</style>
-<style id="go-crm-calendar-dark-fix">
-/* 2026-11-08: CRM + Calendar back to dark theme to match the rest */
-#v-calendar .go-workspace,#v-customers .go-workspace{background:#0f131a!important;color:#eef2f7!important;border:1px solid #202733!important;box-shadow:0 24px 60px rgba(0,0,0,.22)!important}
-#v-calendar .go-workhead h1,#v-customers .go-workhead h1{color:#f8fbff!important}
-#v-calendar .go-workhead p,#v-customers .go-workhead p,#v-calendar .go-kicker,#v-customers .go-kicker{color:#9eaabe!important}
-#v-calendar .wk-panel,#v-customers .wk-panel,#v-calendar #calBody>div,#v-customers #cusBody>div{background:#151b24!important;border:1px solid #273140!important;border-radius:18px!important;color:#ecf2fa!important;box-shadow:none!important}
-#v-calendar .wk-row,#v-customers .wk-row{border-bottom:1px solid #222c3b!important}
-#v-calendar .wk-row b,#v-customers .wk-row b,#v-calendar .wk-panel h3,#v-customers .wk-panel h3{color:#f8fbff!important}
-#v-calendar .wk-row small,#v-customers .wk-row small,#v-calendar .wk-grid label,#v-calendar .wk-panel label,#v-customers .wk-panel p,#v-customers .wk-panel small{color:#9aa6ba!important}
-#v-calendar .wk-in,#v-customers .wk-in,#v-calendar .wk-grid input,#v-calendar .wk-grid select,#v-calendar .wk-panel textarea,#v-customers #cusQ{background:#0f1520!important;border:1px solid #303949!important;color:#eef2f7!important}
-#v-calendar .wk-in::placeholder,#v-customers .wk-in::placeholder,#v-calendar input::placeholder,#v-customers input::placeholder,#v-calendar textarea::placeholder{color:#7f8a9d!important;opacity:1}
-#v-calendar button.btn,#v-calendar button.btn-ghost,#v-calendar .wk-act button,#v-customers button.btn-ghost,#v-customers .go-work-link-primary{border-radius:999px!important}
-#v-calendar button.btn,#v-calendar .wk-act button.pri,#v-customers button.on,#v-customers .go-work-link-primary{background:#f3f4f6!important;color:#111827!important;border:1px solid #f3f4f6!important}
-#v-calendar button.btn-ghost,#v-calendar .wk-act button:not(.pri),#v-customers button.btn-ghost{background:transparent!important;color:#eef2f7!important;border:1px solid #394559!important}
-#v-customers .stu-card,#cusM .stu-card{background:#151b24!important;border:1px solid #273140!important;color:#eef2f7!important}
-#v-customers .stu-card input,#v-customers .stu-card select,#cusM .stu-card input,#cusM .stu-card select{background:#0f1520!important;border:1px solid #303949!important;color:#eef2f7!important}
-#v-customers .stu-card h3,#cusM .stu-card h3{color:#f8fbff!important}
 </style>
 </head>
 <body class="theme-neon-blue font-sans" id="top" data-page="home">
@@ -2400,7 +2301,7 @@ body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspa
   <div class="stu-main">
     <div class="stu-stage" id="stuStage"><div class="stu-hint" id="stuHint">Click anything to select it &middot; drag to move &middot; double-click text to type &middot; corner handle resizes</div><div class="stu-wrap" id="stuWrap"><iframe id="stuFrame" title="Your website"></iframe></div></div>
     <aside class="stu-side">
-      <div class="stu-tabs"><button data-t="el" class="on" onclick="stuTab('el')">Element</button><button data-t="site" onclick="stuTab('site')">Whole site</button><button data-t="offers" onclick="stuTab('offers')">Offers</button><button data-t="add" onclick="stuTab('add')">Add</button></div>
+      <div class="stu-tabs"><button data-t="el" class="on" onclick="stuTab('el')">Element</button><button data-t="site" onclick="stuTab('site')">Whole site</button><button data-t="add" onclick="stuTab('add')">Add</button></div>
       <div class="stu-pane" id="stuPane"></div>
     </aside>
   </div>
@@ -2412,7 +2313,7 @@ body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspa
 <div class="go-workhead go-orders-head"><div><span class="go-kicker">YOUR WORKSPACE / ORDERS</span><h1>Order Center</h1><p>Manage requests from first contact to completion. Share tracking links with customers.</p></div>
 <div class="go-orders-actions"><a href="/build" data-link class="go-work-link">✦ Website builder</a><a href="/brochure" data-link class="go-work-link">▤ Brochure</a><a href="/code" data-link class="go-work-link go-work-link-primary">⌘ Code editor</a></div></div>
 <div class="go-order-stats" id="ordStats" aria-live="polite"></div>
-<div class="go-order-toolbar"><label for="ordQ">Search orders</label><input id="ordQ" class="wk-in" type="search" placeholder="Search by offer, customer or contact…" oninput="renderOrders()"><select id="ordStatus" class="wk-in" aria-label="Filter orders by status" onchange="renderOrders()"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>Processing</option><option>Completed</option><option>Cancelled</option></select><span>Update order status using the action buttons.</span></div>
+<div class="go-order-toolbar"><label for="ordQ">Search orders</label><input id="ordQ" class="wk-in" type="search" placeholder="Search by offer, customer or contact…" oninput="renderOrders()"><span>Move orders through each stage using the action buttons.</span></div>
 <div id="ordBoard" class="wk-board"></div></div></main>
 <!-- =================== CALENDAR =================== -->
 <main class="view" id="v-calendar"><div class="go-workspace" data-nav="dark"><div class="go-workhead"><div><span class="go-kicker">YOUR WORKSPACE</span><h1>Booking Calendar</h1><p>Set your working hours. Customers can only pick free times, so double booking cannot happen.</p></div></div><div id="calBody"></div></div></main>
@@ -3012,48 +2913,6 @@ const GP_CSS = `
 .kan{grid-template-columns:repeat(5,190px);gap:10px}.deal{padding:10px;border-radius:14px}.prod{grid-template-columns:44px 1fr auto;gap:10px;padding:9px}
 .bars .r{grid-template-columns:70px 1fr 40px;font-size:.78rem}.msg{font-size:.82rem;padding:8px 11px}.chat{height:280px}.dp{padding:16px}
 }
-
-/* GoldOffer reference-inspired Pro CRM / Appointments, inside the Shadow DOM */
-.app.go-ref-pro{background:#f5f7fa;color:#192637}
-.app.go-ref-pro .side{background:#171b20;border-right:1px solid #232b32;color:#c9d0d8}
-.app.go-ref-pro .logo{color:#fff}
-.app.go-ref-pro .nav{color:#b5bec9;box-shadow:none}
-.app.go-ref-pro .nav.on{background:#292f36;color:#fff;box-shadow:none}
-.app.go-ref-pro .nav:hover{background:#252c33;color:#fff}
-.app.go-ref-pro .back{border-color:#38414b;color:#d2d9e1}
-.app.go-ref-pro .main{background:#f5f7fa;color:#1b293a}
-.app.go-ref-pro .top h1{color:#192633;font-size:clamp(1.6rem,3vw,2.1rem)}
-.app.go-ref-pro .top p{color:#788597}
-.app.go-ref-pro .card,.app.go-ref-pro .tile{background:#fff;border:1px solid #e3e9f0;color:#223247;box-shadow:0 6px 25px rgba(31,46,69,.04);border-radius:17px}
-.app.go-ref-pro .card h3,.app.go-ref-pro .tile b{color:#192638}
-.app.go-ref-pro .tile small,.app.go-ref-pro .sub,.app.go-ref-pro .lbl{color:#6d7b8b}
-.app.go-ref-pro .btn{background:#137de8;color:#fff;box-shadow:none;border-radius:10px}
-.app.go-ref-pro .btn.g{background:#f0f4f8;color:#38526e;border:1px solid #dde6ef}
-.app.go-ref-pro .btn.r{background:#fff0f2;color:#b94857}
-.app.go-ref-pro .in{background:#f8fafc;border:1px solid #dce5ef;color:#1c2f45;border-radius:10px;color-scheme:light}
-.app.go-ref-pro .in:focus{border-color:#137de8;box-shadow:0 0 0 3px #137de822}
-.app.go-ref-pro .pill{background:#eaf3ff;color:#245ba0}
-.app.go-ref-pro .kan{gap:12px}
-.app.go-ref-pro .col{background:#eef2f7;border:1px solid #e2e8f0;border-radius:17px;min-width:0}
-.app.go-ref-pro .col h3{color:#43536a}
-.app.go-ref-pro .deal{background:#fff;border:1px solid #e1e7ef;border-radius:14px;color:#253449;box-shadow:0 3px 12px #19385e0c}
-.app.go-ref-pro .deal h4{color:#1c2d41}
-.app.go-ref-pro .deal p,.app.go-ref-pro .deal .ft{color:#697990}
-.app.go-ref-pro .item{background:#fff;border:1px solid #e4eaf1;border-radius:12px;color:#25364b}
-.app.go-ref-pro .wk{background:#fff;border:1px solid #e6ebf1;border-radius:13px;color:#26374b}
-.app.go-ref-pro .wkh{background:#f7f9fc;color:#5e6b7e;border-color:#e6ebf1}
-.app.go-ref-pro .wkh.today{background:#eaf4ff;color:#116fbe}
-.app.go-ref-pro .dc{background:#fff;border-color:#e8edf3}
-.app.go-ref-pro .dc>i{border-color:#edf1f5}
-.app.go-ref-pro .tm{color:#8692a4}
-.app.go-ref-pro .ev{color:#1b2732!important;border-radius:8px;box-shadow:0 3px 11px #2342a51c}
-.app.go-ref-pro .ev b{color:#152334!important}
-.app.go-ref-pro .av{color:#fff}
-.app.go-ref-pro .sw i{background:#cdd5df}
-.app.go-ref-pro .sw input:checked+i{background:#137de8}
-@media(max-width:900px){.app.go-ref-pro .side{background:#171b20;border-top-color:#343b44}.app.go-ref-pro .main{padding-bottom:22px}.app.go-ref-pro .kan{overflow-x:auto;grid-template-columns:repeat(5,minmax(220px,1fr))}}
-@media(max-width:600px){.app.go-ref-pro .main{padding:13px 10px 24px}.app.go-ref-pro .top h1{font-size:1.35rem}.app.go-ref-pro .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.app.go-ref-pro .kan{grid-template-columns:repeat(5,80vw)}}
-
 `;
 const gq = (id) => GP.root.getElementById(id);
 const gv = (id) => { const e = gq(id); return e ? e.value : ''; };
@@ -3079,14 +2938,12 @@ function proOpen(t) {
   }
   if (t) GP.tab = t;
   GP.root.querySelector('.app').classList.toggle('locked', gpLocked());
-  GP.root.querySelector('.app').classList.toggle('go-ref-pro', !gpLocked() && (GP.tab === 'crm' || GP.tab === 'cal'));
   if (gpLocked()) { gpLock(); return; }
   gq('gpSide').innerHTML = '<div class="logo"><b>G</b>GoldOffer</div>' + GP_TABS.map(x => '<button class="nav' + (x[0] === GP.tab ? ' on' : '') + '" data-a="tab" data-v="' + x[0] + '">' + gi(x[1]) + '<span>' + x[2] + '</span></button>').join('') + '<div class="sp"></div><button class="back" data-a="back">' + gi('home') + '<span>Back to dashboard</span></button>';
   gpLoad();
 }
 async function gpLoad() {
   const m = gq('gpMain'); const tab = GP.tab;
-  GP.root.querySelector('.app').classList.toggle('go-ref-pro', !gpLocked() && (tab === 'crm' || tab === 'cal'));
   if (gpLocked()) { gpLock(); return; }
   try {
     if (tab === 'auto') GP.d = await gj('GET', '/api/pro/automations');
@@ -4842,7 +4699,6 @@ function stuGrad(prop) { stuSet(prop, 'linear-gradient(' + ($('ga' + prop).value
 function stuRender() {
   const pane = $('stuPane'); if (!pane) return;
   if (ST.tab === 'site') return stuSiteTab(pane);
-  if (ST.tab === 'offers') return stuOffersTab(pane);
   if (ST.tab === 'add') { pane.innerHTML = '<h5>Add anything, anywhere</h5><p style="color:#8a97ad;margin-bottom:10px">New items float on top of the page. Drag them wherever you want, then style them in the Element tab.</p><div class="stu-tg" style="flex-direction:column"><button onclick="stuAdd(\'text\')">+ Text or heading</button><button onclick="stuAdd(\'btn\')">+ Button (link)</button><button onclick="stuAddImage()">+ Image (upload)</button><button onclick="stuAdd(\'shape\')">+ Shape / colored block</button></div><h5>Tips</h5><p style="color:#8a97ad;line-height:1.5">Phone mode keeps its own positions for added items. Switch to Phone, then drag to fix how it looks on mobile.</p>'; return; }
   const s = ST.sel;
   if (!s) { pane.innerHTML = '<div class="stu-pill">Nothing selected</div><p style="color:#8a97ad;line-height:1.6">Click any text, picture, button or box on your site. Then change its color, font, size, position, effects and more. Double-click text to retype it. Use <b>Whole site</b> for global colors, fonts and effects.</p>'; return; }
@@ -4881,21 +4737,6 @@ function stuRender() {
   pane.innerHTML = h;
 }
 function stuMoveAxis(i, val) { const cur = String(stuStyle().translate || '0px 0px').split(/\s+/).map(x => parseFloat(x) || 0); cur[i] = parseFloat(val) || 0; stuSet('translate', (cur[0] || 0) + 'px ' + (cur[1] || 0) + 'px'); }
-function stuOffersTab(pane) {
-  const list = Array.isArray(ST.offers) ? ST.offers : [];
-  if (!list.length) {
-    pane.innerHTML = `<h5>Offers</h5><p style="color:#8a97ad;line-height:1.6">No offers yet. Add your first offer from the Offers section, then come back here to design its page.</p><div class="stu-tg" style="flex-direction:column"><button onclick="stuGo('/offers')">Open all offers page</button></div>`;
-    return;
-  }
-  const cards = list.map(function(o){
-    var title = esc((o && o.title) ? o.title : 'Untitled offer');
-    var desc = esc((o && o.description) ? String(o.description).slice(0, 80) : '');
-    var price = Number(o && o.salePrice > 0 ? o.salePrice : (o && o.price) || 0).toFixed(2);
-    return `<div class="stu-v" style="display:block"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="min-width:0"><b style="display:block;word-break:break-word">${title}</b><small style="display:block;color:#8a97ad;margin-top:4px">${desc || ('EUR ' + price)}</small></div><span style="white-space:nowrap;color:#8a97ad">EUR ${price}</span></div><div class="stu-tg" style="margin-top:10px"><button onclick="stuGo('/offer/${o._id}')">Edit page</button><button onclick="window.open(API + '/site/' + encodeURIComponent(ST.slug) + '/offer/${o._id}', '_blank')">Open live</button></div></div>`;
-  }).join('');
-  pane.innerHTML = `<h5>Offers</h5><p style="color:#8a97ad;line-height:1.6;margin-bottom:12px">Open any offer page directly from Studio. This makes it faster to style the text, photos and buttons of a specific offer.</p><div class="stu-tg" style="flex-direction:column;gap:10px"><button onclick="stuGo('/offers')">Open all offers page</button>${cards}</div>`;
-}
-
 function stuSiteTab(pane) {
   const v = ST.D.v, fo = (k) => '<option value="">Default</option>' + ST.fonts.map(f => '<option value="' + f[0] + '"' + (v[k] === f[0] ? ' selected' : '') + '>' + f[1] + ' - ' + f[3] + '</option>').join('');
   const cr = (l, k, d) => '<div class="stu-r"><label>' + l + '</label><input type="color" value="' + (v[k] || d) + '" oninput="stuSetV(\'' + k + '\',this.value)"><button class="stu-x" onclick="stuSetV(\'' + k + '\',null)">clear</button></div>';
@@ -4954,22 +4795,15 @@ let ORDERS = [];
 async function loadOrders() { try { ORDERS = (await api('/api/orders')).orders; renderOrders(); } catch (e) { $('ordBoard').textContent = e.message; } }
 function renderOrders() {
   const q = ($('ordQ').value || '').toLowerCase();
-  const statusFilter = $('ordStatus') ? $('ordStatus').value : '';
-  const all = ORDERS.filter(o => !q || [o.offerTitle, o.customerName, o.customerContact].join(' ').toLowerCase().includes(q));
-  const rows = all.filter(o => !statusFilter || (o.status || 'Pending') === statusFilter);
+  const rows = ORDERS.filter(o => !q || [o.offerTitle, o.customerName, o.customerContact].join(' ').toLowerCase().includes(q));
   const next = { Pending: ['Accepted', 'Accept'], Accepted: ['Processing', 'Start work'], Processing: ['Completed', 'Complete'] };
-  const counts = Object.fromEntries(['Pending','Accepted','Processing','Completed','Cancelled'].map(k => [k, all.filter(o => (o.status || 'Pending') === k).length]));
+  const counts = Object.fromEntries(['Pending','Accepted','Processing','Completed','Cancelled'].map(k => [k, rows.filter(o => (o.status || 'Pending') === k).length]));
   const stats = $('ordStats');
-  if (stats) stats.innerHTML = [['Total',all.length],['New',counts.Pending],['In progress',counts.Accepted+counts.Processing],['Completed',counts.Completed]].map(([name,n]) => '<div class="go-order-stat"><span>'+name+'</span><strong>'+n+'</strong></div>').join('');
-  const statusText = {Pending:'Pending',Accepted:'Accepted',Processing:'Processing',Completed:'Complete',Cancelled:'Cancelled'};
-  $('ordBoard').innerHTML = '<div class="go-order-table-wrap"><table class="go-order-table"><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Offer</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>' + (rows.map(o => {
-    const k = o.status || 'Pending';
-    const actions = (next[k] ? '<button class="pri" onclick="ordSet(\'' + o._id + '\',\'' + next[k][0] + '\')">' + next[k][1] + '</button>' : '')
-      + (o.trackUrl ? '<button onclick="copyTxt(\'' + esc(o.trackUrl) + '\')">Tracking link</button>' : '')
-      + (k !== 'Cancelled' && k !== 'Completed' ? '<button onclick="ordSet(\'' + o._id + '\',\'Cancelled\')">Cancel</button>' : '')
-      + (k === 'Cancelled' ? '<button onclick="ordSet(\'' + o._id + '\',\'Pending\')">Reopen</button>' : '');
-    return '<tr><td data-label="Order"><strong>#' + esc(String(o._id || '').slice(-6).toUpperCase()) + '</strong></td><td data-label="Date">' + new Date(o.createdAt).toLocaleDateString() + '</td><td data-label="Customer"><b>' + esc(o.customerName || 'Customer') + '</b><small>' + esc((o.customerContact || '').slice(0,80)) + '</small></td><td data-label="Offer"><b>' + esc(o.offerTitle || 'Request') + '</b>' + (o.note ? '<small>' + esc(o.note.slice(0,100)) + '</small>' : '') + '</td><td data-label="Amount"><strong>€' + money(o.amount) + '</strong></td><td data-label="Status"><span class="go-status go-status-' + k + '">' + (statusText[k] || esc(k)) + '</span></td><td data-label="Actions"><div class="wk-act">' + actions + '</div></td></tr>';
-  }).join('') || '<tr><td colspan="7" class="go-order-empty">No orders match your search.</td></tr>') + '</tbody></table></div>';
+  if (stats) stats.innerHTML = [['Total',rows.length],['New',counts.Pending],['In progress',counts.Accepted+counts.Processing],['Completed',counts.Completed]].map(([name,n]) => '<div class="go-order-stat"><span>'+name+'</span><strong>'+n+'</strong></div>').join('');
+  $('ordBoard').innerHTML = ORD_COLS.map(([k, label]) => {
+    const list = rows.filter(o => (o.status || 'Pending') === k);
+    return '<div class="wk-col"><h3>' + label + '<span>' + list.length + '</span></h3>' + (list.map(o => '<div class="wk-card"><b>' + esc(o.offerTitle || 'Request') + '</b><small>' + esc(o.customerName || '') + ' &middot; EUR ' + money(o.amount) + '</small><small>' + esc((o.customerContact || '').slice(0, 90)) + '</small>' + (o.note ? '<small>&ldquo;' + esc(o.note.slice(0, 120)) + '&rdquo;</small>' : '') + '<small>' + new Date(o.createdAt).toLocaleString() + '</small><div class="wk-act">' + (next[k] ? '<button class="pri" onclick="ordSet(\'' + o._id + '\',\'' + next[k][0] + '\')">' + next[k][1] + '</button>' : '') + (o.trackUrl ? '<button onclick="copyTxt(\'' + esc(o.trackUrl) + '\')">Copy tracking link</button>' : '') + (k !== 'Cancelled' && k !== 'Completed' ? '<button onclick="ordSet(\'' + o._id + '\',\'Cancelled\')">Cancel</button>' : '') + (k === 'Cancelled' ? '<button onclick="ordSet(\'' + o._id + '\',\'Pending\')">Reopen</button>' : '') + '</div></div>').join('') || '<small style="color:#6f7d94;padding:6px">Nothing here</small>') + '</div>';
+  }).join('');
 }
 async function ordSet(id, status) { try { await api('/api/orders/' + id, { method: 'PATCH', body: JSON.stringify({ status }) }); await loadOrders(); } catch (e) { notify(e.message, 'Order'); } }
 function copyTxt(t) { navigator.clipboard.writeText(t).then(() => notify('Copied.'), () => prompt('Copy this link', t)); }

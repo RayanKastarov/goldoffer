@@ -3468,10 +3468,8 @@ body .screen-caption,body .screen-caption strong{color:#fff!important}
 body .screen-caption span{color:#d9ebff!important}
 /* Keep offer content contrast irrespective of theme variables. */
 body .card .in{background:#fff!important;color:#182b47!important}
-body .card .in h3,body .card .in h3 a{color:#172d4b!important;-webkit-text-fill-color:#172d4b!important;opacity:1!important;display:block!important;line-height:1.28!important;margin:0 0 6px!important;word-break:break-word!important;overflow-wrap:anywhere!important;text-wrap:pretty!important}
-body .card .in{display:flex!important;flex-direction:column!important;gap:8px!important;padding:16px 18px 18px!important;min-width:0!important}
-body .card .in p,body .card .in small{color:#435b79!important;-webkit-text-fill-color:#435b79!important;opacity:1!important;line-height:1.45!important;margin:0!important}
-body .card .in .more{margin-top:6px!important}
+body .card .in h3,body .card .in h3 a{color:#172d4b!important;-webkit-text-fill-color:#172d4b!important;opacity:1!important}
+body .card .in p,body .card .in small{color:#435b79!important;-webkit-text-fill-color:#435b79!important;opacity:1!important}
 body .card .in .more,body .card .in a:not(.btn){color:#2057b0!important;-webkit-text-fill-color:#2057b0!important}
 body .card .in a:hover{text-decoration:underline!important}
 
