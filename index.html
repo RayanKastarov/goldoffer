@@ -2280,7 +2280,7 @@ body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspa
             <div class="note" id="offerLimit" style="margin:0 0 12px"></div>
             <div id="offerList"></div>
             <div class="add-box">
-              <div class="field"><label>Title</label><input type="text" id="oTitle" placeholder="e.g. Oil change"></div>
+              <div class="field"><label>Title</label><input type="text" id="oTitle" placeholder="e.g. Oil change" onblur="goRenderSpecFields()"></div>
               <div style="display:flex;gap:9px;flex-wrap:wrap">
                 <button class="btn-ghost" id="aiBtn" onclick="lookupPrice()">Check market price</button>
                 <button class="btn-ghost" id="descBtn" onclick="lookupDescription()">✦ Generate description from Google</button>
@@ -2289,6 +2289,12 @@ body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspa
               <div class="field" style="margin-top:12px"><label>Price (EUR)</label><input type="number" id="oPrice" min="0" step="0.01" placeholder="e.g. 25"></div>
               <div class="field"><label>Short description</label><input type="text" id="oDesc" maxlength="500" placeholder="One or two lines shown on the card"></div>
               <div class="field"><label>Full description (optional)</label><textarea id="oLong" maxlength="4000" rows="5" placeholder="Everything a customer should know: what is included, sizes, materials, how it works..."></textarea></div>
+              <div class="field" style="margin-top:12px"><label>Smart catalog filters (optional)</label>
+                <p class="note" style="margin:3px 0 9px">Add accurate details so customers can filter your real offers. The catalog always includes minimum and maximum price.</p>
+                <select id="oSpecSector" onchange="goRenderSpecFields()" style="width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#111827;margin-bottom:9px">
+                  <option value="auto">Detect from product / website</option><option value="automotive">Cars</option><option value="motorcycles">Motorcycles</option><option value="fashion">Clothing</option><option value="realestate">Properties</option><option value="electronics">Electronics</option><option value="beauty">Beauty</option><option value="food">Food</option><option value="general">Other products</option>
+                </select><div id="oSpecFields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px"></div>
+              </div>
               <div class="field"><label>Photos (optional, up to 8)</label><input type="file" id="oImg" accept="image/*" multiple onchange="previewPhotos()">
                 <div id="oExisting" class="thumbs-row"></div>
                 <div id="oImgPrev" class="thumbs-row"></div>
@@ -3941,10 +3947,42 @@ async function deleteSite(id) {
       '<span class="thumb"><img src="' + esc(u) + '" alt="Saved photo"><button type="button" class="x" title="Remove photo" onclick="dropExisting(' + i + ')">&times;</button></span>').join('');
   }
   function dropExisting(i) { S.editImages.splice(i, 1); renderExisting(); }
+  // Offer metadata powers real, category-specific filters on the published shop.
+  const GO_SPEC_FIELDS = {
+    automotive: [['brand','Brand (e.g. BMW)'],['body','Body type (SUV, Coupe)'],['fuel','Fuel'],['transmission','Transmission'],['year','Year'],['power','Power (hp)'],['mileage','Mileage (km)'],['color','Color'],['condition','Condition']],
+    motorcycles: [['brand','Brand'],['body','Type'],['fuel','Fuel'],['year','Year'],['power','Power (hp)'],['mileage','Mileage (km)']],
+    fashion: [['brand','Brand'],['size','Size'],['color','Color'],['material','Material']],
+    realestate: [['location','Location'],['type','Property type'],['rooms','Rooms'],['area','Area (m²)']],
+    electronics: [['brand','Brand'],['storage','Storage (GB)'],['color','Color'],['condition','Condition']],
+    beauty: [['brand','Brand'],['type','Product type'],['size','Size'],['color','Color']],
+    food: [['type','Type'],['size','Size'],['diet','Dietary']],
+    general: [['brand','Brand'],['size','Size'],['color','Color'],['condition','Condition']]
+  };
+  function goOfferSector() {
+    if ($('oSpecSector').value !== 'auto') return $('oSpecSector').value;
+    const txt=[S.user && S.user.category, S.user && S.user.siteName, $('oTitle').value, $('oDesc').value].join(' ').toLowerCase();
+    if (/\b(car|cars|auto|vehicle|bmw|audi|mercedes|porsche|tesla|suv)\b|автомобил|автокъща|кола|коли/.test(txt))return 'automotive';
+    if (/\b(motorcycle|motorbike|scooter)\b|мотоциклет|мотор/.test(txt))return 'motorcycles';
+    if (/\b(apartment|real estate|property)\b|имот|апартамент/.test(txt))return 'realestate';
+    if (/\b(dress|shirt|fashion|clothing|sneaker)\b|дрех|обув|рокл/.test(txt))return 'fashion';
+    if (/\b(phone|computer|laptop|electronics)\b|телефон|лаптоп|компютър/.test(txt))return 'electronics';
+    if (/\b(cosmetic|perfume|beauty)\b|козметик|парфюм/.test(txt))return 'beauty';
+    if (/\b(food|restaurant|bakery|cake)\b|храна|пекарн|сладкарн/.test(txt))return 'food';
+    return 'general';
+  }
+  function goCollectSpecs(){
+    const o={}; document.querySelectorAll('#oSpecFields [data-spec]').forEach(el=>{const v=el.value.trim();if(v)o[el.dataset.spec]=v.slice(0,70)});return o;
+  }
+  function goRenderSpecFields(values){
+    const old={...goCollectSpecs(),...(values||{})},fields=GO_SPEC_FIELDS[goOfferSector()]||GO_SPEC_FIELDS.general;
+    $('oSpecFields').innerHTML=fields.map(([k,label])=>'<label style="font-size:12px;font-weight:600">'+esc(label)+'<input data-spec="'+k+'" type="text" maxlength="70" value="'+esc(old[k]||'')+'" placeholder="Optional" style="display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#111827"></label>').join('');
+  }
+  function goResetSpecs(){ $('oSpecSector').value='auto';goRenderSpecFields({brand:'',body:'',fuel:'',transmission:'',year:'',power:'',mileage:'',size:'',color:'',material:'',location:'',type:'',rooms:'',area:'',storage:'',condition:'',diet:''}); }
+  goRenderSpecFields();
   function resetOfferForm() {
     S.editId = null; S.editImages = [];
     ['oTitle', 'oPrice', 'oDesc', 'oLong', 'oImg'].forEach(i => $(i).value = '');
-    clearPhoto(); renderExisting();
+    clearPhoto(); renderExisting(); goResetSpecs();
     $('oRange').style.display = 'none';
     $('addOfferBtn').textContent = 'Add offer';
     $('cancelEditBtn').style.display = 'none';
@@ -3956,6 +3994,7 @@ async function deleteSite(id) {
     S.editId = id; S.editImages = offerImgs(o).slice();
     $('oTitle').value = o.title || ''; $('oPrice').value = o.price != null ? o.price : '';
     $('oDesc').value = o.description || ''; $('oLong').value = o.longDescription || '';
+    goRenderSpecFields(o.specifications || {});
     $('oImg').value = ''; $('oImgPrev').innerHTML = '';
     renderExisting();
     $('addOfferBtn').textContent = 'Save changes';
@@ -3986,7 +4025,7 @@ async function deleteSite(id) {
         if (!res.ok) throw new Error(up.message || 'Image upload failed');
         images.push(up.url);
       }
-      const payload = { title, price, description: $('oDesc').value.trim(), longDescription: $('oLong').value.trim(), images };
+      const payload = { title, price, description: $('oDesc').value.trim(), longDescription: $('oLong').value.trim(), specifications: goCollectSpecs(), images };
       if (editing) {
         const d = await api('/api/offers/' + S.editId, { method: 'PUT', body: JSON.stringify(payload) });
         S.offers = S.offers.map(o => o._id === S.editId ? d.offer : o);

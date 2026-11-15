@@ -189,6 +189,7 @@ const OfferSchema = new mongoose.Schema({
   imageUrl: String,                      // cover photo (always the first gallery image)
   images: { type: [String], default: [] }, // gallery: links to /api/image/<id> (the bytes live in the Image collection)
   longDescription: String,
+  specifications: { type: mongoose.Schema.Types.Mixed, default: {} },
   salePrice: { type: Number, default: 0 },
   variants: { type: [{ name: String, price: Number, stock: Number, _id: false }], default: [] },
   order: { type: Number, default: 0 },
@@ -938,6 +939,15 @@ app.put('/api/site/slug', authenticateToken, async (req, res) => {
   }
 });
 
+// Optional searchable product specifications for category-specific storefront filters.
+const GO_SPEC_KEYS = ['brand','body','fuel','transmission','year','power','mileage','size','color','material','location','type','rooms','area','storage','condition','diet'];
+function goCleanSpecifications(raw){
+  const result={};
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return result;
+  for(const key of GO_SPEC_KEYS){const v=raw[key];if((typeof v==='string'||typeof v==='number')&&String(v).trim())result[key]=String(v).trim().slice(0,70);}
+  return result;
+}
+
 // ---------- Offers ----------
 app.get('/api/offers', authenticateToken, async (req, res) => {
   const offers = await Offer.find({ userId: req.user.id }).sort({ order: 1, createdAt: 1 });
@@ -970,6 +980,7 @@ app.post('/api/offers', authenticateToken, async (req, res) => {
       price: p,
       description: String(description || '').slice(0, 500),
       longDescription: String(longDescription || '').slice(0, 4000),
+      specifications: goCleanSpecifications(req.body && req.body.specifications),
       images: gallery,
       imageUrl: gallery[0] || null,
       order: existing
@@ -1011,6 +1022,7 @@ app.put('/api/offers/:id', authenticateToken, async (req, res) => {
     }
     if (b.description !== undefined) set.description = String(b.description).slice(0, 500);
     if (b.longDescription !== undefined) set.longDescription = String(b.longDescription).slice(0, 4000);
+    if (b.specifications !== undefined) set.specifications = goCleanSpecifications(b.specifications);
     if (b.images !== undefined) { set.images = cleanImages(b.images); set.imageUrl = set.images[0] || null; }
     else if (b.imageUrl !== undefined) set.imageUrl = /^https:\/\//.test(b.imageUrl || '') ? b.imageUrl : null;
     const offer = await Offer.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, { $set: set }, { new: true });
@@ -3497,6 +3509,33 @@ body .card .in a:hover{text-decoration:underline!important}
 @media(max-width:680px){body .bar{left:8px!important;right:8px!important;top:8px!important}body .bar nav a{padding:7px 10px!important}}
 </style>`;
 
+// The AI site must own its public navigation across ALL routes, not only its homepage.
+function goAiActive(user) { return !!(user.aiGenerated && user.aiPage && user.aiPage.html); }
+function goAiNav(user, page='') {
+  const slug=encodeURIComponent(String(user.slug||'')), root='/site/'+slug;
+  const name=esc(user.siteName||'My website');
+  const category=String(user.category||'').toLowerCase();
+  const catalog=/car|auto|vehicle|motor|кола|коли|автомоб/i.test(category)?'Vehicles':/real.?estate|имот|property/i.test(category)?'Properties':/fashion|clothing|дрех|обув/i.test(category)?'Collection':/beauty|козмет/i.test(category)?'Products':'Explore';
+  const links=[['Home',root],[catalog,root+'/offers'],['Saved',root+'/favorites'],['Profile',root+'/profile'],['Messages',root+'/messages']];
+  const aiCss=String((user.aiPage&&user.aiPage.css)||'');
+  const right=/text-align\s*:\s*right/i.test(aiCss)?'go-ai-nav-right':'';
+  return `<header class="go-ai-public-nav ${right}"><a class="go-ai-nav-brand" href="${root}">${name}</a><nav aria-label="Main navigation">${links.map(([label,url])=>`<a class="${(page==='favorites'&&label==='Saved')||(page==='profile'&&label==='Profile')||(page==='messages'&&label==='Messages')||(page==='offers'&&label===catalog)?'current':''}" href="${url}">${label}</a>`).join('')}</nav></header>`;
+}
+function goAiInnerPagesCss(user) {
+  if(!goAiActive(user))return '';
+  const p=user.aiPage.palette||{};
+  const color=(k,f)=>/^#[0-9a-f]{6}$/i.test(String(p[k]||''))?p[k]:f;
+  const bg=color('bg','#0b1018'),panel=color('panel','#202633'),ink=color('text','#f5f7fb'),accent=color('a','#f97316');
+  return `<style id="go-ai-inner-pages">:root{--a:${accent};--bg:${bg};--panel:${panel};--text:${ink};--ink:${accent};--mute:color-mix(in srgb,${ink} 68%,transparent);--soft:${ink};--line:color-mix(in srgb,${ink} 20%,transparent);--nv2:${accent}}
+body{background:var(--bg)!important;color:var(--text)!important;font-family:Inter,system-ui,sans-serif}
+body .go-ai-public-nav{position:relative!important;z-index:75;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:20px clamp(18px,5vw,85px);background:color-mix(in srgb,var(--bg) 84%,transparent);border-bottom:1px solid var(--line);backdrop-filter:blur(22px)}
+.go-ai-public-nav a{color:var(--text)!important;text-decoration:none!important;font-weight:650;white-space:nowrap}.go-ai-public-nav .go-ai-nav-brand{font-size:clamp(19px,2vw,26px);font-weight:850;letter-spacing:-.04em}.go-ai-public-nav nav{display:flex;gap:clamp(5px,1.5vw,22px);flex-wrap:wrap;align-items:center}.go-ai-public-nav nav a{display:inline-flex;padding:10px 12px;border:1px solid transparent;border-radius:10px;font-size:14px}.go-ai-public-nav nav a.current,.go-ai-public-nav nav a:hover{border-color:var(--line);background:var(--panel);color:var(--a)!important}
+body .wrap,body .container,body .profile-wrap{color:var(--text)}body .wrap h1,body .wrap h2,body .wrap h3,body .wrap p,body .wrap a,body .wrap .sub,body footer{color:var(--text)}body .wrap .sub,body .wrap .crumb{opacity:.75}body footer{background:var(--bg)!important;color:var(--text)!important;border-top:1px solid var(--line)!important}
+body .sp-hero,body .sp-about,body .sp-review-summary,body .sp-review-list,body .mside,body .mmain,body .msgr,body .profile-card,body .seller-hero,body .seller-card,body .panel,body .msg-layout,body .msg-list,body .msg-thread,body .p-card,body .review-card,body .info-card,body .card{background:var(--panel)!important;color:var(--text)!important;border-color:var(--line)!important}body .sp-tabs{background:var(--bg)!important;border-color:var(--line)!important}body .sp-eyebrow{color:var(--a)!important}body .sp-primary{background:var(--a)!important;color:${goAiTextOn(accent)}!important}body .sp-btn{border-color:var(--line)}body .sp-section-head h2,body .sp-intro h1,body .sp-about h3{color:var(--text)!important}body input,body textarea,body select{color:var(--text);background:var(--panel);border-color:var(--line)}body input::placeholder,body textarea::placeholder{color:var(--text);opacity:.65}body .cta,body .btn-primary{background:var(--a)!important;color:${goAiTextOn(accent)}!important}
+@media(max-width:760px){.go-ai-public-nav{padding:16px!important}.go-ai-public-nav nav{width:100%;overflow-x:auto;flex-wrap:nowrap}.go-ai-public-nav nav a{font-size:12px;padding:8px}}
+</style>`;
+}
+
 function pageShell(user, { title, desc, body, cls, page }) {
   const t = THEMES[user.theme] || THEMES.gold;
   const f = FONTS[user.font] || FONTS.sans;
@@ -3532,7 +3571,7 @@ body #goOfferGrid{gap:22px!important}
 </style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
-${user.aiGenerated && user.aiPage && user.aiPage.html && page === 'home' ? '' : GO_PUBLIC_LIGHT_FIX_CSS}
+${user.aiGenerated && user.aiPage && user.aiPage.html && page === 'home' ? '' : GO_PUBLIC_LIGHT_FIX_CSS}${page !== 'home' ? goAiInnerPagesCss(user) : ''}
 ${GD.freeHtml(D, page)}
 <script type="application/json" id="go-design">${JSON.stringify(D || {}).replace(/</g, '\\u003c')}</script><script>${GO_APPLY_JS}</script>${studio ? `<script>(${goStudioClient.toString()})(${goDesignCore.toString()})</script>` : ''}
 ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
@@ -3899,6 +3938,7 @@ const PHONE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9
 const PIN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
 function siteBar(user, kind) {
+  if(goAiActive(user))return goAiNav(user,kind==='fav'?'favorites':kind==='msg'?'messages':kind);
   const s = esc(user.slug);
   const first = kind === 'home'
     ? `<a class="hide-m" href="/site/${s}/offers">Offers</a><a class="hide-m" href="#about">About</a>`
@@ -4344,6 +4384,7 @@ const SITE_CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
   "font-src https://fonts.gstatic.com",
   "img-src 'self' data: https:",
+  "media-src 'self' https:",
   "frame-src 'self' https://www.google.com",
   "form-action 'self'",
   "base-uri 'self'"
@@ -4436,18 +4477,86 @@ app.get('/site/:slug', async (req, res) => {
 });
 
 
+// Category-aware storefront facets. Facts come only from an offer's saved specifications
+// or a recognizable value in its title/description; unknown values are never invented.
+const GO_FACET_SECTORS = {
+  automotive: [ ['brand','Brand'],['body','Body type'],['fuel','Fuel'],['transmission','Transmission'],['year','Model year'],['power','Power (hp)'],['mileage','Mileage (km)'],['color','Color'],['condition','Condition'] ],
+  motorcycles: [ ['brand','Brand'],['body','Type'],['fuel','Fuel'],['year','Model year'],['power','Power (hp)'],['mileage','Mileage (km)'] ],
+  fashion: [ ['brand','Brand'],['size','Size'],['color','Color'],['material','Material'] ],
+  realestate: [ ['location','Location'],['type','Property type'],['rooms','Rooms'],['area','Area (m²)'] ],
+  electronics: [ ['brand','Brand'],['storage','Storage'],['color','Color'],['condition','Condition'] ],
+  beauty: [ ['brand','Brand'],['type','Product type'],['size','Size'],['color','Color'] ],
+  food: [ ['type','Type'],['size','Size'],['diet','Dietary'] ],
+  general: [ ['brand','Brand'],['size','Size'],['color','Color'],['condition','Condition'] ]
+};
+function goCatalogSector(user, offers) {
+  // AI-generated sites can retain a stale account category (e.g. Barber for a car shop).
+  // Prioritize actual offer descriptions and the AI-generated website brief.
+  const offerText=offers.map(o=>[o.title,o.description,o.longDescription].join(' ')).join(' ').toLowerCase().slice(0,5000);
+  const siteText=[user.siteName,user.sellerBio,user.aiPage&&String(user.aiPage.html||'').replace(/<[^>]*>/g,' ').slice(0,1800)].join(' ').toLowerCase();
+  const all=offerText+' '+siteText;
+  const has=re=>re.test(all);
+  if(has(/\b(car|cars|automotive|vehicle|vehicles|sedan|suv|bmw|mercedes|audi|porsche|tesla|volkswagen|car dealership|autodealer)\b|автомобил|коли|автокъща|кола/))return 'automotive';
+  if(has(/\b(motorcycle|motorbike|bikes|scooter)\b|мотоциклет|мотори/))return 'motorcycles';
+  if(has(/\b(apartment|property|properties|real estate|villa|house for sale)\b|недвижим|апартамент|имот/))return 'realestate';
+  if(has(/\b(clothing|fashion|dress|shirt|sneaker|hoodie|jacket|apparel)\b|дрех|обув|рокл/))return 'fashion';
+  if(has(/\b(phone|laptop|computer|smartphone|tablet|electronics|gaming pc)\b|телефон|лаптоп|компютър|електроник/))return 'electronics';
+  if(has(/\b(cosmetics|skincare|perfume|makeup|beauty)\b|козметик|парфюм/))return 'beauty';
+  if(has(/\b(bakery|restaurant|pizza|cake|food|coffee)\b|храна|сладкарниц|пекарн/))return 'food';
+  return 'general';
+}
+function goOfferFacets(offer, sector) {
+  const raw=[offer.title,offer.description,offer.longDescription].filter(Boolean).join(' ');
+  const val=String(raw), low=val.toLowerCase(), saved=(offer.specifications&&typeof offer.specifications==='object'&&!Array.isArray(offer.specifications))?offer.specifications:{};
+  const a={};
+  const allowed=new Set((GO_FACET_SECTORS[sector]||GO_FACET_SECTORS.general).map(([k])=>k));
+  for(const k of allowed){const v=saved[k];if(typeof v==='string'&&v.trim())a[k]=v.trim().slice(0,70);else if(typeof v==='number'&&Number.isFinite(v)&&v>=0)a[k]=String(v);}
+  const pick=(k,re,transform=m=>m[1])=>{if(!a[k]){const m=val.match(re);if(m)a[k]=String(transform(m)).slice(0,70)}};
+  if(allowed.has('brand')){
+    if(sector==='automotive'||sector==='motorcycles'||sector==='electronics')pick('brand',/\b(mercedes(?:-benz)?|bmw|audi|porsche|tesla|volkswagen|vw|toyota|ford|honda|renault|peugeot|opel|skoda|volvo|hyundai|kia|nissan|mazda|lexus|ferrari|lamborghini|bentley|rolls.royce|ducati|yamaha|kawasaki|suzuki|apple|samsung|lenovo|asus|dell|hp|sony)\b/i,m=>m[1]);
+  }
+  if(sector==='automotive'||sector==='motorcycles'){
+    pick('fuel',/\b(diesel|petrol|gasoline|electric|hybrid|lpg|cng)\b|\b(дизел|бензин|електрическ\w*|хибрид\w*)\b/i,m=>m[1]||m[2]);
+    if(allowed.has('transmission'))pick('transmission',/\b(automatic|manual|автоматик|ръчн\w*)\b/i);
+    pick('power',/(\d{2,4})\s*(?:hp|bhp|horsepower|к\.?\s*с\.?|конски\s+сили)\b/i);
+    pick('mileage',/(\d[\d\s,.]{0,9})\s*(?:km|км)\b/i,m=>m[1].replace(/\D/g,''));
+    pick('year',/\b(19[8-9]\d|20[0-3]\d)\b/);
+    if(allowed.has('body'))pick('body',/\b(SUV|sedan|coupe|hatchback|wagon|convertible|pickup|van|roadster|touring|sportbike|cruiser|scooter)\b|\b(седан|джип|купе|комби|кабриолет)\b/i,m=>m[1]||m[2]);
+  }
+  if(sector==='fashion'||sector==='beauty'||sector==='food'||sector==='general'){
+    pick('size',/\b(XXXL|XXL|XL|XS|S|M|L|\d{2,3}\s*(?:ml|g|kg|l))\b/i,m=>m[1].toUpperCase());
+    pick('color',/\b(black|white|red|blue|green|pink|purple|brown|beige|grey|gray|gold|silver|черен|бял|червен|син|зелен|розов|лилав|кафяв|бежов|сив)\b/i);
+  }
+  if(sector==='realestate'){
+    pick('rooms',/(\d{1,2})\s*(?:rooms?|bedrooms?|стаи|стайни|спални)/i);
+    pick('area',/(\d{2,5})\s*(?:m2|m²|кв\.?\s*м)/i);
+  }
+  if(sector==='electronics')pick('storage',/(\d{2,4})\s*(GB|TB)\b/i,m=>m[1]+' '+m[2].toUpperCase());
+  if(!a.condition){if(/\b(new|brand new|ново|нов)\b/i.test(low))a.condition='New';else if(/\b(used|pre.?owned|употребяван|втора употреба)\b/i.test(low))a.condition='Used';}
+  return a;
+}
+function goCatalogFacetConfig(sector, offers){
+  const rows=offers.map(o=>goOfferFacets(o,sector));
+  // Show only filters with at least one real value. Every site always gets min/max price.
+  const defs=GO_FACET_SECTORS[sector]||GO_FACET_SECTORS.general;
+  return {rows,fields:defs.map(([key,label])=>({key,label,values:[...new Set(rows.map(r=>r[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).slice(0,100)}))};
+}
+
 function renderOffersShop(user, offers) {
   const slug = esc(user.slug), seller = esc(sellerName(user)), brand = esc(user.siteName || '');
   const cat = esc(user.categoryLabel || user.category || 'General');
   const stockMap = user._stockMap || {};
-  const cards = offers.map(o => {
+  const sector = goCatalogSector(user, offers);
+  const facetConfig = goCatalogFacetConfig(sector, offers);
+  const cards = offers.map((o, index) => {
     const g = galleryOf(o), id = String(o._id);
     const tracked = Object.prototype.hasOwnProperty.call(stockMap, id);
     const qty = tracked ? Number(stockMap[id]) : null;
     const sale = o.salePrice > 0 ? o.salePrice : 0;
     const price = sale || o.price;
     const out = qty === 0;
-    return `<a class="pc" href="/site/${slug}/offer/${id}" data-t="${esc(String(o.title || '').toLowerCase())} ${esc(String(o.description || '').toLowerCase())}" data-p="${Number(price) || 0}" data-n="${esc(String(o.title || '').toLowerCase())}" data-out="${out ? 1 : 0}">
+    const facets = facetConfig.rows[index] || {};
+    return `<a class="pc" href="/site/${slug}/offer/${id}" data-t="${esc(String(o.title || '').toLowerCase())} ${esc(String(o.description || '').toLowerCase())}" data-p="${Number(price) || 0}" data-n="${esc(String(o.title || '').toLowerCase())}" data-out="${out ? 1 : 0}" data-spec="${esc(JSON.stringify(facets))}">
   <div class="pi">${g.length ? `<img src="${esc(g[0])}" alt="${esc(o.title)}" loading="lazy">` : (goAiEditorialImage([o.title,user.category,user.siteName].join(' '),offers.findIndex(x=>String(x._id)===id)) ? `<img src="${esc(goAiEditorialImage([o.title,user.category,user.siteName].join(' '),offers.findIndex(x=>String(x._id)===id)))}" alt="" loading="lazy">` : '<div class="go-product-empty" aria-label="Product photo not uploaded"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="10" width="34" height="28" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="19" cy="19" r="3" fill="currentColor"/><path d="M10 34l10-10 7 7 5-5 7 8" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>')}<span class="st ${out ? 'o' : ''}">${out ? 'Out of stock' : 'In stock'}</span><button type="button" class="hb" data-id="${id}" aria-label="Save" aria-pressed="false">&#9825;</button></div>
   <div class="pb"><h3>${esc(o.title)}</h3><div class="pr"><b>${eur(price)}</b>${sale && o.price > sale ? `<s>${eur(o.price)}</s>` : ''}</div>
   <dl><div><dt>Category</dt><dd>${cat}</dd></div><div><dt>Brand</dt><dd>${brand}</dd></div></dl>
@@ -4461,7 +4570,7 @@ function renderOffersShop(user, offers) {
 .sb a{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;color:#4b5563;text-decoration:none;font-size:14px;font-weight:600}.sb a:hover{background:#f3f4f6}.sb a.on{background:#111827;color:#fff}
 .mn{flex:1;min-width:0;padding:22px 28px}.tp{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:20px}.tp h1{font-size:24px;margin:0 auto 0 0}
 .sr{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:0 14px;height:44px;min-width:260px}.sr input{border:0;outline:0;flex:1;font:inherit;background:transparent}
-.fl{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}.fl select,.fl button{height:40px;border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:0 14px;font:inherit;font-size:14px;cursor:pointer}.fl button.on{background:#111827;color:#fff;border-color:#111827}
+.fl{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}.go-price-range{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.go-price-range label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}.go-price-range input{width:105px;height:40px;border:1px solid #e5e7eb;background:#fff;color:#111827;border-radius:12px;padding:0 10px;font:inherit;font-size:14px}.go-filter{max-width:190px}.go-filter:disabled{opacity:.5;cursor:not-allowed}.go-filter:focus-visible,.go-price-range input:focus-visible{outline:2px solid #4c80ed;outline-offset:2px}.fl select,.fl button{height:40px;border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:0 14px;font:inherit;font-size:14px;cursor:pointer}.fl button.on{background:#111827;color:#fff;border-color:#111827}
 .gr{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}.gr.list{grid-template-columns:1fr}
 .pc{background:#fff;border-radius:20px;padding:12px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:12px;border:1px solid #eef0f3;transition:.15s}.pc:hover{box-shadow:0 10px 30px #11182714;transform:translateY(-2px)}
 .gr.list .pc{flex-direction:row;align-items:center}.gr.list .pi{width:160px;flex:none}
@@ -4480,22 +4589,24 @@ dl{margin:10px 0;display:grid;gap:4px;font-size:13px}dl div{display:flex;justify
   const aiCatalogCss=ap ? `
 :root{--shop-bg:${safeColor(ap.bg,'#0a0c11')};--shop-panel:${safeColor(ap.panel,'#191e28')};--shop-ink:${safeColor(ap.text,'#f4f6fa')};--shop-accent:${safeColor(ap.a,'#ff6a22')}}
 body{background:var(--shop-bg);color:var(--shop-ink)}.sb{background:var(--shop-panel);border-color:#ffffff18}.sb a{color:var(--shop-ink);opacity:.85}.sb a:hover,.sb a.on{background:var(--shop-accent);color:#101014;opacity:1}.sb small{color:var(--shop-ink);opacity:.5}
-.sb .lg i{background:var(--shop-accent);color:#101014}.sr,.fl select,.fl button{background:var(--shop-panel);color:var(--shop-ink);border-color:#ffffff29}.sr input{color:var(--shop-ink)}.sr input::placeholder{color:var(--shop-ink);opacity:.6}.fl button.on{background:var(--shop-accent);color:#111;border-color:var(--shop-accent)}
+.sb .lg i{background:var(--shop-accent);color:#101014}.sr,.fl select,.fl button{background:var(--shop-panel);color:var(--shop-ink);border-color:#ffffff29}.sr input{color:var(--shop-ink)}.sr input::placeholder{color:var(--shop-ink);opacity:.6}.go-price-range input{background:var(--shop-panel);color:var(--shop-ink);border-color:#ffffff29}.fl button.on{background:var(--shop-accent);color:#111;border-color:var(--shop-accent)}
 .pc{background:var(--shop-panel);color:var(--shop-ink);border-color:#ffffff24;border-radius:17px;padding:10px;gap:15px}.pc:hover{box-shadow:0 20px 54px #0008;border-color:var(--shop-accent)}.pi{aspect-ratio:16/10;background:#11141c;border-radius:12px}.pi img{object-fit:cover}.pb{padding:4px 5px 8px}.pb h3{color:var(--shop-ink);font-size:17px;line-height:1.3;overflow-wrap:anywhere}.pr b{color:var(--shop-accent)}.pr s,.qty,.sn,dt{color:var(--shop-ink);opacity:.65}.pf{border-color:#ffffff20}.av{background:var(--shop-accent);color:#111}.no{color:var(--shop-ink)}
 .st{left:12px;top:12px;z-index:4}.hb{z-index:4}.pi .ph-art{height:100%;overflow:hidden}.pi .ph-art strong{font-size:clamp(12px,2vw,18px);max-width:70%;overflow-wrap:anywhere}
 @media(max-width:820px){.sb{background:var(--shop-panel);border-color:#ffffff29}}` : '';
-  const js = `(function(){var q=document.getElementById('q'),g=document.getElementById('gr'),cs=[].slice.call(g.children),no=document.getElementById('no'),so=document.getElementById('so'),ao=document.getElementById('ao'),K='fav:${String(user.slug).replace(/[^\w-]/g, '')}';
+  const aiShopNavCss=goAiActive(user)?`<style id="go-ai-shop-nav-styles">body{display:flex;flex-direction:column!important}.sb{display:none!important}.mn{width:min(100%,1580px);margin:0 auto;padding:30px clamp(16px,4vw,64px)}.go-ai-public-nav{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:17px clamp(16px,4vw,64px);background:var(--shop-panel);border-bottom:1px solid #ffffff29}.go-ai-public-nav .go-ai-nav-brand{font-size:clamp(20px,2vw,28px);font-weight:850;text-decoration:none;color:var(--shop-ink)}.go-ai-public-nav nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.go-ai-public-nav nav a{font-weight:650;padding:10px 14px;border-radius:10px;text-decoration:none;color:var(--shop-ink)}.go-ai-public-nav nav a:hover,.go-ai-public-nav nav a.current{background:var(--shop-accent);color:#111}.tp h1{font-size:clamp(25px,3vw,42px)}.pc{overflow:hidden}.pc .pi{aspect-ratio:16/10}.pc .pb{min-width:0}@media(max-width:680px){.go-ai-public-nav nav{width:100%;overflow-x:auto;flex-wrap:nowrap}.go-ai-public-nav nav a{white-space:nowrap;font-size:12px}.mn{padding:20px 14px}} </style>`:'';
+  const js = `(function(){var q=document.getElementById('q'),g=document.getElementById('gr'),cs=[].slice.call(g.children),no=document.getElementById('no'),so=document.getElementById('so'),ao=document.getElementById('ao'),min=document.getElementById('priceMin'),max=document.getElementById('priceMax'),facets=[].slice.call(document.querySelectorAll('.go-filter')),K='fav:${String(user.slug).replace(/[^\w-]/g, '')}';
 function ld(){try{return JSON.parse(localStorage.getItem(K)||'[]')}catch(e){return[]}}function sv(a){try{localStorage.setItem(K,JSON.stringify(a))}catch(e){}}
-function run(){var t=q.value.trim().toLowerCase(),n=0;var arr=cs.slice();var m=so.value;if(m==='pa')arr.sort(function(a,b){return a.dataset.p-b.dataset.p});if(m==='pd')arr.sort(function(a,b){return b.dataset.p-a.dataset.p});if(m==='n')arr.sort(function(a,b){return a.dataset.n<b.dataset.n?-1:1});arr.forEach(function(c){var ok=(!t||c.dataset.t.indexOf(t)>-1)&&(!ao.classList.contains('on')||c.dataset.out==='0');c.style.display=ok?'':'none';if(ok)n++;g.appendChild(c)});no.style.display=n?'none':'block';document.getElementById('cnt').textContent=n+' products'}
-q.oninput=run;so.onchange=run;ao.onclick=function(){ao.classList.toggle('on');run()};
+function run(){var t=q.value.trim().toLowerCase(),n=0;var arr=cs.slice();var m=so.value;if(m==='pa')arr.sort(function(a,b){return a.dataset.p-b.dataset.p});if(m==='pd')arr.sort(function(a,b){return b.dataset.p-a.dataset.p});if(m==='n')arr.sort(function(a,b){return a.dataset.n<b.dataset.n?-1:1});arr.forEach(function(c){var price=Number(c.dataset.p),lo=min.value.trim()===''?null:Number(min.value),hi=max.value.trim()===''?null:Number(max.value),spec={};try{spec=JSON.parse(c.dataset.spec||'{}')}catch(e){}var matchFacets=facets.every(function(sel){return !sel.value||String(spec[sel.dataset.key]||'').toLowerCase()===sel.value.toLowerCase()});var ok=(!t||c.dataset.t.indexOf(t)>-1)&&(!ao.classList.contains('on')||c.dataset.out==='0')&&(lo===null||price>=lo)&&(hi===null||price<=hi)&&matchFacets;c.style.display=ok?'':'none';if(ok)n++;g.appendChild(c)});no.style.display=n?'none':'block';document.getElementById('cnt').textContent=n+' products'}
+q.oninput=run;so.onchange=run;min.oninput=run;max.oninput=run;facets.forEach(function(f){f.onchange=run});ao.onclick=function(){ao.classList.toggle('on');run()};
 document.getElementById('gv').onclick=function(){g.classList.remove('list')};document.getElementById('lv').onclick=function(){g.classList.add('list')};
 var f=ld();[].forEach.call(document.querySelectorAll('.pi img'),function(im){im.addEventListener('error',function(){im.style.display='none';im.parentNode.classList.add('go-image-error')});if(im.complete&&!im.naturalWidth){im.style.display='none';im.parentNode.classList.add('go-image-error')}});[].forEach.call(document.querySelectorAll('.hb'),function(b){if(f.indexOf(b.dataset.id)>-1){b.classList.add('on');b.innerHTML='&#9829;'}b.onclick=function(e){e.preventDefault();e.stopPropagation();var a=ld(),i=a.indexOf(b.dataset.id);if(i>-1){a.splice(i,1);b.classList.remove('on');b.innerHTML='&#9825;'}else{a.push(b.dataset.id);b.classList.add('on');b.innerHTML='&#9829;'}sv(a)}});run()})();`;
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offers — ${brand}</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"><style>${css}
-${aiCatalogCss}</style></head><body>
+${aiCatalogCss}</style>${aiShopNavCss}</head><body>
+${goAiActive(user)?goAiNav(user,'offers'): ''}
 <aside class="sb"><div class="lg"><i>${esc(initials(user.siteName))}</i>${brand}</div><small>Menu</small>
 <a class="on" href="/site/${slug}/offers">&#9638; Products</a><a href="/site/${slug}">&#8962; Home</a><a href="/site/${slug}/favorites">&#9825; Saved</a><a href="/site/${slug}/messages">&#9993; Messages</a><a href="/site/${slug}/profile">&#9786; Seller profile</a>${user.brochure && user.brochure.enabled ? `<a href="/site/${slug}/brochure">&#9776; Brochure</a>` : ''}</aside>
 <div class="mn"><div class="tp"><h1>Products <span id="cnt" style="font-size:14px;color:#9ca3af;font-weight:600"></span></h1><label class="sr">&#128269;<input id="q" type="search" placeholder="Search products" autocomplete="off"></label></div>
-<div class="fl"><select id="so" aria-label="Sort"><option value="">Newest</option><option value="pa">Price: low to high</option><option value="pd">Price: high to low</option><option value="n">Name A–Z</option></select><button id="ao" type="button">In stock only</button><button id="gv" type="button">&#9638; Grid</button><button id="lv" type="button">&#9776; List</button></div>
+<div class="fl"><div class="go-price-range" role="group" aria-label="Price range in euro"><label>Min € <input type="number" id="priceMin" min="0" step="0.01" inputmode="decimal" placeholder="Min price" aria-label="Minimum price in euros"></label><label>Max € <input type="number" id="priceMax" min="0" step="0.01" inputmode="decimal" placeholder="Max price" aria-label="Maximum price in euros"></label></div>${facetConfig.fields.map(f=>`<select class="go-filter" data-key="${f.key}" aria-label="Filter by ${esc(f.label)}" ${f.values.length ? '' : 'disabled title="Add this specification to an offer to enable filtering"'}><option value="">${esc(f.label)}: All</option>${f.values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')}</select>`).join('')}<select id="so" aria-label="Sort"><option value="">Newest</option><option value="pa">Price: low to high</option><option value="pd">Price: high to low</option><option value="n">Name A–Z</option></select><button id="ao" type="button">In stock only</button><button id="gv" type="button">&#9638; Grid</button><button id="lv" type="button">&#9776; List</button></div>
 <div class="gr" id="gr">${cards}</div><p class="no" id="no">${offers.length ? 'No matching products.' : 'No offers yet. Please check back soon.'}</p></div><script>${js}</script></body></html>`;
 }
 
@@ -4799,7 +4910,7 @@ function renderAiSite(user, offers, sent) {
   }
   const hadOffers = html.includes('{{OFFERS}}');
   const offersCta = `${offersHtml}<div style="padding:24px 18px;text-align:center"><a class="goa-btn" href="/site/${slug}/offers" style="display:inline-flex;gap:8px;padding:16px 30px;border-radius:14px;background:var(--a);color:var(--text);font-weight:700;text-decoration:none">Browse all offers &rarr;</a></div>`;
-  html = html.replace(/href="#offers"/g, `href="/site/${slug}/offers"`).replace(/href="#offers"/g, `href="/site/${slug}/offers"`).replace(/\{\{OFFERS\}\}/g, offersCta).replace(/\{\{FAQ\}\}/g, faqHtml).replace(/\{\{CONTACT\}\}/g, contactHtml);
+  html = html.replace(/href="#offers"/g, `href="/site/${slug}/offers"`).replace(/href="#favorites"/g, `href="/site/${slug}/favorites"`).replace(/href="#profile"/g, `href="/site/${slug}/profile"`).replace(/href="#messages"/g, `href="/site/${slug}/messages"`).replace(/\{\{OFFERS\}\}/g, offersCta).replace(/\{\{FAQ\}\}/g, faqHtml).replace(/\{\{CONTACT\}\}/g, contactHtml);
   if (!hadOffers) html += `<section id="offers" style="padding:40px 18px;max-width:1100px;margin:auto">${offersCta}</section>`;
   const aiSearch = `<div style="max-width:1050px;margin:24px auto;padding:12px"><input id="goAISearch" type="search" placeholder="Search products in any language..." aria-label="Search products" style="width:100%;padding:14px;border:1px solid #bac3d1;border-radius:10px"></div><script>(function(){var i=document.getElementById('goAISearch'),cards=[].slice.call(document.querySelectorAll('.ai-offer')),timer,seq=0;if(!i)return;i.addEventListener('input',function(){clearTimeout(timer);var q=i.value.trim(),v=++seq;if(!q){cards.forEach(x=>x.style.display='');return}timer=setTimeout(async function(){try{var r=await fetch('/site/'+encodeURIComponent(document.body.dataset.slug)+'/search.json?q='+encodeURIComponent(q)),d=await r.json();if(v!==seq)return;var ids=new Set(d.ids);cards.forEach(x=>x.style.display=ids.has(x.getAttribute('href').split('/').pop())?'':'none')}catch(e){}},500)})})();</script>`;
   const credits=((user.aiPage&&user.aiPage.photoCredits)||[]).map(x=>`<span>${esc(x.credit||'Wikimedia Commons')} · ${esc(x.license||'CC license')}${x.page?` · <a href="${esc(x.page)}" target="_blank" rel="noopener noreferrer">source</a>`:''}</span>`).join(' · ');
@@ -5452,6 +5563,29 @@ async function goAiSearchPhoto(query) {
   if(goAiPhotosCache.size>180)goAiPhotosCache.delete(goAiPhotosCache.keys().next().value);
   return photo;
 }
+// Licensed public product video discovery (Wikimedia Commons only). Never claim any
+// discovered video represents an actual seller listing. Only display with attribution.
+const goAiVideoCache=new Map();
+async function goAiSearchVideo(query) {
+  const q=cleanStr(query,90).replace(/[^\p{L}\p{N}\s-]/gu,' ').trim();
+  if(!q)return null;
+  const key=q.toLowerCase(),cached=goAiVideoCache.get(key);
+  if(cached && Date.now()-cached.at<3600000)return cached.result;
+  let found=null;
+  try{
+    const r=await axios.get('https://commons.wikimedia.org/w/api.php',{params:{action:'query',generator:'search',gsrsearch:q+' video',gsrnamespace:6,gsrlimit:12,prop:'imageinfo',iiprop:'url|extmetadata|mime',format:'json'},headers:{'User-Agent':'GoldOfferStudio/1.0 (licensed media discovery)'},timeout:5500});
+    const results=Object.values((r.data&&r.data.query&&r.data.query.pages)||{});
+    for(const item of results){
+      const v=item.imageinfo&&item.imageinfo[0];if(!v)continue;
+      const url=goAiMediaUrl(v.url);
+      const license=String(v.extmetadata&&v.extmetadata.LicenseShortName&&v.extmetadata.LicenseShortName.value||'');
+      if(!url||!/\.(?:webm|mp4|ogv)(?:\?|$)/i.test(url)||!(/^(?:CC|Public domain)/i.test(license)))continue;
+      found={url,type:'video',name:cleanStr(item.title||q,100),credit:cleanStr(String(v.extmetadata&&v.extmetadata.Artist&&v.extmetadata.Artist.value||'Wikimedia Commons').replace(/<[^>]+>/g,''),120),license:cleanStr(license,60),page:goAiMediaUrl(v.descriptionurl||'')};break;
+    }
+  }catch(e){console.warn('Public video discovery unavailable:',String(e.message).slice(0,100))}
+  goAiVideoCache.set(key,{result:found,at:Date.now()});if(goAiVideoCache.size>60)goAiVideoCache.delete(goAiVideoCache.keys().next().value);
+  return found;
+}
 const goAiLayouts=['split','cinematic','editorial','mosaic','minimal','showcase'];
 function goAiLayout(brief, description){
   const request=String(description||'').toLowerCase();
@@ -5529,7 +5663,7 @@ function goAiBuildPage(brief, siteName, description, lang, media = [], photos = 
 
 // Resilient original-design fallback for models that return no JSON/HTML (not a six-template catalog).
 // Content is the AI-written brief; structure, image placement and visual parameters vary per request.
-function goAiResilientPage(brief, name, description, media, photos) {
+function goAiResilientPage(brief, name, description, media, photos, discoveredVideos=[]) {
   const pick = a => a[crypto.randomInt(a.length)];
   const rand = (min,max) => crypto.randomInt(min,max+1);
   const text = (x,n=400) => esc(cleanStr(x||'',n));
@@ -5542,11 +5676,12 @@ function goAiResilientPage(brief, name, description, media, photos) {
   if(requested){p.bg=requested;p.text=goAiTextOn(requested);p.panel=p.text==='#fafbff'?'#1c2331':'#ffffff';}
   else p.text=goAiTextOn(p.bg);
   const imageList=[...(media||[]).filter(x=>x.type==='image'),...(photos||[]).filter(x=>x.url)].slice(0,10);
-  const videoList=(media||[]).filter(x=>x.type==='video');
-  const visualList=[...videoList,...imageList];
+  const videoList=[...(media||[]).filter(x=>x.type==='video'),...(discoveredVideos||[]).filter(x=>x.type==='video')];
+  const visualList=imageList;
   const mediaHtml=visualList.map((m,i)=>m.type==='video'
     ? `<video src="${esc(m.url)}" controls muted playsinline preload="metadata" aria-label="${text(m.name||name,100)}"></video>`
     : `<img src="${esc(m.url)}" alt="${text(m.name||name,100)}" loading="${i?'lazy':'eager'}">`).join('');
+  const videoShowcase=videoList.length ? `<section class="go-r-video-showcase" aria-label="Product video"><p class="go-r-eyebrow">VIDEO SHOWCASE</p><h2>${text(name,110)} — Video</h2>${videoList.slice(0,2).map(v=>`<figure><video src="${esc(v.url)}" controls muted playsinline preload="metadata" aria-label="${text(v.name||name,110)}"></video><figcaption>${text(v.name||'Licensed visual footage',100)} · Preview footage, not necessarily the exact item for sale</figcaption></figure>`).join('')}</section>` : '';
   const sections={
     story:`<section id="about" class="go-r-story"><p class="go-r-eyebrow">${text(brief.eyebrow||brief.category||name,90)}</p><h2>${text(brief.aboutHeading||name,140)}</h2><p>${text(brief.bio||description,700)}</p></section>`,
     benefits:`<section class="go-r-benefits">${(Array.isArray(brief.benefits)?brief.benefits:[]).slice(0,4).map((b,i)=>`<article><small>0${i+1}</small><h3>${text(b.title,100)}</h3><p>${text(b.description,260)}</p></article>`).join('')}</section>`,
@@ -5561,7 +5696,11 @@ function goAiResilientPage(brief, name, description, media, photos) {
   const heroMediaFirst=/photo.*(?:left|first)|снимк.*(?:ляво|първо)/i.test(description) ? true
     : /photo.*right|снимк.*дясно/i.test(description) ? false : !!rand(0,1);
   const heroTitle=text(brief.heroHeadline||name,140);
-  const hero=`<header class="go-r-nav"><a href="#top">${text(name,90)}</a><nav><a href="#about">About</a><a href="#offers">Offers</a><a href="#contact">Contact</a></nav></header><main id="top"><section class="go-r-hero"><div class="go-r-copy"><p class="go-r-eyebrow">${text(brief.category||name,80)}</p><h1>${heroTitle}</h1><p>${text(brief.heroSubheadline||description,400)}</p><a href="#offers" class="go-r-button">${text(brief.offersHeading||'Explore',80)} ↗</a></div><div class="go-r-media">${mediaHtml||'<div class="go-r-abstract" aria-hidden="true"></div>'}</div></section>${order.map(k=>sections[k]).join('')}</main><footer class="go-r-footer">${text(name,100)} <a href="#top">↑</a></footer>`;
+  // When photos exist, use the cinematic image-overlay treatment if the client asks for it.
+  // Otherwise keep a free composition; do not force automotive framing on other sectors.
+  const cinematic=!!imageList.length && /(?:luxur|premium|cinematic|hero|full.?screen|background photo|overla|дизайн.*снимк|лукс|кинематограф|текст.*снимк)/i.test(description);
+  const heroClass=cinematic?' go-r-hero-cinematic':'';
+  const hero=`<header class="go-r-nav"><a href="#top">${text(name,90)}</a><nav><a href="#about">About</a><a href="#offers">Offers</a><a href="#contact">Contact</a></nav></header><main id="top"><section class="go-r-hero${heroClass}"><div class="go-r-copy"><p class="go-r-eyebrow">${text(brief.category||name,80)}</p><h1>${heroTitle}</h1><p>${text(brief.heroSubheadline||description,400)}</p><a href="#offers" class="go-r-button">${text(brief.offersHeading||'Explore',80)} ↗</a></div><div class="go-r-media">${mediaHtml||'<div class="go-r-abstract" aria-hidden="true"></div>'}</div></section>${videoShowcase}${order.map(k=>sections[k]).join('')}</main><footer class="go-r-footer">${text(name,100)} <a href="#top">↑</a></footer>`;
   const radius=rand(0,28),maxW=rand(1040,1440),heroSplit=rand(40,65),size=rand(55,95)/10;
   const font=pick(['Georgia,serif','Arial,Helvetica,sans-serif','Trebuchet MS,Arial,sans-serif','Palatino,Georgia,serif','Verdana,Geneva,sans-serif']);
   const padding=rand(58,118),shift=heroMediaFirst?'1':'2',copyShift=heroMediaFirst?'2':'1';
@@ -5569,22 +5708,25 @@ function goAiResilientPage(brief, name, description, media, photos) {
     `.ai-original *{box-sizing:border-box}.ai-original a{color:inherit}.ai-original h1,.ai-original h2,.ai-original h3{font-family:${font};line-height:1.08;overflow-wrap:break-word}.ai-original p{line-height:1.65}`+
     `.go-r-nav{max-width:${maxW}px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:25px 5%;border-bottom:1px solid currentColor}.go-r-nav>a{font-weight:850;text-decoration:none}.go-r-nav nav{display:flex;gap:18px;font-size:14px}.go-r-nav nav a{text-decoration:none}`+
     `.go-r-hero{max-width:${maxW}px;margin:auto;display:grid;grid-template-columns:${heroSplit}% 1fr;align-items:center;gap:24px;min-height:75svh;padding:40px 5%}.go-r-copy{grid-column:${copyShift};grid-row:1}.go-r-copy h1{font-size:clamp(2.7rem,${size}vw,6.2rem);letter-spacing:-.035em;margin:15px 0 24px}.go-r-copy>p:not(.go-r-eyebrow){font-size:clamp(1.05rem,1.7vw,1.4rem);opacity:.85;max-width:65ch}.go-r-media{grid-column:${shift};grid-row:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}.go-r-media>*:first-child{grid-column:1/-1}.go-r-media img,.go-r-media video{width:100%;height:100%;min-height:170px;max-height:520px;object-fit:cover;border-radius:${radius}px}.go-r-abstract{height:480px;background:radial-gradient(circle at 30% 40%,var(--a),transparent 55%),linear-gradient(135deg,var(--panel),var(--b));border-radius:${radius}px}`+
+    `.go-r-video-showcase{max-width:${maxW}px;margin:30px auto;padding:45px 5%}.go-r-video-showcase h2{font-size:clamp(1.8rem,4vw,3.5rem)}.go-r-video-showcase figure{margin:0}.go-r-video-showcase video{display:block;width:100%;max-height:620px;object-fit:contain;background:#000;border-radius:${radius}px}.go-r-video-showcase figcaption{padding:15px 4px;font-size:.9rem;opacity:.7}`+
+    `.go-r-hero-cinematic{position:relative;isolation:isolate;display:grid;grid-template-columns:1fr;min-height:76svh;overflow:hidden;border-radius:${radius}px;margin-top:18px}.go-r-hero-cinematic .go-r-media{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:-1}.go-r-hero-cinematic .go-r-media:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(3,5,9,.89),rgba(3,5,9,.48) 54%,rgba(3,5,9,.07)),linear-gradient(0deg,rgba(3,5,9,.5),transparent 40%)}.go-r-hero-cinematic .go-r-media img:first-child{width:100%;height:100%;max-height:none;min-height:100%;object-fit:cover;border-radius:0}.go-r-hero-cinematic .go-r-media img:not(:first-child){display:none}.go-r-hero-cinematic .go-r-copy{grid-row:1;grid-column:1;z-index:2;width:min(760px,96%);padding:30px 3%;color:#fff}.go-r-hero-cinematic .go-r-copy h1{color:#fff;text-shadow:0 5px 35px #0009}.go-r-hero-cinematic .go-r-copy>p:not(.go-r-eyebrow){color:#f1f4f9;opacity:1;max-width:52ch}`+
     `.go-r-eyebrow{color:var(--a);text-transform:uppercase;letter-spacing:.15em;font-weight:800;font-size:.78rem}.go-r-button{display:inline-block;background:var(--a);color:${goAiTextOn(p.a)}!important;padding:14px 24px;text-decoration:none;border-radius:${radius}px;margin-top:25px;font-weight:800}`+
     `.go-r-story,.go-r-benefits,.go-r-offers,.go-r-faq,.go-r-contact{max-width:${maxW}px;margin:auto;padding:${padding}px 5%}.ai-original h2{font-size:clamp(2.3rem,5vw,5rem);margin:12px 0 28px}.go-r-story{display:grid;grid-template-columns:1fr 2fr;gap:24px}.go-r-story .go-r-eyebrow{grid-column:1/-1}.go-r-story p:last-child{font-size:1.15rem;max-width:68ch}.go-r-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}.go-r-benefits article{background:var(--panel);padding:30px;border-radius:${radius}px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent)}.go-r-benefits article small{color:var(--a)}.go-r-faq,.go-r-contact{background:var(--panel);border-radius:${radius}px}.go-r-contact{margin-bottom:60px}.go-r-footer{padding:25px 5%;border-top:1px solid currentColor;display:flex;justify-content:space-between}.go-r-footer a{text-decoration:none}`+
-    `@media(max-width:760px){.go-r-nav nav{gap:9px;font-size:12px}.go-r-hero{display:flex;flex-direction:column;min-height:0;padding:50px 5%}.go-r-copy,.go-r-media{width:100%}.go-r-copy{order:1}.go-r-media{order:2}.go-r-copy h1{font-size:clamp(2.5rem,13vw,5rem)}.go-r-story{display:block}.go-r-story,.go-r-benefits,.go-r-offers,.go-r-faq,.go-r-contact{padding:50px 5%}}`;
+    `@media(max-width:760px){.go-r-nav nav{gap:9px;font-size:12px}.go-r-hero{display:flex;flex-direction:column;min-height:0;padding:50px 5%}.go-r-copy,.go-r-media{width:100%}.go-r-copy{order:1}.go-r-media{order:2}.go-r-copy h1{font-size:clamp(2.5rem,13vw,5rem)}.go-r-story{display:block}.go-r-story,.go-r-benefits,.go-r-offers,.go-r-faq,.go-r-contact{padding:50px 5%}.go-r-hero-cinematic{min-height:65svh}.go-r-hero-cinematic .go-r-media{position:absolute;inset:0;width:100%;height:100%;order:0}.go-r-hero-cinematic .go-r-copy{order:1;margin:0;width:100%;padding:30px 4%}}`;
   return {...brief,html:`<div class="ai-original">${hero}</div>`,css,palette:p};
 }
 
 // AI free-design pass: no preset layout names or server-side page grids.
 // The provider produces semantic HTML + authored CSS on every invocation;
 // the server keeps offer / FAQ / contact modules authoritative and safe.
-async function goAiGenerateOriginalDesign({ key, model, name, description, languageName, brief, media, photos }) {
+async function goAiGenerateOriginalDesign({ key, model, name, description, languageName, brief, media, photos, videos=[] }) {
   const colors = brief.palette || {};
   const uploads = (media || []).map((m,i) => ({ id:'user-'+(i+1),type:m.type,url:m.url,name:m.name }));
   const discovered = (photos || []).filter(x=>x&&x.url).map((m,i)=>({id:'photo-'+(i+1),type:'image',url:m.url,credit:m.credit||''}));
-  const supplied = [...uploads,...discovered];
+  const discoveredVideos=(videos||[]).filter(x=>x&&x.url).map((m,i)=>({id:'licensed-video-'+(i+1),type:'video',url:m.url,name:m.name||'Licensed footage',credit:m.credit||'',license:m.license||''}));
+  const supplied = [...uploads,...discovered,...discoveredVideos];
   const userBg = goAiRequestedBg(description);
-  const system = `You are a world-class creative web designer and front-end engineer, NOT a template filler. Design a completely new website for this single customer. You choose the page's HTML DOM architecture, relative placement of blocks, graphics (CSS only), photography layout, navigation, section count/order, typography scale, spacing, radii, gradients, visual rhythm and animations independently every time. NEVER use a standard six-layout catalog, fixed starter structure, or copy the same ordering between customers. Take every explicit instruction in the customer's description literally and as the top priority, including colors, dark/light mode, hero orientation, image placement, product subject, section hierarchy and vibe. If the user asks for black, NEVER override it with white; same for every other specified color. When the client requests a luxury, premium or automotive site, deliver a cinematic art-directed design with substantial real photographic panels from the supplied manifest; dark sophisticated backgrounds, impeccable alignment, generous whitespace, readable listing previews via {{OFFERS}}, sharp typography, refined accent colors, navigation, meaningful content hierarchy. Never use a blank gradient square in place of a provided photo. NEVER fabricate seller inventory, exact vehicle specifications, offers, prices, customer counts, performance claims, awards or functional search systems. When the customer asks for another sector, choose visuals and layout appropriate for that sector, not automotive aesthetics. Treat a reference screenshot as inspiration only, never copy its brand or invented facts. Avoid horizontal overflow, excessive heading width, overlapping badges or text. Make layouts responsive at 375px, 768px and 1440px. Use distinct font stacks from installed web-safe fonts (no remote imports). Write the page copy in ${languageName}. Do not invent prices, addresses, contact data, testimonials or achievements. Only use grounded business facts in the supplied JSON. Return ONE JSON object with exactly 3 top-level keys: "html" (HTML string of complete, meaningful page fragment), "css" (CSS string, namespaced under .ai-original), and "palette" (object with a,b,bg,panel,text as valid six-digit hexadecimal colors). HTML MUST have ONE wrapping <div class="ai-original">, a substantial brand-specific hero, some meaningful sections, and MUST include exactly once each placeholder: {{OFFERS}}, {{FAQ}}, {{CONTACT}} in semantically appropriate parts of HTML. These are injected by the trusted backend: DO NOT create your own fake product cards or contact forms. Include links to #offers, #about and #contact where appropriate; do not link to made-up domains. Asset URLs: use ONLY URLs from the media manifest, and embed each user-uploaded photo/video at least once in an intentional location. Videos use <video src="..." controls muted playsinline preload="metadata"></video> (no scripts). Images use <img src="..." alt="..." loading="lazy">. Absolutely no JavaScript, <script>, <style>, <iframe>, <form>, inline on* handlers, external CSS imports or CDN links. Do not put HTML into CSS. CSS should be vivid, polished, fully responsive and distinctive; use var(--bg), var(--panel), var(--text), var(--a) and var(--b) for brand colors so every explicitly requested color is respected. Do not add global body selectors or !important overrides, use .ai-original scope. Aim for HTML under 12000 characters and CSS under 11000 characters. Output valid JSON only, no markdown.`;
+  const system = `You are a world-class creative web designer and front-end engineer, NOT a template filler. Design a completely new website for this single customer. You choose the page's HTML DOM architecture, relative placement of blocks, graphics (CSS only), photography layout, navigation, section count/order, typography scale, spacing, radii, gradients, visual rhythm and animations independently every time. NEVER use a standard six-layout catalog, fixed starter structure, or copy the same ordering between customers. Take every explicit instruction in the customer's description literally and as the top priority, including colors, dark/light mode, hero orientation, image placement, product subject, section hierarchy and vibe. If the user asks for black, NEVER override it with white; same for every other specified color. When the client requests a luxury, premium or automotive site, deliver a cinematic art-directed design with substantial real photographic panels from the supplied manifest; dark sophisticated backgrounds, impeccable alignment, generous whitespace, readable listing previews via {{OFFERS}}, sharp typography, refined accent colors, navigation, meaningful content hierarchy. Never use a blank gradient square in place of a provided photo. NEVER fabricate seller inventory, exact vehicle specifications, offers, prices, customer counts, performance claims, awards or functional search systems. Use the navigation and menu design as part of the original brand identity rather than a generic GoldOffer menu. Include a readable branded header/nav within your generated HTML and give it a distinctive visual treatment. At least one intentional hero should art-direct text WITH a real supplied photograph (text overlay over an actual photo, with a contrast gradient), if images exist; do not rely only on a tiny photo beside a large heading. When a real video is supplied in the media manifest, include an elegant video showcase using actual <video controls> and a truthful descriptive caption; videos MUST NOT be simulated as playable images. Make careful use of perspective, depth, and subtle motion using CSS only, honor prefers-reduced-motion. Do not claim that stock footage is the exact item for sale. When the customer asks for another sector, choose visuals and layout appropriate for that sector, not automotive aesthetics. Treat a reference screenshot as inspiration only, never copy its brand or invented facts. Avoid horizontal overflow, excessive heading width, overlapping badges or text. Make layouts responsive at 375px, 768px and 1440px. Use distinct font stacks from installed web-safe fonts (no remote imports). Write the page copy in ${languageName}. Do not invent prices, addresses, contact data, testimonials or achievements. Only use grounded business facts in the supplied JSON. Return ONE JSON object with exactly 3 top-level keys: "html" (HTML string of complete, meaningful page fragment), "css" (CSS string, namespaced under .ai-original), and "palette" (object with a,b,bg,panel,text as valid six-digit hexadecimal colors). HTML MUST have ONE wrapping <div class="ai-original">, a substantial brand-specific hero, some meaningful sections, and MUST include exactly once each placeholder: {{OFFERS}}, {{FAQ}}, {{CONTACT}} in semantically appropriate parts of HTML. These are injected by the trusted backend: DO NOT create your own fake product cards or contact forms. Include links to #offers, #about and #contact where appropriate; do not link to made-up domains. Asset URLs: use ONLY URLs from the media manifest, and embed each user-uploaded photo/video at least once in an intentional location. Videos use <video src="..." controls muted playsinline preload="metadata"></video> (no scripts). Images use <img src="..." alt="..." loading="lazy">. Absolutely no JavaScript, <script>, <style>, <iframe>, <form>, inline on* handlers, external CSS imports or CDN links. Do not put HTML into CSS. CSS should be vivid, polished, fully responsive and distinctive; use var(--bg), var(--panel), var(--text), var(--a) and var(--b) for brand colors so every explicitly requested color is respected. Do not add global body selectors or !important overrides, use .ai-original scope. Aim for HTML under 12000 characters and CSS under 11000 characters. Output valid JSON only, no markdown.`;
   const payload={
     model,
     messages:[{role:'system',content:system},{role:'user',content:JSON.stringify({name,description,brief,palette:colors,explicitBackground:userBg||null,media:supplied,designChallenge:crypto.randomBytes(12).toString('hex')})}],
@@ -5606,7 +5748,7 @@ async function goAiGenerateOriginalDesign({ key, model, name, description, langu
     const raw=choice&&choice.message&&choice.message.content;
     const output=typeof raw==='string'?raw:Array.isArray(raw)?raw.map(p=>p&&p.text||'').join(''):'';
     const obj=extractJson(output);
-    const html=obj&&aiCleanHtml(obj.html);
+    let html=obj&&aiCleanHtml(obj.html);
     const css=obj&&aiCleanCss(obj.css);
     diagnostics=choice&&choice.finish_reason||'invalid-json';
     const hasSections=html&&html.includes('{{OFFERS}}')&&html.includes('{{FAQ}}')&&html.includes('{{CONTACT}}');
@@ -5619,14 +5761,22 @@ async function goAiGenerateOriginalDesign({ key, model, name, description, langu
         p[k]=/^#[0-9a-f]{6}$/i.test(v)?v:(k==='bg'?'#0b1018':k==='text'?'#ffffff':k==='panel'?'#202632':'#667eea');
       }
       if(userBg){p.bg=userBg;p.text=goAiTextOn(userBg);}
+      // If an authenticated/licensed demo clip was found but the model omitted it,
+      // place an actual accessible video block; do not render a fake play button.
+      const missingVideo=discoveredVideos.find(v=>!html.includes(v.url));
+      if(missingVideo){
+        const block=`<section class="go-ai-licensed-video" aria-label="Video showcase"><h2>Video showcase</h2><video src="${esc(missingVideo.url)}" controls muted playsinline preload="metadata" aria-label="${esc(missingVideo.name||'Licensed footage')}"></video><p>${esc(missingVideo.name||'Licensed footage')} · Illustrative video, not necessarily the actual item for sale</p></section>`;
+        const at=html.lastIndexOf('</div>');
+        html=at>=0 ? html.slice(0,at)+block+html.slice(at) : html+block;
+      }
       // Never let an arbitrary stylesheet force body backgrounds or HTML imports.
-      const finalCss=css+'\n.ai-original{background:var(--bg);color:var(--text);min-height:100vh}\n.ai-original img,.ai-original video{max-width:100%}\n@media(max-width:600px){.ai-original{overflow-x:clip}}';
+      const finalCss=css+'\n.ai-original{background:var(--bg);color:var(--text);min-height:100vh}\n.ai-original img,.ai-original video{max-width:100%}\n.go-ai-licensed-video{padding:clamp(32px,5vw,85px);background:var(--panel);margin:30px auto;max-width:1280px}.go-ai-licensed-video video{width:100%;max-height:600px;background:#000;display:block;object-fit:contain}.go-ai-licensed-video p{opacity:.75}\n@media(max-width:600px){.ai-original{overflow-x:clip}}';
       return {...brief,html,css:finalCss,palette:p};
     }
     console.warn('AI original design validation failed',{model,finishReason:diagnostics,htmlLength:html&&html.length,cssLength:css&&css.length,hasSections:!!hasSections,uploadsIncluded});
   }
   console.warn('AI original design missing; using resilient layout', {model,reason:diagnostics});
-  return goAiResilientPage(brief,name,description,media,photos);
+  return goAiResilientPage(brief,name,description,media,photos,videos);
 }
 
 app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
@@ -5748,9 +5898,15 @@ All user-visible text must be written in ${languageName}. Pick a visual tone mat
     }));
     // Let the model design HTML/CSS itself; the old six-layout renderer is not used.
     // Uploaded media and discovered relevant photos are supplied as real image URLs.
-    j=await goAiGenerateOriginalDesign({key,model,name,description:desc,languageName,brief:j,media:uploadedMedia,photos:searched});
+    // Discover licensed demonstration clips only when the customer asks for video.
+    // Uploads always take priority; never embed arbitrary search result pages or copyrighted YouTube footage.
+    const videoRequested=/(?:video|clip|footage|drone|видео|клип|дрон|обикаля|обиколка)/i.test(desc);
+    const foundVideo=videoRequested && !uploadedMedia.some(x=>x.type==='video')
+      ? await goAiSearchVideo((desc.match(/(?:audi|mercedes|bmw|porsche|tesla|ford|toyota|honda|volvo|hyundai|kia)\s+[a-z0-9 -]{1,20}/i)||[])[0] || cleanStr((j.category||'')+' '+name,90)) : null;
+    const licensedVideos=foundVideo?[foundVideo]:[];
+    j=await goAiGenerateOriginalDesign({key,model,name,description:desc,languageName,brief:j,media:uploadedMedia,photos:searched,videos:licensedVideos});
     const cleanHtml = aiCleanHtml(j.html);
-    const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), photoCredits:[...searched,...productPhotos].filter(x=>x&&x.license).map(x=>({credit:x.credit,license:x.license,page:x.page})), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
+    const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), photoCredits:[...searched,...productPhotos,...licensedVideos].filter(x=>x&&x.license).map(x=>({credit:x.credit,license:x.license,page:x.page})), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
     // Export choice: create an offline standalone file, without storing another website.
     if (req.body.output === 'code') {
       { const _json = res.json.bind(res); res.json = function (body) { try { if (body && body.output === 'code') goSaveCodeProject(req.user.id, name, body); } catch (e) {} return _json(body); }; }
