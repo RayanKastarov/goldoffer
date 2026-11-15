@@ -1259,6 +1259,27 @@ app.post('/api/upload', authenticateToken, (req, res) => {
   });
 });
 
+// AI website media: authenticated, validated and stored with existing Image model.
+// Uploaded images and videos remain available to the published site. No file system dependency.
+const goAiMediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => cb(null, /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm))$/.test(file.mimetype))
+});
+app.post('/api/ai/media', authenticateToken, (req, res) => {
+  goAiMediaUpload.single('file')(req, res, async (err) => {
+    if (err) return res.status(400).json({ message: err.code === 'LIMIT_FILE_SIZE' ? 'Media too large (12 MB maximum).' : 'Media upload failed.' });
+    const f = req.file;
+    if (!f) return res.status(400).json({ message: 'Use JPG/PNG/WEBP/GIF or MP4/WEBM.' });
+    const video = f.mimetype.startsWith('video/');
+    if (!video && f.size > 5 * 1024 * 1024) return res.status(400).json({ message: 'Images must be under 5 MB.' });
+    try {
+      const doc = await Image.create({ userId: req.user.id, contentType: f.mimetype, data: f.buffer });
+      return res.json({ url: PUBLIC_BASE + '/api/image/' + doc._id, type: video ? 'video' : 'image', name: cleanStr(f.originalname, 90) });
+    } catch (e) { console.error('AI media save', e.message); return res.status(500).json({ message: 'Media storage failed.' }); }
+  });
+});
+
 // Public: images must load on the public site and on the builder (a different domain)
 app.get('/api/image/:id', async (req, res) => {
   try {
@@ -3511,7 +3532,7 @@ body #goOfferGrid{gap:22px!important}
 </style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
-${GO_PUBLIC_LIGHT_FIX_CSS}
+${user.aiGenerated && user.aiPage && user.aiPage.html && page === 'home' ? '' : GO_PUBLIC_LIGHT_FIX_CSS}
 ${GD.freeHtml(D, page)}
 <script type="application/json" id="go-design">${JSON.stringify(D || {}).replace(/</g, '\\u003c')}</script><script>${GO_APPLY_JS}</script>${studio ? `<script>(${goStudioClient.toString()})(${goDesignCore.toString()})</script>` : ''}
 ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
@@ -4737,7 +4758,7 @@ img{max-width:100%;height:auto}a{color:inherit}
 .ai-float{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:80}.ai-float a{display:inline-block;padding:11px 18px;border-radius:999px;background:var(--a);color:var(--on);font-weight:800;text-decoration:none;box-shadow:0 8px 24px #0005}
 .go-public-announcement{margin:12px auto!important;max-width:1100px}`;
 }
-const AI_STORE_CSS = `<style id="go-ai-accessible-cards">body .ai-offer{background:#fff!important;color:#182b47!important;border:1px solid #d7e2f1!important}body .ai-offer-body,body .ai-offer-title{color:#182b47!important;-webkit-text-fill-color:#182b47!important}body .ai-offer-desc{color:#435b79!important;-webkit-text-fill-color:#435b79!important;opacity:1!important}body .ai-offer-price{color:#1f56ac!important;-webkit-text-fill-color:#1f56ac!important}body .ai-offer .go-ai-stock{position:absolute!important;top:12px!important;left:12px!important;right:auto!important;bottom:auto!important;color:#075d35!important;background:#e6f8ee!important;-webkit-text-fill-color:#075d35!important}body .go-ai-stock.is-out{background:#b91c39!important;color:#fff!important;-webkit-text-fill-color:#fff!important}body #goAISearch{color:#172d4b!important;background:#fff!important}</style>`;
+const AI_STORE_CSS = `<style id="go-ai-theme-cards">.ai-offers{gap:clamp(12px,2vw,24px)}body .ai-offer{background:var(--panel);color:var(--text);border:1px solid color-mix(in srgb,var(--text) 19%,transparent);border-radius:var(--go-card-radius,18px)}body .ai-offer-body,body .ai-offer-title,body .ai-offer-desc{color:var(--text);-webkit-text-fill-color:var(--text)}body .ai-offer-desc{opacity:.82}body .ai-offer-price{color:var(--a);-webkit-text-fill-color:var(--a)}body .ai-offer .go-ai-stock{top:12px;left:12px;right:auto;bottom:auto}body .go-ai-stock.is-out{background:#b91c39;color:#fff}body #goAISearch{color:var(--text);background:var(--panel);border:1px solid color-mix(in srgb,var(--text) 28%,transparent)!important}</style>`;
 const AI_READABILITY_SCRIPT = "<script id=\"go-ai-accessible-contrast\">(function(){\nfunction rgb(c){var m=String(c).match(/^rgba?\\(\\s*(\\d+)[ ,]+(\\d+)[ ,]+(\\d+)(?:[ ,/]+([\\d.]+))?/i);return m?[+m[1],+m[2],+m[3],m[4]===undefined?1:+m[4]]:null}\nfunction lum(c){var a=c.slice(0,3).map(function(v){v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*a[0]+.7152*a[1]+.0722*a[2]}\nfunction ratio(a,b){var x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}\nfunction effectiveBackground(el){var chain=[],p=el;while(p&&p.nodeType===1){chain.unshift(p);p=p.parentElement}var out=[255,255,255];for(var j=0;j<chain.length;j++){var st=getComputedStyle(chain[j]);if(st.backgroundImage&&st.backgroundImage!=='none')return null;var v=rgb(st.backgroundColor);if(v&&v[3]>0){var a=v[3];out=[v[0]*a+out[0]*(1-a),v[1]*a+out[1]*(1-a),v[2]*a+out[2]*(1-a)]}}return out}\nfunction fix(){document.querySelectorAll('main h1,main h2,main h3,main h4,main p,main span,main small,main li,main a,main label,main strong,section h1,section h2,section h3,section p,section a,header a,nav a,.ai-offer-title,.ai-offer-desc,.ai-offer-price').forEach(function(el){if(el.closest('.go-ai-stock,.ai-float,.go-owner-banner,button,[role=button]'))return;var cs=getComputedStyle(el);if(cs.visibility==='hidden'||cs.display==='none'||parseFloat(cs.opacity)<.65)return;var bg=effectiveBackground(el);if(!bg)return;var fg=rgb(cs.color);if(!fg)return;var thresh=parseFloat(cs.fontSize)>=24?3:4.5;if(ratio(fg,bg)>=thresh)return;var dark=[20,33,54],light=[255,255,255],best=ratio(dark,bg)>=ratio(light,bg)?dark:light;el.style.setProperty('color','rgb('+best.join(',')+')','important');el.style.setProperty('-webkit-text-fill-color','rgb('+best.join(',')+')','important');if(el.tagName==='A')el.style.textDecorationThickness='2px'})}\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fix);else fix();window.addEventListener('load',fix,{once:true});\n})();</script>";
 function renderAiSite(user, offers, sent) {
   const slug = esc(user.slug);
@@ -4758,11 +4779,13 @@ function renderAiSite(user, offers, sent) {
   const contactHtml = `<div class="ai-contact">${cl.join('') || `<span>${esc(user.siteName)}</span>`}</div>`;
   let html = aiCleanHtml(user.aiPage.html);
   const hadOffers = html.includes('{{OFFERS}}');
-  const offersCta = `<div style="padding:24px 18px;text-align:center"><a class="goa-btn" href="/site/${slug}/offers" style="display:inline-flex;gap:8px;padding:16px 30px;border-radius:14px;background:#111;color:#fff;font-weight:700;text-decoration:none">Browse offers &rarr;</a></div>`;
+  const offersCta = `${offersHtml}<div style="padding:24px 18px;text-align:center"><a class="goa-btn" href="/site/${slug}/offers" style="display:inline-flex;gap:8px;padding:16px 30px;border-radius:14px;background:var(--a);color:var(--text);font-weight:700;text-decoration:none">Browse all offers &rarr;</a></div>`;
   html = html.replace(/href="#offers"/g, `href="/site/${slug}/offers"`).replace(/href="#offers"/g, `href="/site/${slug}/offers"`).replace(/\{\{OFFERS\}\}/g, offersCta).replace(/\{\{FAQ\}\}/g, faqHtml).replace(/\{\{CONTACT\}\}/g, contactHtml);
   if (!hadOffers) html += `<section id="offers" style="padding:40px 18px;max-width:1100px;margin:auto">${offersCta}</section>`;
   const aiSearch = `<div style="max-width:1050px;margin:24px auto;padding:12px"><input id="goAISearch" type="search" placeholder="Search products in any language..." aria-label="Search products" style="width:100%;padding:14px;border:1px solid #bac3d1;border-radius:10px"></div><script>(function(){var i=document.getElementById('goAISearch'),cards=[].slice.call(document.querySelectorAll('.ai-offer')),timer,seq=0;if(!i)return;i.addEventListener('input',function(){clearTimeout(timer);var q=i.value.trim(),v=++seq;if(!q){cards.forEach(x=>x.style.display='');return}timer=setTimeout(async function(){try{var r=await fetch('/site/'+encodeURIComponent(document.body.dataset.slug)+'/search.json?q='+encodeURIComponent(q)),d=await r.json();if(v!==seq)return;var ids=new Set(d.ids);cards.forEach(x=>x.style.display=ids.has(x.getAttribute('href').split('/').pop())?'':'none')}catch(e){}},500)})})();</script>`;
-  const body = `${aiSearch}${html}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>` + AI_STORE_CSS + AI_READABILITY_SCRIPT;
+  const credits=((user.aiPage&&user.aiPage.photoCredits)||[]).map(x=>`<span>${esc(x.credit||'Wikimedia Commons')} · ${esc(x.license||'CC license')}${x.page?` · <a href="${esc(x.page)}" target="_blank" rel="noopener noreferrer">source</a>`:''}</span>`).join(' · ');
+  const creditHtml=credits?`<aside style="padding:12px 5%;font-size:11px;opacity:.75" aria-label="Photo credits">Photo credits: ${credits}</aside>`:'';
+  const body = `${aiSearch}${html}${creditHtml}<nav class="ai-float"><a href="/site/${slug}/messages">Messages</a></nav>` + AI_STORE_CSS + AI_READABILITY_SCRIPT;
   return pageShell(user, { title: user.siteName, desc: String(user.sellerBio || user.siteName).slice(0, 160), body, page: 'home' });
 }
 
@@ -5313,10 +5336,91 @@ app.post('/api/code/ai', authenticateToken, async (req, res) => {
 });
 
 
+// Diverse AI generation: verified media only. Google Programmable Search requires
+// GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX; it is limited to reusable images.
+// Otherwise Wikimedia Commons is searched (author/license attribution kept).
+const goAiColors = {
+  'black':'#0c1018','черен':'#0c1018','черно':'#0c1018',
+  'white':'#f8f9fc','бял':'#f8f9fc','бяло':'#f8f9fc',
+  'red':'#6e1b2b','червен':'#6e1b2b','червено':'#6e1b2b',
+  'blue':'#102a51','син':'#102a51','синьо':'#102a51',
+  'green':'#103b2c','зелен':'#103b2c','зелено':'#103b2c',
+  'purple':'#2b154b','лилав':'#2b154b','лилаво':'#2b154b',
+  'pink':'#ffe1ee','розов':'#ffe1ee','розово':'#ffe1ee',
+  'orange':'#fff0d6','оранжев':'#fff0d6','оранжево':'#fff0d6',
+  'yellow':'#fff8cc','жълт':'#fff8cc','жълто':'#fff8cc',
+  'beige':'#f1e4d1','бежов':'#f1e4d1','бежово':'#f1e4d1',
+  'brown':'#2b1e19','кафяв':'#2b1e19','кафяво':'#2b1e19',
+  'gray':'#222833','grey':'#222833','сив':'#222833','сиво':'#222833'
+};
+const goAiHex = h => /^#[0-9a-f]{6}$/i.test(String(h||''));
+const goAiTextOn = hex => {
+  const rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
+  const L=rgb.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});
+  return .2126*L[0]+.7152*L[1]+.0722*L[2] > .36 ? '#172036' : '#fafbff';
+};
+function goAiRequestedBg(description) {
+  const d=String(description||'').toLowerCase();
+  // Only force the background when the user explicitly asks for a background.
+  const m=d.match(/(?:background|фон(?:ът|а)?|бекграунд|background color|bg)[^\n.!?]{0,48}/i);
+  if(!m) return '';
+  const hex=m[0].match(/#[0-9a-f]{6}\b/i);
+  if(hex)return hex[0];
+  for(const [word,hexVal] of Object.entries(goAiColors)) if(new RegExp('(^|[^\\p{L}])'+word+'(?=$|[^\\p{L}])','iu').test(m[0]))return hexVal;
+  return '';
+}
+const goAiMediaUrl = value => {
+  try { const u=new URL(String(value||'')); return u.protocol==='https:' && u.username==='' && u.password==='' && u.href.length<1500 ? u.href : ''; }
+  catch (_) { return ''; }
+};
+function goAiMediaFromRequest(raw) {
+  const values=Array.isArray(raw)?raw.slice(0,5):[];
+  return values.map(x=>({ url:goAiMediaUrl(x&&x.url), type:x&&x.type==='video'?'video':'image', name:cleanStr(x&&x.name,90) }))
+    .filter(x=>x.url && x.url.startsWith(PUBLIC_BASE+'/api/image/'));
+}
+const goAiPhotosCache=new Map();
+async function goAiSearchPhoto(query) {
+  const q=cleanStr(query,100).replace(/[^\p{L}\p{N}\s\-]/gu,' ').trim();
+  if(!q)return null;
+  const cacheKey=q.toLowerCase();const cached=goAiPhotosCache.get(cacheKey);
+  if(cached&&Date.now()-cached.at<3600000)return cached.photo;
+  let photo=null;
+  try{
+    if(process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_CX){
+      const r=await axios.get('https://www.googleapis.com/customsearch/v1',{
+        params:{key:process.env.GOOGLE_CSE_API_KEY,cx:process.env.GOOGLE_CSE_CX,q,searchType:'image',num:5,safe:'active',rights:'cc_publicdomain|cc_attribute'},timeout:5500
+      });
+      const items=(r.data&&r.data.items)||[];
+      const item=items.find(x=>goAiMediaUrl(x.link) && /^https?:/i.test(x.link));
+      if(item)photo={url:goAiMediaUrl(item.link),credit:cleanStr(item.displayLink||'Google Images (check license)',90)};
+    }
+    if(!photo){
+      const r=await axios.get('https://commons.wikimedia.org/w/api.php',{
+        params:{action:'query',generator:'search',gsrsearch:q+' filetype:bitmap',gsrnamespace:6,gsrlimit:8,prop:'imageinfo',iiprop:'url|extmetadata',iiurlwidth:1200,format:'json',origin:'*'},
+        timeout:5500,headers:{'User-Agent':'GoldOfferStudio/1.0 (image discovery; Wikimedia Commons)'}
+      });
+      const pages=Object.values((r.data&&r.data.query&&r.data.query.pages)||{});
+      const entries=pages.map(x=>x.imageinfo&&x.imageinfo[0]).filter(Boolean);
+      const suitable=entries.find(x=>{const u=goAiMediaUrl(x.thumburl||x.url);return u && /\.(?:jpe?g|png|webp)(?:\?|$)/i.test(u) && /^(CC|Public domain)/i.test(String(x.extmetadata&&x.extmetadata.LicenseShortName&&x.extmetadata.LicenseShortName.value||''));});
+      if(suitable){const meta=suitable.extmetadata||{};photo={url:goAiMediaUrl(suitable.thumburl||suitable.url),credit:cleanStr((meta.Artist&&meta.Artist.value||'Wikimedia Commons').replace(/<[^>]+>/g,'').slice(0,120),120),license:cleanStr(meta.LicenseShortName&&meta.LicenseShortName.value||'',50),page:goAiMediaUrl(suitable.descriptionurl)};}
+    }
+  }catch(e){console.warn('AI photo search failed',String(e.message).slice(0,110));}
+  goAiPhotosCache.set(cacheKey,{photo,at:Date.now()});
+  if(goAiPhotosCache.size>180)goAiPhotosCache.delete(goAiPhotosCache.keys().next().value);
+  return photo;
+}
+const goAiLayouts=['split','cinematic','editorial','mosaic','minimal','showcase'];
+function goAiLayout(brief, description){
+  const request=String(description||'').toLowerCase();
+  const directives=[['minimal',/minimal|минимал/i],['cinematic',/full.?screen|cinematic|цял екран|пълен екран|кинематограф/i],['mosaic',/mosaic|grid|мозайка|плочки/i],['editorial',/editorial|magazine|списание|редакцион/i],['showcase',/showcase|каталог|продуктов/i],['split',/split|две колони|разделен екран/i]];
+  for(const [v,pattern] of directives)if(pattern.test(request))return v;
+  return goAiLayouts[crypto.randomInt(goAiLayouts.length)];
+}
+
 // GoldOffer AI v3: the model writes a SHORT content brief, not a giant JSON-escaped
 // HTML/CSS document. Server-owned HTML/CSS removes JSON truncation as a failure mode
 // for both publish-link and export-code paths.
-function goAiBuildPage(brief, siteName, description, lang) {
+function goAiBuildPage(brief, siteName, description, lang, media = [], photos = []) {
   const str = (v, limit = 200) => cleanStr(v, limit);
   const safe = v => esc(str(v, 700));
   const list = (v, max) => Array.isArray(v) ? v.filter(x => x && typeof x === 'object').slice(0, max) : [];
@@ -5327,6 +5431,17 @@ function goAiBuildPage(brief, siteName, description, lang) {
     : { a:'#2563eb', b:'#0e7490', bg:'#f7f9fc', panel:'#ffffff', text:'#17243b' };
   const hex = (key) => /^#[\da-f]{6}$/i.test(String(paletteIn[key] || '')) ? String(paletteIn[key]) : defaults[key];
   const palette = Object.fromEntries(['a','b','bg','panel','text'].map(k => [k,hex(k)]));
+  const userBg=goAiRequestedBg(description);
+  if(userBg) {palette.bg=userBg;palette.text=goAiTextOn(userBg);palette.panel=palette.text==='#fafbff'?'#18212d':'#ffffff';}
+  else {palette.text=goAiTextOn(palette.bg);}
+  const layout=goAiLayout(brief,description);
+  const headingFont=/\b(modern|tech|startup|software|технолог|модерн)\b/i.test(description)?'sans-serif':/luxur|elegan|лукс|елегант/i.test(description)?'serif':(crypto.randomInt(2)?'serif':'sans-serif');
+  const images=media.filter(x=>x.type==='image').map(x=>({url:x.url,credit:'Your uploaded photo'}));
+  const video=media.find(x=>x.type==='video');
+  const hero=images[0]||photos[0]||null;
+  const heroMedia=video?`<video class="goa-hero-media" src="${esc(video.url)}" autoplay muted loop playsinline controls preload="metadata" aria-label="${esc(siteName)} video"></video>`
+    :hero?`<img class="goa-hero-media" src="${esc(hero.url)}" alt="${esc(siteName)}" loading="eager">`:'';
+  const heroCredit=(!video && hero && hero.license)?`<small class="goa-photo-credit">Photo: ${esc(hero.credit||'Wikimedia Commons')} · ${esc(hero.license)}</small>`:'';
   const heading = str(brief.heroHeadline, 95) || siteName;
   const subtitle = str(brief.heroSubheadline, 240) || str(brief.bio, 240) || description;
   const about = str(brief.bio, 500) || description;
@@ -5340,8 +5455,8 @@ function goAiBuildPage(brief, siteName, description, lang) {
   }));
   if (!benefits.length) benefits.push({title:'Thoughtful service',description:about,index:1});
   const cards = benefits.map(b => `<article class="goa-benefit"><span class="goa-index">0${b.index}</span><h3>${safe(b.title)}</h3><p>${safe(b.description)}</p></article>`).join('');
-  const siteHtml = `<div class="goa-site"><header class="goa-nav"><a class="goa-logo" href="#home">${safe(siteName)}</a><nav aria-label="Sections"><a href="#about">${safe(aboutHeading)}</a><a href="#offers">${safe(offersHeading)}</a><a href="#contact">Contact</a></nav><a class="goa-navcta" href="#offers">Explore <span aria-hidden="true">↗</span></a></header>
-  <main id="home"><section class="goa-hero"><div class="goa-art" aria-hidden="true"><div class="goa-orb"></div><div class="goa-ring"></div><div class="goa-beam"></div></div><div class="goa-hero-inner"><p class="goa-eyebrow"><span class="goa-star">✦</span> ${safe(eyebrow)}</p><h1>${safe(heading)}</h1><p class="goa-sub">${safe(subtitle)}</p><div class="goa-actions"><a class="goa-btn" href="#offers">Explore ${safe(offersHeading)} <span aria-hidden="true">↗</span></a><a class="goa-textlink" href="#about">Discover our story <span aria-hidden="true">→</span></a></div></div><div class="goa-hero-bottom"><span>DESIGNED TO STAND APART</span><span>${safe(siteName)}</span></div></section>
+  const siteHtml = `<div class="goa-site goa-layout-${layout} goa-heading-${headingFont}"><header class="goa-nav"><a class="goa-logo" href="#home">${safe(siteName)}</a><nav aria-label="Sections"><a href="#about">${safe(aboutHeading)}</a><a href="#offers">${safe(offersHeading)}</a><a href="#contact">Contact</a></nav><a class="goa-navcta" href="#offers">Explore <span aria-hidden="true">↗</span></a></header>
+  <main id="home"><section class="goa-hero"><div class="goa-art" aria-hidden="true"><div class="goa-orb"></div><div class="goa-ring"></div><div class="goa-beam"></div></div><div class="goa-media-wrap">${heroMedia}${heroCredit}</div><div class="goa-hero-inner"><p class="goa-eyebrow"><span class="goa-star">✦</span> ${safe(eyebrow)}</p><h1>${safe(heading)}</h1><p class="goa-sub">${safe(subtitle)}</p><div class="goa-actions"><a class="goa-btn" href="#offers">Explore ${safe(offersHeading)} <span aria-hidden="true">↗</span></a><a class="goa-textlink" href="#about">Discover our story <span aria-hidden="true">→</span></a></div></div><div class="goa-hero-bottom"><span>DESIGNED TO STAND APART</span><span>${safe(siteName)}</span></div></section>
   <section id="about" class="goa-about goa-section"><div class="goa-kicker">01 / WHO WE ARE</div><div><h2>${safe(aboutHeading)}</h2><p>${safe(about)}</p></div></section>
   <section class="goa-benefits goa-section"><div class="goa-kicker">02 / WHY CHOOSE US</div><div class="goa-benefitgrid">${cards}</div></section>
   <section id="offers" class="goa-products goa-section"><div class="goa-kicker">03 / CURATED FOR YOU</div><div class="goa-headingrow"><h2>${safe(offersHeading)}</h2><p>${safe(str(brief.offersIntro,190) || 'Explore what we can create together.')}</p></div>{{OFFERS}}</section>
@@ -5354,7 +5469,71 @@ function goAiBuildPage(brief, siteName, description, lang) {
 .goa-hero{min-height:610px;min-height:75svh;position:relative;display:flex;flex-direction:column;justify-content:center;isolation:isolate;background:linear-gradient(130deg,var(--bg),var(--panel))}.goa-art{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;opacity:.85}.goa-orb{position:absolute;width:70vw;height:70vw;min-width:480px;min-height:480px;right:-18%;top:-27%;background:radial-gradient(circle at 36% 36%,var(--a),var(--b) 24%,transparent 66%);filter:blur(36px);opacity:.34}.goa-ring{position:absolute;right:8%;top:6%;width:40vw;height:40vw;min-width:260px;min-height:260px;border:1px solid var(--a);border-radius:50%;transform:rotate(-25deg) skewY(14deg);opacity:.35}.goa-beam{position:absolute;right:-12%;bottom:18%;width:65%;height:1px;background:linear-gradient(90deg,transparent,var(--a),transparent);transform:rotate(-22deg);box-shadow:0 0 30px 6px var(--a);opacity:.5}.goa-hero-inner{width:min(1200px,90%);margin:85px auto 70px;position:relative;z-index:1}.goa-eyebrow,.goa-kicker{font-size:.72rem;font-weight:850;letter-spacing:.19em;text-transform:uppercase;color:var(--a)}.goa-star{font-size:1.4rem;vertical-align:middle}.goa-hero h1{font-size:clamp(3.5rem,8.8vw,8rem);max-width:900px;margin:28px 0}.goa-sub{font-size:clamp(1.02rem,1.7vw,1.3rem);max-width:620px;opacity:.84}.goa-actions{display:flex;align-items:center;gap:28px;flex-wrap:wrap;margin-top:36px}.goa-btn{display:inline-flex;gap:20px;align-items:center;justify-content:space-between;background:var(--a);color:#111827!important;font-weight:800;padding:16px 25px;border-radius:5px;font-size:.9rem;box-shadow:0 12px 32px #0002}.goa-textlink{font-size:.9rem;font-weight:700;border-bottom:1px solid var(--a);padding:9px 0}.goa-hero-bottom{display:flex;justify-content:space-between;padding:22px 5%;font-size:.64rem;letter-spacing:.12em;font-weight:700;opacity:.65;border-top:1px solid currentColor}
 .goa-section{width:min(1180px,90%);margin:auto;padding:105px 0}.goa-section h2{font-size:clamp(2.5rem,5vw,4.7rem);margin:0 0 22px}.goa-about{display:grid;grid-template-columns:1fr 2fr;gap:30px}.goa-about p{max-width:700px;font-size:1.1rem;opacity:.8}.goa-benefits{border-top:1px solid currentColor}.goa-benefitgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:30px}.goa-benefit{background:var(--panel);border:1px solid color-mix(in srgb,var(--text) 16%,transparent);padding:33px 27px;min-height:240px}.goa-index{font-size:.73rem;color:var(--a);font-weight:800}.goa-benefit h3{font-size:1.9rem;margin:38px 0 10px}.goa-benefit p{font-size:.9rem;opacity:.78}.goa-products{border-top:1px solid currentColor}.goa-headingrow{display:flex;align-items:end;justify-content:space-between;gap:30px;margin:24px 0 32px}.goa-headingrow p{max-width:310px;opacity:.75}.goa-site .ai-offers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.goa-site .ai-offer{transition:transform .2s;overflow:hidden;border-radius:14px}.goa-site .ai-offer:hover{transform:translateY(-5px)}.goa-site .ai-offer-body{padding:24px}.goa-site .ai-offer-title{font-size:1.2rem}.goa-site .ai-offer-img{aspect-ratio:16/10;background:linear-gradient(135deg,var(--a),var(--b))}.goa-faq{border-top:1px solid currentColor}.goa-site .ai-faq details{border:1px solid color-mix(in srgb,var(--text) 18%,transparent);border-radius:5px;padding:20px 24px}.goa-contact{position:relative;padding:80px 6%;width:min(1180px,90%);margin:30px auto 95px;background:var(--panel);border:1px solid color-mix(in srgb,var(--a) 35%,transparent);overflow:hidden}.goa-contact-orb{position:absolute;right:-80px;top:-130px;width:300px;height:300px;border:1px solid var(--a);border-radius:50%;opacity:.3}.goa-contact h2{position:relative;max-width:750px}.goa-contact p{max-width:540px}.goa-contact .ai-contact{margin:24px 0}.goa-footer{border-top:1px solid color-mix(in srgb,var(--text) 22%,transparent);padding:38px 5%;display:flex;gap:20px;flex-wrap:wrap;align-items:center;justify-content:space-between;font-size:.83rem}.goa-footer span:first-child{font-weight:800}
 @media(max-width:760px){.goa-nav{gap:12px;padding:17px 5%}.goa-logo{max-width:64%}.goa-nav nav{display:none}.goa-navcta{font-size:.75rem;padding:9px 12px}.goa-hero{min-height:590px}.goa-hero-inner{margin:55px auto}.goa-hero h1{font-size:clamp(2.9rem,12vw,4.9rem);overflow-wrap:anywhere}.goa-hero-bottom{gap:20px}.goa-section{padding:75px 0}.goa-about{grid-template-columns:1fr;gap:20px}.goa-benefitgrid,.goa-site .ai-offers{grid-template-columns:1fr}.goa-headingrow{display:block}.goa-contact{padding:60px 6%;margin-bottom:45px}.goa-footer{flex-direction:column;align-items:flex-start}}`;
-  return { ...brief, siteName, bio:about, palette, html:siteHtml, css, offers:list(brief.offers,6), faq:list(brief.faq,6) };
+  const variantCss = `.goa-site{--goa-layout:${layout};--goa-radius:${layout==='minimal'?'0px':layout==='mosaic'?'32px':'16px'};--goa-hero-overlay:rgba(0,0,0,.1)}
+.goa-site .goa-heading-sans-serif h1,.goa-site.goa-heading-sans-serif h1,.goa-site.goa-heading-sans-serif h2,.goa-site.goa-heading-sans-serif h3{font-family:Inter,Arial,system-ui,sans-serif}
+.goa-media-wrap{display:none}.goa-hero-media{width:100%;height:100%;object-fit:cover;display:block}.goa-photo-credit{position:absolute;bottom:8px;right:12px;font-size:10px;background:#0009;color:#fff;padding:4px 7px;border-radius:4px}
+.goa-site .goa-btn{border-radius:var(--goa-radius)}.goa-site .goa-benefit{border-radius:var(--goa-radius)}
+.goa-layout-split .goa-hero{display:grid;grid-template-columns:1fr 1fr;min-height:75vh;align-items:stretch}.goa-layout-split .goa-hero-inner{grid-column:1;grid-row:1;align-self:center;width:84%;margin:0 auto;padding:50px 0}.goa-layout-split .goa-media-wrap{display:block;grid-column:2;grid-row:1;min-height:610px;overflow:hidden;background:linear-gradient(125deg,var(--a),var(--panel))}.goa-layout-split .goa-hero-bottom{grid-column:1/-1}.goa-layout-split .goa-hero h1{font-size:clamp(3rem,6vw,6rem)}
+.goa-layout-cinematic .goa-hero{min-height:90svh;justify-content:end;color:#fff;background:linear-gradient(115deg,#0b1018,#192839)}.goa-layout-cinematic .goa-media-wrap{display:block;position:absolute;inset:0;z-index:-1;background:var(--panel)}.goa-layout-cinematic .goa-media-wrap::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.82),rgba(0,0,0,.23))}.goa-layout-cinematic .goa-hero-inner{margin:120px auto 65px}.goa-layout-cinematic .goa-hero h1{max-width:1050px;font-size:clamp(3.5rem,10vw,9.5rem)}.goa-layout-cinematic .goa-eyebrow{color:#fff}
+.goa-layout-editorial .goa-nav{border-bottom:1px solid currentColor}.goa-layout-editorial .goa-hero{min-height:75svh;display:grid;grid-template-columns:1.1fr .9fr;align-items:center}.goa-layout-editorial .goa-hero-inner{grid-column:1;grid-row:1;width:84%;margin:50px auto}.goa-layout-editorial .goa-media-wrap{display:block;grid-column:2;grid-row:1;height:75%;margin:5%;background:var(--panel);overflow:hidden;border-radius:60% 60% 4px 4px}.goa-layout-editorial .goa-hero-bottom{grid-column:1/-1}.goa-layout-editorial .goa-hero h1{font-weight:400;font-size:clamp(3.2rem,7vw,7.5rem)}
+.goa-layout-mosaic .goa-hero{min-height:70svh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:3%}.goa-layout-mosaic .goa-hero-inner{grid-column:2;grid-row:1;width:88%;margin:50px auto}.goa-layout-mosaic .goa-media-wrap{grid-column:1;grid-row:1;display:block;min-height:480px;height:85%;margin-left:5%;background:var(--panel);overflow:hidden;border-radius:var(--goa-radius)}.goa-layout-mosaic .goa-hero-bottom{grid-column:1/-1}.goa-layout-mosaic .goa-benefitgrid{grid-template-columns:1.3fr 1fr;gap:22px}.goa-layout-mosaic .goa-benefit:first-child{grid-row:span 2}.goa-layout-mosaic .goa-benefit{min-height:140px}
+.goa-layout-minimal .goa-nav{border-bottom:1px solid color-mix(in srgb,var(--text) 23%,transparent)}.goa-layout-minimal .goa-hero{min-height:58svh;background:var(--bg)}.goa-layout-minimal .goa-art{display:none}.goa-layout-minimal .goa-hero-inner{max-width:1000px;text-align:center}.goa-layout-minimal .goa-sub{margin:0 auto}.goa-layout-minimal .goa-actions{justify-content:center}.goa-layout-minimal .goa-hero h1{font-family:Inter,Arial,sans-serif;font-weight:800;letter-spacing:-.07em}.goa-layout-minimal .goa-media-wrap{display:block;height:min(480px,54vw);width:min(1080px,90%);margin:0 auto 30px;background:var(--panel);border-radius:0}.goa-layout-minimal .goa-hero-bottom{display:none}.goa-layout-minimal .goa-about{grid-template-columns:1fr}.goa-layout-minimal .goa-section{padding:60px 0}
+.goa-layout-showcase .goa-hero{min-height:75svh;display:grid;grid-template-columns:.9fr 1.1fr;align-items:center;gap:2%}.goa-layout-showcase .goa-hero-inner{grid-column:1;grid-row:1;width:88%;margin:50px auto}.goa-layout-showcase .goa-media-wrap{grid-column:2;grid-row:1;display:block;height:75%;min-height:420px;background:var(--panel);margin-right:4%;box-shadow:22px 22px 0 var(--a);border-radius:var(--goa-radius);overflow:hidden}.goa-layout-showcase .goa-hero-bottom{grid-column:1/-1}.goa-layout-showcase .goa-benefitgrid{grid-template-columns:repeat(2,1fr)}.goa-layout-showcase .goa-benefit:nth-child(3){grid-column:1/-1;min-height:130px}
+@media(max-width:800px){.goa-site .goa-hero{display:flex;flex-direction:column;min-height:0}.goa-site .goa-hero-inner{width:90%;margin:48px auto 32px;order:1}.goa-site .goa-media-wrap{position:relative;inset:auto;grid-column:auto;grid-row:auto;display:${heroMedia?'block':'none'};width:90%;height:300px;min-height:0;margin:0 auto 28px;order:2;border-radius:14px}.goa-site .goa-hero-bottom{order:3;width:100%}.goa-layout-cinematic .goa-media-wrap{position:absolute;inset:0;width:100%;height:100%;margin:0;z-index:-1}.goa-layout-cinematic .goa-hero{min-height:70svh}.goa-layout-cinematic .goa-hero-inner{margin:100px auto 40px}.goa-layout-minimal .goa-media-wrap{width:90%;height:260px}.goa-layout-mosaic .goa-benefitgrid,.goa-layout-showcase .goa-benefitgrid{grid-template-columns:1fr}.goa-layout-mosaic .goa-benefit:first-child,.goa-layout-showcase .goa-benefit:nth-child(3){grid-column:auto;grid-row:auto}}
+`;
+  return { ...brief, siteName, bio:about, palette, layout, html:siteHtml, css:css+variantCss, offers:list(brief.offers,6), faq:list(brief.faq,6) };
+}
+
+// AI free-design pass: no preset layout names or server-side page grids.
+// The provider produces semantic HTML + authored CSS on every invocation;
+// the server keeps offer / FAQ / contact modules authoritative and safe.
+async function goAiGenerateOriginalDesign({ key, model, name, description, languageName, brief, media, photos }) {
+  const colors = brief.palette || {};
+  const uploads = (media || []).map((m,i) => ({ id:'user-'+(i+1),type:m.type,url:m.url,name:m.name }));
+  const discovered = (photos || []).filter(x=>x&&x.url).map((m,i)=>({id:'photo-'+(i+1),type:'image',url:m.url,credit:m.credit||''}));
+  const supplied = [...uploads,...discovered];
+  const userBg = goAiRequestedBg(description);
+  const system = `You are a world-class creative web designer and front-end engineer, NOT a template filler. Design a completely new website for this single customer. You choose the page's HTML DOM architecture, relative placement of blocks, graphics (CSS only), photography layout, navigation, section count/order, typography scale, spacing, radii, gradients, visual rhythm and animations independently every time. NEVER use a standard six-layout catalog, fixed starter structure, or copy the same ordering between customers. Take every explicit instruction in the customer's description literally and as the top priority, including colors, dark/light mode, hero orientation, image placement, product subject, section hierarchy and vibe. If the user asks for black, NEVER override it with white; same for every other specified color. Make layouts responsive at 375px, 768px and 1440px. Use distinct font stacks from installed web-safe fonts (no remote imports). Write the page copy in ${languageName}. Do not invent prices, addresses, contact data, testimonials or achievements. Only use grounded business facts in the supplied JSON. Return ONE JSON object with exactly 3 top-level keys: "html" (HTML string of complete, meaningful page fragment), "css" (CSS string, namespaced under .ai-original), and "palette" (object with a,b,bg,panel,text as valid six-digit hexadecimal colors). HTML MUST have ONE wrapping <div class="ai-original">, a substantial brand-specific hero, some meaningful sections, and MUST include exactly once each placeholder: {{OFFERS}}, {{FAQ}}, {{CONTACT}} in semantically appropriate parts of HTML. These are injected by the trusted backend: DO NOT create your own fake product cards or contact forms. Include links to #offers, #about and #contact where appropriate; do not link to made-up domains. Asset URLs: use ONLY URLs from the media manifest, and embed each user-uploaded photo/video at least once in an intentional location. Videos use <video src="..." controls muted playsinline preload="metadata"></video> (no scripts). Images use <img src="..." alt="..." loading="lazy">. Absolutely no JavaScript, <script>, <style>, <iframe>, <form>, inline on* handlers, external CSS imports or CDN links. Do not put HTML into CSS. CSS should be vivid, polished, fully responsive and distinctive; use var(--bg), var(--panel), var(--text), var(--a) and var(--b) for brand colors so every explicitly requested color is respected. Do not add global body selectors or !important overrides, use .ai-original scope. Aim for HTML under 12000 characters and CSS under 11000 characters. Output valid JSON only, no markdown.`;
+  const payload={
+    model,
+    messages:[{role:'system',content:system},{role:'user',content:JSON.stringify({name,description,brief,palette:colors,explicitBackground:userBg||null,media:supplied,designChallenge:crypto.randomBytes(12).toString('hex')})}],
+    temperature:0.95,max_tokens:9200
+  };
+  let diagnostics='';
+  for(let attempt=0;attempt<2;attempt++){
+    if(attempt===0)payload.response_format={type:'json_object'};
+    else delete payload.response_format;
+    let resp;
+    try{
+      resp=await axios.post('https://openrouter.ai/api/v1/chat/completions',payload,{headers:{Authorization:'Bearer '+key},timeout:110000});
+    }catch(e){
+      if(attempt===0 && e.response && [400,422].includes(e.response.status))continue;
+      throw e;
+    }
+    const choice=resp.data&&resp.data.choices&&resp.data.choices[0];
+    const raw=choice&&choice.message&&choice.message.content;
+    const output=typeof raw==='string'?raw:Array.isArray(raw)?raw.map(p=>p&&p.text||'').join(''):'';
+    const obj=extractJson(output);
+    const html=obj&&aiCleanHtml(obj.html);
+    const css=obj&&aiCleanCss(obj.css);
+    diagnostics=choice&&choice.finish_reason||'invalid-json';
+    const hasSections=html&&html.includes('{{OFFERS}}')&&html.includes('{{FAQ}}')&&html.includes('{{CONTACT}}');
+    const uploadsIncluded=uploads.every(m=>html&&html.includes(m.url.replace(/&/g,'&amp;')) || html&&html.includes(m.url));
+    if(html && html.length>750 && css && css.length>300 && hasSections && uploadsIncluded && /class\s*=\s*["'][^"']*ai-original/i.test(html)){
+      const aiPalette=(obj.palette&&typeof obj.palette==='object')?obj.palette:{};
+      const p={};
+      for(const k of ['a','b','bg','panel','text']){
+        const v=String(aiPalette[k]||colors[k]||'');
+        p[k]=/^#[0-9a-f]{6}$/i.test(v)?v:(k==='bg'?'#0b1018':k==='text'?'#ffffff':k==='panel'?'#202632':'#667eea');
+      }
+      if(userBg){p.bg=userBg;p.text=goAiTextOn(userBg);}
+      // Never let an arbitrary stylesheet force body backgrounds or HTML imports.
+      const finalCss=css+'\n.ai-original{background:var(--bg);color:var(--text);min-height:100vh}\n.ai-original img,.ai-original video{max-width:100%}\n@media(max-width:600px){.ai-original{overflow-x:clip}}';
+      return {...brief,html,css:finalCss,palette:p};
+    }
+    console.warn('AI original design validation failed',{model,finishReason:diagnostics,htmlLength:html&&html.length,cssLength:css&&css.length,hasSections:!!hasSections,uploadsIncluded});
+  }
+  throw new Error('AI original design was incomplete ('+diagnostics+'). Nothing was published. Please retry generation.');
 }
 
 app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
@@ -5383,6 +5562,12 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     const genCap = limitsOf(root).aiGen;
     if (!isFree && genCap <= 0) return res.status(402).json({ message: 'AI website generation is unavailable for your account.', upgrade: true });
     const name = cleanStr(req.body.name, 60), desc = cleanStr(req.body.description, 1500);
+    const uploadedMedia = goAiMediaFromRequest(req.body.media);
+    for (const m of uploadedMedia) {
+      const ident=m.url.split('/').pop();
+      if(!mongoose.isValidObjectId(ident) || !await Image.exists({ _id:ident, userId:req.user.id }))
+        return res.status(403).json({ message:'One of the media files does not belong to your account. Re-upload it.' });
+    }
     const lang = (typeof req.body.lang === 'string' && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(req.body.lang)) ? req.body.lang : 'en';
     const languageName = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(lang) || lang; } catch (e) { return lang; } })();
     if (!name || desc.length < 10) return res.status(400).json({ message: 'Give a name and describe the business (at least a sentence).' });
@@ -5400,7 +5585,7 @@ app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, 
     // This avoids asking the model to JSON-escape thousands of bytes of HTML/CSS.
     const sys = `You are an expert brand designer and website copywriter. Reply ONLY with one valid SMALL JSON object. Do not write HTML, CSS or JavaScript.
 Keys: category (string), city (string or empty), bio (2 short sentences), announcement (short or empty), eyebrow (short string), heroHeadline (bold evocative 3-8 words), heroSubheadline (1-2 sentences), aboutHeading (short), offersHeading (short), offersIntro (short), faqHeading (short), contactHeadline (short), contactSubheadline (short), benefits (3 objects {title,description}), offers (3-6 objects {title,price:number,description}), faq (3 objects {question,answer}), palette (object with a,b,bg,panel,text as six-digit #RRGGBB colors).
-All user-visible text must be written in ${languageName}. Pick a visual tone matching the business. For premium/luxury brands choose a dark base with sophisticated accents, for other brands use an appropriate readable palette. Use strong color contrast. Only use supplied facts; never invent client reviews, awards, addresses, phone numbers, statistics or prices. If price is not given, use 0. Keep JSON compact under 4500 characters. No markdown.`;
+All user-visible text must be written in ${languageName}. Pick a visual tone matching the business. Follow the description as the top priority: requested colors, text, products and style must be reflected in palette and copy. A separate AI design pass will invent the complete HTML/CSS layout from scratch. Never force a white background unless asked. For premium/luxury brands choose a dark base with sophisticated accents, for other brands use an appropriate readable palette. Use strong color contrast. Only use supplied facts; never invent client reviews, awards, addresses, phone numbers, statistics or prices. If price is not given, use 0. Keep JSON compact under 4500 characters. No markdown.`;
     const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
     let j = null;
     let diagnostics = null;
@@ -5409,7 +5594,7 @@ All user-visible text must be written in ${languageName}. Pick a visual tone mat
       const payload = {
         model,
         messages: [{ role:'system', content:sys }, { role:'user', content:`Business name: ${name}\nDescription: ${desc}` }],
-        temperature: attempt ? 0.2 : 0.45,
+        temperature: attempt ? 0.45 : 0.85,
         max_tokens: attempt ? 1900 : 2400
       };
       // JSON mode is supported by many OpenRouter chat models. Retry without it
@@ -5441,7 +5626,7 @@ All user-visible text must be written in ${languageName}. Pick a visual tone mat
       };
       if (obj && typeof obj === 'object' && !Array.isArray(obj)
           && (typeof obj.heroHeadline === 'string' || typeof obj.bio === 'string' || Array.isArray(obj.offers))) {
-        j = goAiBuildPage(obj, name, desc, lang);
+        j = obj;
         break;
       }
       console.warn('AI site brief validation failed', diagnostics);
@@ -5450,13 +5635,28 @@ All user-visible text must be written in ${languageName}. Pick a visual tone mat
       message:'AI provider did not return a valid website brief. No site was published. Try a different OPENROUTER_MODEL if this continues.',
       diagnostic:{ finishReason:diagnostics && diagnostics.finishReason, contentLength:diagnostics && diagnostics.contentLength, responseChoices:diagnostics && diagnostics.responseChoices }
     });
+    // Images are matched to the business and its actual offers. The user's uploads always win.
+    const searched=[];
+    if(!uploadedMedia.some(x=>x.type==='image'||x.type==='video')){
+      const first=await goAiSearchPhoto(cleanStr(j.category||name,60)+' '+cleanStr(name,45));
+      if(first)searched.push(first);
+    }
+    const pictureUploads=uploadedMedia.filter(x=>x.type==='image');
+    const rawOffers=Array.isArray(j.offers)?j.offers.slice(0,6):[];
+    const productPhotos=await Promise.all(rawOffers.slice(0,3).map(async (o,k)=>{
+      const chosen=pictureUploads[k+1]||(!k&&pictureUploads[0])||null;
+      return chosen?{url:chosen.url,credit:'Uploaded by owner'}:goAiSearchPhoto(cleanStr(o.title,90)+' '+cleanStr(j.category||'',40));
+    }));
+    // Let the model design HTML/CSS itself; the old six-layout renderer is not used.
+    // Uploaded media and discovered relevant photos are supplied as real image URLs.
+    j=await goAiGenerateOriginalDesign({key,model,name,description:desc,languageName,brief:j,media:uploadedMedia,photos:searched});
     const cleanHtml = aiCleanHtml(j.html);
-    const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
+    const aiPage = cleanHtml.length > 200 ? { html: cleanHtml, css: aiCleanCss(j.css), photoCredits:[...searched,...productPhotos].filter(x=>x&&x.license).map(x=>({credit:x.credit,license:x.license,page:x.page})), palette: (j.palette && typeof j.palette === 'object') ? { a: cleanStr(j.palette.a, 9), b: cleanStr(j.palette.b, 9), bg: cleanStr(j.palette.bg, 9), panel: cleanStr(j.palette.panel, 9), text: cleanStr(j.palette.text, 9) } : {} } : undefined;
     // Export choice: create an offline standalone file, without storing another website.
     if (req.body.output === 'code') {
       { const _json = res.json.bind(res); res.json = function (body) { try { if (body && body.output === 'code') goSaveCodeProject(req.user.id, name, body); } catch (e) {} return _json(body); }; }
       const offers = (Array.isArray(j.offers) ? j.offers : []).slice(0, 6);
-      const cards = offers.map(o => `<article class="product"><h3>${esc(cleanStr(o.title,120))}</h3><p>${esc(cleanStr(o.description,400))}</p>${Number(o.price)>0?`<strong>€${Number(o.price).toFixed(2)}</strong>`:''}</article>`).join('');
+      const cards = offers.map((o,ii) => `<article class="product">${productPhotos[ii]&&productPhotos[ii].url?`<img src="${esc(productPhotos[ii].url)}" alt="${esc(cleanStr(o.title,120))}" style="width:100%;height:220px;object-fit:cover">`:''}<h3>${esc(cleanStr(o.title,120))}</h3><p>${esc(cleanStr(o.description,400))}</p>${Number(o.price)>0?`<strong>€${Number(o.price).toFixed(2)}</strong>`:''}</article>`).join('');
       const faqs = (Array.isArray(j.faq)?j.faq:[]).slice(0,6).map(f=>`<details><summary>${esc(cleanStr(f.question,160))}</summary><p>${esc(cleanStr(f.answer,500))}</p></details>`).join('');
       const page = (cleanHtml || '<main><h1>'+esc(name)+'</h1>{{OFFERS}}</main>')
         .replace(/\{\{OFFERS\}\}/g,'<section id="offers"><h2>Offers</h2>'+cards+'</section>')
@@ -5471,7 +5671,7 @@ All user-visible text must be written in ${languageName}. Pick a visual tone mat
       const format = String(req.body.codeLanguage || 'html').toLowerCase();
       const jsString = v => JSON.stringify(String(v)).replace(/</g, '\\u003c');
       const cssVars = ':root{--a:'+safeHex(palette.a,'#355cbd')+';--b:'+safeHex(palette.b,'#0e8490')+';--bg:'+safeHex(palette.bg,'#ffffff')+';--panel:'+safeHex(palette.panel,'#f1f4f8')+';--text:'+safeHex(palette.text,'#182339')+'}';
-      const pageCss = cssVars+'body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}main{max-width:1080px;margin:auto;padding:32px}section{padding:32px 0}.product{background:var(--panel);padding:16px;border-radius:10px;margin:12px 0}'+staticCss;
+      const pageCss = cssVars+'body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif}*{box-sizing:border-box}img,video{max-width:100%}'+staticCss;
       const b64 = Buffer.from(file,'utf8').toString('base64');
       const snip = (s, prefix) => ({ output:'code', codeLanguage:format, html:s, language:lang, fileName:prefix });
       const component = 'import React from "react";\n\nexport default function GoldOfferWebsite() {\n  const page = '+jsString(page)+';\n  const css = '+jsString(pageCss)+';\n  return <><style>{css}</style><main dangerouslySetInnerHTML={{ __html: page }} /></>;\n}\n';
@@ -5525,7 +5725,7 @@ All user-visible text must be written in ${languageName}. Pick a visual tone mat
         if (clientGone) break;
         const o = offers[i] || {};
         if (!cleanStr(o.title, 120)) continue;
-        await Offer.create({ userId: sub._id, title: cleanStr(o.title, 120), price: Math.max(0, Number(o.price) || 0), description: cleanStr(o.description, 400), order: i });
+        await Offer.create({ userId: sub._id, title: cleanStr(o.title, 120), price: Math.max(0, Number(o.price) || 0), description: cleanStr(o.description, 400), imageUrl: (productPhotos[i]&&productPhotos[i].url)||'', images:productPhotos[i]&&productPhotos[i].url?[productPhotos[i].url]:[], order: i });
       }
       if (clientGone) {
         // Canceled before the response: undo only this newly-created AI website.
