@@ -5484,6 +5484,54 @@ function goAiBuildPage(brief, siteName, description, lang, media = [], photos = 
   return { ...brief, siteName, bio:about, palette, layout, html:siteHtml, css:css+variantCss, offers:list(brief.offers,6), faq:list(brief.faq,6) };
 }
 
+// Resilient original-design fallback for models that return no JSON/HTML (not a six-template catalog).
+// Content is the AI-written brief; structure, image placement and visual parameters vary per request.
+function goAiResilientPage(brief, name, description, media, photos) {
+  const pick = a => a[crypto.randomInt(a.length)];
+  const rand = (min,max) => crypto.randomInt(min,max+1);
+  const text = (x,n=400) => esc(cleanStr(x||'',n));
+  const paletteIn = brief.palette && typeof brief.palette==='object' ? brief.palette : {};
+  const dark = /black|dark|noir|premium|luxur|черн|тъмен|лукс/i.test(description);
+  const base = dark ? {bg:'#0e1017',panel:'#1d2331',text:'#f7f8fc',a:'#c7a66a',b:'#76d8d1'} : {bg:'#f5f3ee',panel:'#ffffff',text:'#15232b',a:'#245ee9',b:'#b95753'};
+  const p = {};
+  for(const k of ['a','b','bg','panel','text'])p[k]=goAiHex(paletteIn[k])?paletteIn[k]:base[k];
+  const requested=goAiRequestedBg(description);
+  if(requested){p.bg=requested;p.text=goAiTextOn(requested);p.panel=p.text==='#fafbff'?'#1c2331':'#ffffff';}
+  else p.text=goAiTextOn(p.bg);
+  const imageList=[...(media||[]).filter(x=>x.type==='image'),...(photos||[]).filter(x=>x.url)].slice(0,10);
+  const videoList=(media||[]).filter(x=>x.type==='video');
+  const visualList=[...videoList,...imageList];
+  const mediaHtml=visualList.map((m,i)=>m.type==='video'
+    ? `<video src="${esc(m.url)}" controls muted playsinline preload="metadata" aria-label="${text(m.name||name,100)}"></video>`
+    : `<img src="${esc(m.url)}" alt="${text(m.name||name,100)}" loading="${i?'lazy':'eager'}">`).join('');
+  const sections={
+    story:`<section id="about" class="go-r-story"><p class="go-r-eyebrow">${text(brief.eyebrow||brief.category||name,90)}</p><h2>${text(brief.aboutHeading||name,140)}</h2><p>${text(brief.bio||description,700)}</p></section>`,
+    benefits:`<section class="go-r-benefits">${(Array.isArray(brief.benefits)?brief.benefits:[]).slice(0,4).map((b,i)=>`<article><small>0${i+1}</small><h3>${text(b.title,100)}</h3><p>${text(b.description,260)}</p></article>`).join('')}</section>`,
+    offers:`<section id="offers" class="go-r-offers"><p class="go-r-eyebrow">${text(brief.offersIntro||'',180)}</p><h2>${text(brief.offersHeading||'Explore',110)}</h2>{{OFFERS}}</section>`,
+    faq:`<section class="go-r-faq"><h2>${text(brief.faqHeading||'Questions',110)}</h2>{{FAQ}}</section>`,
+    contact:`<section id="contact" class="go-r-contact"><h2>${text(brief.contactHeadline||name,110)}</h2><p>${text(brief.contactSubheadline||'',250)}</p>{{CONTACT}}</section>`
+  };
+  const order=['story','benefits','offers','faq','contact'];
+  // Preserve commerce/navigation anchors while varying the order of story and benefits.
+  if(rand(0,1))[order[0],order[1]]=[order[1],order[0]];
+  if(rand(0,1))[order[2],order[3]]=[order[3],order[2]];
+  const heroMediaFirst=/photo.*(?:left|first)|снимк.*(?:ляво|първо)/i.test(description) ? true
+    : /photo.*right|снимк.*дясно/i.test(description) ? false : !!rand(0,1);
+  const heroTitle=text(brief.heroHeadline||name,140);
+  const hero=`<header class="go-r-nav"><a href="#top">${text(name,90)}</a><nav><a href="#about">About</a><a href="#offers">Offers</a><a href="#contact">Contact</a></nav></header><main id="top"><section class="go-r-hero"><div class="go-r-copy"><p class="go-r-eyebrow">${text(brief.category||name,80)}</p><h1>${heroTitle}</h1><p>${text(brief.heroSubheadline||description,400)}</p><a href="#offers" class="go-r-button">${text(brief.offersHeading||'Explore',80)} ↗</a></div><div class="go-r-media">${mediaHtml||'<div class="go-r-abstract" aria-hidden="true"></div>'}</div></section>${order.map(k=>sections[k]).join('')}</main><footer class="go-r-footer">${text(name,100)} <a href="#top">↑</a></footer>`;
+  const radius=rand(0,28),maxW=rand(1040,1440),heroSplit=rand(40,65),size=rand(55,95)/10;
+  const font=pick(['Georgia,serif','Arial,Helvetica,sans-serif','Trebuchet MS,Arial,sans-serif','Palatino,Georgia,serif','Verdana,Geneva,sans-serif']);
+  const padding=rand(58,118),shift=heroMediaFirst?'1':'2',copyShift=heroMediaFirst?'2':'1';
+  const css=`.ai-original{background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden;font-family:Arial,system-ui,sans-serif}`+
+    `.ai-original *{box-sizing:border-box}.ai-original a{color:inherit}.ai-original h1,.ai-original h2,.ai-original h3{font-family:${font};line-height:1.08;overflow-wrap:break-word}.ai-original p{line-height:1.65}`+
+    `.go-r-nav{max-width:${maxW}px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:25px 5%;border-bottom:1px solid currentColor}.go-r-nav>a{font-weight:850;text-decoration:none}.go-r-nav nav{display:flex;gap:18px;font-size:14px}.go-r-nav nav a{text-decoration:none}`+
+    `.go-r-hero{max-width:${maxW}px;margin:auto;display:grid;grid-template-columns:${heroSplit}% 1fr;align-items:center;gap:24px;min-height:75svh;padding:40px 5%}.go-r-copy{grid-column:${copyShift};grid-row:1}.go-r-copy h1{font-size:clamp(3rem,${size}vw,8rem);letter-spacing:-.05em;margin:15px 0 24px}.go-r-copy>p:not(.go-r-eyebrow){font-size:clamp(1.05rem,1.7vw,1.4rem);opacity:.85;max-width:65ch}.go-r-media{grid-column:${shift};grid-row:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}.go-r-media>*:first-child{grid-column:1/-1}.go-r-media img,.go-r-media video{width:100%;height:100%;min-height:170px;max-height:520px;object-fit:cover;border-radius:${radius}px}.go-r-abstract{height:480px;background:radial-gradient(circle at 30% 40%,var(--a),transparent 55%),linear-gradient(135deg,var(--panel),var(--b));border-radius:${radius}px}`+
+    `.go-r-eyebrow{color:var(--a);text-transform:uppercase;letter-spacing:.15em;font-weight:800;font-size:.78rem}.go-r-button{display:inline-block;background:var(--a);color:${goAiTextOn(p.a)}!important;padding:14px 24px;text-decoration:none;border-radius:${radius}px;margin-top:25px;font-weight:800}`+
+    `.go-r-story,.go-r-benefits,.go-r-offers,.go-r-faq,.go-r-contact{max-width:${maxW}px;margin:auto;padding:${padding}px 5%}.ai-original h2{font-size:clamp(2.3rem,5vw,5rem);margin:12px 0 28px}.go-r-story{display:grid;grid-template-columns:1fr 2fr;gap:24px}.go-r-story .go-r-eyebrow{grid-column:1/-1}.go-r-story p:last-child{font-size:1.15rem;max-width:68ch}.go-r-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}.go-r-benefits article{background:var(--panel);padding:30px;border-radius:${radius}px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent)}.go-r-benefits article small{color:var(--a)}.go-r-faq,.go-r-contact{background:var(--panel);border-radius:${radius}px}.go-r-contact{margin-bottom:60px}.go-r-footer{padding:25px 5%;border-top:1px solid currentColor;display:flex;justify-content:space-between}.go-r-footer a{text-decoration:none}`+
+    `@media(max-width:760px){.go-r-nav nav{gap:9px;font-size:12px}.go-r-hero{display:flex;flex-direction:column;min-height:0;padding:50px 5%}.go-r-copy,.go-r-media{width:100%}.go-r-copy{order:1}.go-r-media{order:2}.go-r-copy h1{font-size:clamp(2.5rem,13vw,5rem)}.go-r-story{display:block}.go-r-story,.go-r-benefits,.go-r-offers,.go-r-faq,.go-r-contact{padding:50px 5%}}`;
+  return {...brief,html:`<div class="ai-original">${hero}</div>`,css,palette:p};
+}
+
 // AI free-design pass: no preset layout names or server-side page grids.
 // The provider produces semantic HTML + authored CSS on every invocation;
 // the server keeps offer / FAQ / contact modules authoritative and safe.
@@ -5500,7 +5548,7 @@ async function goAiGenerateOriginalDesign({ key, model, name, description, langu
     temperature:0.95,max_tokens:9200
   };
   let diagnostics='';
-  for(let attempt=0;attempt<2;attempt++){
+  for(let attempt=0;attempt<(model==='openrouter/free'?1:2);attempt++){
     if(attempt===0)payload.response_format={type:'json_object'};
     else delete payload.response_format;
     let resp;
@@ -5508,6 +5556,7 @@ async function goAiGenerateOriginalDesign({ key, model, name, description, langu
       resp=await axios.post('https://openrouter.ai/api/v1/chat/completions',payload,{headers:{Authorization:'Bearer '+key},timeout:110000});
     }catch(e){
       if(attempt===0 && e.response && [400,422].includes(e.response.status))continue;
+      if(!e.response || e.response.status>=500 || e.response.status===429){console.warn('AI original design provider unavailable; using resilient layout', {model,status:e.response&&e.response.status});break;}
       throw e;
     }
     const choice=resp.data&&resp.data.choices&&resp.data.choices[0];
@@ -5533,7 +5582,8 @@ async function goAiGenerateOriginalDesign({ key, model, name, description, langu
     }
     console.warn('AI original design validation failed',{model,finishReason:diagnostics,htmlLength:html&&html.length,cssLength:css&&css.length,hasSections:!!hasSections,uploadsIncluded});
   }
-  throw new Error('AI original design was incomplete ('+diagnostics+'). Nothing was published. Please retry generation.');
+  console.warn('AI original design missing; using resilient layout', {model,reason:diagnostics});
+  return goAiResilientPage(brief,name,description,media,photos);
 }
 
 app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
