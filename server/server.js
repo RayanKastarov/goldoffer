@@ -1202,14 +1202,30 @@ app.post('/api/ai/product-description', authenticateToken, async (req, res) => {
   const query = String((req.body && req.body.query) || '').trim().slice(0, 120);
   if (query.length < 3) return res.status(400).json({ message: 'Enter a product name (at least 3 characters).' });
   try {
-    const results = await googleResults(query, 'Bulgaria');
-    if (results === null) return res.status(503).json({ message: 'Google search is not configured on the server. Set SERPAPI_KEY or GOOGLE_API_KEY and GOOGLE_CX.' });
-    const description = searchDescription(query, results);
-    if (!description) return res.json({ description: '', message: 'Not enough reliable information found for this product. Please write the description yourself.' });
-    return res.json({ description, source: 'Google search snippets', message: 'Draft from search results. Review the details before publishing.' });
-  } catch (err) {
-    console.error('Product description search failed:', err.message);
-    return res.status(502).json({ message: 'Could not fetch Google results right now. Please try again.' });
+    // Product descriptions are original English copy, not pasted search snippets.
+    // Search is optional context, never a license to invent product specifications.
+    let items=[];
+    try { items=(await googleResults(query, '')) || []; }
+    catch (e) { console.warn('Product search context unavailable', e.message); }
+    const evidence=items.slice(0,5).map(x => cleanStr([x.name,...(x.texts||[])].join(' '),400)).filter(Boolean);
+    const key=process.env.OPENROUTER_API_KEY;
+    if(!key) return res.status(503).json({message:'Set OPENROUTER_API_KEY to generate a polished English description.'});
+    const model=process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+    const prompt='Write original, polished English ecommerce product copy for the exact product named by the seller. Respond ONLY with JSON {"description":"..."}. Use one compelling but factual opening sentence plus 2–3 concise sentences about intended use, style or experience. Write natural English, no keyword stuffing or repeating the product name, no generic claims. Do not invent materials, sizes, colors, measurements, technology, availability, prices, official partnerships or features unless explicitly supported by the provided title/evidence. If evidence is weak, stay general. Never copy source snippets verbatim.';
+    const r=await axios.post('https://openrouter.ai/api/v1/chat/completions',{
+      model, temperature:0.65, max_tokens:440,
+      messages:[{role:'system',content:prompt},{role:'user',content:JSON.stringify({productName:query,searchContext:evidence})}]
+    },{headers:{Authorization:'Bearer '+key},timeout:45000});
+    const c=r.data&&r.data.choices&&r.data.choices[0];
+    const raw=c&&c.message&&c.message.content;
+    const t=typeof raw==='string'?raw:Array.isArray(raw)?raw.map(x=>x.text||'').join(''):'';
+    const obj=extractJson(t);
+    let description=String(obj&&obj.description||'').trim().replace(/<[^>]+>/g,'').slice(0,700);
+    if(!description || description.length<55) return res.status(502).json({message:'The AI did not return a complete English description. Please retry; no text was replaced.'});
+    return res.json({description,source:'AI copy grounded in product title and available search context',message:'Review product details before publishing.'});
+  } catch(err) {
+    console.error('AI product description generation failed',err.response&&err.response.status||err.message);
+    return res.status(502).json({message:'The AI description provider is temporarily unavailable. Please retry.'});
   }
 });
 
@@ -3532,6 +3548,11 @@ body .go-ai-public-nav{position:relative!important;z-index:75;display:flex;align
 .go-ai-public-nav a{color:var(--text)!important;text-decoration:none!important;font-weight:650;white-space:nowrap}.go-ai-public-nav .go-ai-nav-brand{font-size:clamp(19px,2vw,26px);font-weight:850;letter-spacing:-.04em}.go-ai-public-nav nav{display:flex;gap:clamp(5px,1.5vw,22px);flex-wrap:wrap;align-items:center}.go-ai-public-nav nav a{display:inline-flex;padding:10px 12px;border:1px solid transparent;border-radius:10px;font-size:14px}.go-ai-public-nav nav a.current,.go-ai-public-nav nav a:hover{border-color:var(--line);background:var(--panel);color:var(--a)!important}
 body .wrap,body .container,body .profile-wrap{color:var(--text)}body .wrap h1,body .wrap h2,body .wrap h3,body .wrap p,body .wrap a,body .wrap .sub,body footer{color:var(--text)}body .wrap .sub,body .wrap .crumb{opacity:.75}body footer{background:var(--bg)!important;color:var(--text)!important;border-top:1px solid var(--line)!important}
 body .sp-hero,body .sp-about,body .sp-review-summary,body .sp-review-list,body .mside,body .mmain,body .msgr,body .profile-card,body .seller-hero,body .seller-card,body .panel,body .msg-layout,body .msg-list,body .msg-thread,body .p-card,body .review-card,body .info-card,body .card{background:var(--panel)!important;color:var(--text)!important;border-color:var(--line)!important}body .sp-tabs{background:var(--bg)!important;border-color:var(--line)!important}body .sp-eyebrow{color:var(--a)!important}body .sp-primary{background:var(--a)!important;color:${goAiTextOn(accent)}!important}body .sp-btn{border-color:var(--line)}body .sp-section-head h2,body .sp-intro h1,body .sp-about h3{color:var(--text)!important}body input,body textarea,body select{color:var(--text);background:var(--panel);border-color:var(--line)}body input::placeholder,body textarea::placeholder{color:var(--text);opacity:.65}body .cta,body .btn-primary{background:var(--a)!important;color:${goAiTextOn(accent)}!important}
+/* AI-brand styles must win over the shared storefront stylesheet. */
+body .go-ai-public-nav{box-shadow:0 12px 36px color-mix(in srgb,var(--bg) 75%,transparent)!important}
+body .go-ai-public-nav nav a.current{color:var(--a)!important;border-bottom:2px solid var(--a)!important}
+body .sp-hero,body .sp-about,body .seller-hero,body .profile-card,body .msg-layout,body .msg-thread{box-shadow:0 18px 45px color-mix(in srgb,var(--bg) 75%,transparent)!important}
+body .wrap .btn,body .wrap button:not(.go-ai-theme-ignore),body .sp-primary{border-radius:clamp(8px,1vw,16px)}
 @media(max-width:760px){.go-ai-public-nav{padding:16px!important}.go-ai-public-nav nav{width:100%;overflow-x:auto;flex-wrap:nowrap}.go-ai-public-nav nav a{font-size:12px;padding:8px}}
 </style>`;
 }
@@ -3571,7 +3592,7 @@ body #goOfferGrid{gap:22px!important}
 </style></head><body class="${cls || ''} layout-${esc(safeLayout(user.layout))}" data-page="${esc(page)}" data-slug="${esc(user.slug)}" data-seller="${esc(sellerName(user))}">
 ${user.announcementText ? `<aside class="go-public-announcement">${esc(user.announcementText)}</aside><style>.go-public-announcement{position:relative;z-index:2;margin:70px auto -60px;width:min(100% - 36px,1180px);padding:12px 20px;border-radius:12px;background:color-mix(in srgb,var(--a) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--a) 30%,transparent);color:inherit;text-align:center;font-size:14px}</style>` : ''}
 ${body}
-${user.aiGenerated && user.aiPage && user.aiPage.html && page === 'home' ? '' : GO_PUBLIC_LIGHT_FIX_CSS}${page !== 'home' ? goAiInnerPagesCss(user) : ''}
+${goAiActive(user) ? '' : GO_PUBLIC_LIGHT_FIX_CSS}${page !== 'home' ? goAiInnerPagesCss(user) : ''}
 ${GD.freeHtml(D, page)}
 <script type="application/json" id="go-design">${JSON.stringify(D || {}).replace(/</g, '\\u003c')}</script><script>${GO_APPLY_JS}</script>${studio ? `<script>(${goStudioClient.toString()})(${goDesignCore.toString()})</script>` : ''}
 ${studio ? '' : `<script>(function(){try{var p=location.pathname.split('/');if(p[1]==='site'&&p[2]){fetch('/api/storefront/'+encodeURIComponent(p[2])+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:p[3]==='offer'?'offer':'view',offerId:p[3]==='offer'?p[4]:undefined}),keepalive:true}).catch(function(){})}}catch(e){}})()</script>`}
@@ -4871,7 +4892,7 @@ function aiCleanHtml(h) {
 function aiBaseCss(user) {
   const p = (user.aiPage && user.aiPage.palette) || {};
   const col = (v, d) => (/^#[0-9a-f]{3,8}$/i.test(String(v || '')) ? v : d);
-  const a = col(p.a, '#ffb703'), b = col(p.b, a), bg = col(p.bg, '#0b0f17'), panel = col(p.panel, '#151b27'), text = col(p.text, '#f3f4f6');
+  const a = col(p.a, '#e85729'), b = col(p.b, a), bg = col(p.bg, '#10151b'), panel = col(p.panel, '#1c2831'), text = col(p.text, '#f3f4f6');
   return `:root{--a:${a};--b:${b};--bg:${bg};--panel:${panel};--text:${text};--on:#111;--line:rgba(127,127,127,.25);--mute:#9aa3b2;--soft:#cbd2dc;--ink:${a}}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.55;-webkit-text-size-adjust:100%}
 img{max-width:100%;height:auto}a{color:inherit}
@@ -5587,134 +5608,7 @@ async function goAiSearchVideo(query) {
   return found;
 }
 const goAiLayouts=['split','cinematic','editorial','mosaic','minimal','showcase'];
-function goAiLayout(brief, description){
-  const request=String(description||'').toLowerCase();
-  const directives=[['minimal',/minimal|минимал/i],['cinematic',/full.?screen|cinematic|цял екран|пълен екран|кинематограф/i],['mosaic',/mosaic|grid|мозайка|плочки/i],['editorial',/editorial|magazine|списание|редакцион/i],['showcase',/showcase|каталог|продуктов/i],['split',/split|две колони|разделен екран/i]];
-  for(const [v,pattern] of directives)if(pattern.test(request))return v;
-  return goAiLayouts[crypto.randomInt(goAiLayouts.length)];
-}
-
-// GoldOffer AI v3: the model writes a SHORT content brief, not a giant JSON-escaped
-// HTML/CSS document. Server-owned HTML/CSS removes JSON truncation as a failure mode
-// for both publish-link and export-code paths.
-function goAiBuildPage(brief, siteName, description, lang, media = [], photos = []) {
-  const str = (v, limit = 200) => cleanStr(v, limit);
-  const safe = v => esc(str(v, 700));
-  const list = (v, max) => Array.isArray(v) ? v.filter(x => x && typeof x === 'object').slice(0, max) : [];
-  const paletteIn = brief.palette && typeof brief.palette === 'object' ? brief.palette : {};
-  const dark = /luxur|premium|cinemat|dark|black|night|noir|automotiv|detail|barber|автомоб|лукс|черн/i.test(siteName + ' ' + description);
-  const defaults = dark
-    ? { a:'#dfbc75', b:'#a77c41', bg:'#0b1018', panel:'#18212c', text:'#f7f2e9' }
-    : { a:'#2563eb', b:'#0e7490', bg:'#f7f9fc', panel:'#ffffff', text:'#17243b' };
-  const hex = (key) => /^#[\da-f]{6}$/i.test(String(paletteIn[key] || '')) ? String(paletteIn[key]) : defaults[key];
-  const palette = Object.fromEntries(['a','b','bg','panel','text'].map(k => [k,hex(k)]));
-  const userBg=goAiRequestedBg(description);
-  if(userBg) {palette.bg=userBg;palette.text=goAiTextOn(userBg);palette.panel=palette.text==='#fafbff'?'#18212d':'#ffffff';}
-  else {palette.text=goAiTextOn(palette.bg);}
-  const layout=goAiLayout(brief,description);
-  const headingFont=/\b(modern|tech|startup|software|технолог|модерн)\b/i.test(description)?'sans-serif':/luxur|elegan|лукс|елегант/i.test(description)?'serif':(crypto.randomInt(2)?'serif':'sans-serif');
-  const images=media.filter(x=>x.type==='image').map(x=>({url:x.url,credit:'Your uploaded photo'}));
-  const video=media.find(x=>x.type==='video');
-  const hero=images[0]||photos[0]||null;
-  const heroMedia=video?`<video class="goa-hero-media" src="${esc(video.url)}" autoplay muted loop playsinline controls preload="metadata" aria-label="${esc(siteName)} video"></video>`
-    :hero?`<img class="goa-hero-media" src="${esc(hero.url)}" alt="${esc(siteName)}" loading="eager">`:'';
-  const heroCredit=(!video && hero && hero.license)?`<small class="goa-photo-credit">Photo: ${esc(hero.credit||'Wikimedia Commons')} · ${esc(hero.license)}</small>`:'';
-  const heading = str(brief.heroHeadline, 95) || siteName;
-  const subtitle = str(brief.heroSubheadline, 240) || str(brief.bio, 240) || description;
-  const about = str(brief.bio, 500) || description;
-  const eyebrow = str(brief.eyebrow, 56) || str(brief.category, 56) || 'Thoughtfully crafted';
-  const offersHeading = str(brief.offersHeading, 90) || 'Our services';
-  const aboutHeading = str(brief.aboutHeading, 90) || 'Our story';
-  const benefits = list(brief.benefits, 3).map((b,i) => ({
-    title: str(b.title,70) || 'Attention to detail',
-    description: str(b.description,190) || 'Thoughtful service, built around your needs.',
-    index:i+1
-  }));
-  if (!benefits.length) benefits.push({title:'Thoughtful service',description:about,index:1});
-  const cards = benefits.map(b => `<article class="goa-benefit"><span class="goa-index">0${b.index}</span><h3>${safe(b.title)}</h3><p>${safe(b.description)}</p></article>`).join('');
-  const siteHtml = `<div class="goa-site goa-layout-${layout} goa-heading-${headingFont}"><header class="goa-nav"><a class="goa-logo" href="#home">${safe(siteName)}</a><nav aria-label="Sections"><a href="#about">${safe(aboutHeading)}</a><a href="#offers">${safe(offersHeading)}</a><a href="#contact">Contact</a></nav><a class="goa-navcta" href="#offers">Explore <span aria-hidden="true">↗</span></a></header>
-  <main id="home"><section class="goa-hero"><div class="goa-art" aria-hidden="true"><div class="goa-orb"></div><div class="goa-ring"></div><div class="goa-beam"></div></div><div class="goa-media-wrap">${heroMedia}${heroCredit}</div><div class="goa-hero-inner"><p class="goa-eyebrow"><span class="goa-star">✦</span> ${safe(eyebrow)}</p><h1>${safe(heading)}</h1><p class="goa-sub">${safe(subtitle)}</p><div class="goa-actions"><a class="goa-btn" href="#offers">Explore ${safe(offersHeading)} <span aria-hidden="true">↗</span></a><a class="goa-textlink" href="#about">Discover our story <span aria-hidden="true">→</span></a></div></div><div class="goa-hero-bottom"><span>DESIGNED TO STAND APART</span><span>${safe(siteName)}</span></div></section>
-  <section id="about" class="goa-about goa-section"><div class="goa-kicker">01 / WHO WE ARE</div><div><h2>${safe(aboutHeading)}</h2><p>${safe(about)}</p></div></section>
-  <section class="goa-benefits goa-section"><div class="goa-kicker">02 / WHY CHOOSE US</div><div class="goa-benefitgrid">${cards}</div></section>
-  <section id="offers" class="goa-products goa-section"><div class="goa-kicker">03 / CURATED FOR YOU</div><div class="goa-headingrow"><h2>${safe(offersHeading)}</h2><p>${safe(str(brief.offersIntro,190) || 'Explore what we can create together.')}</p></div>{{OFFERS}}</section>
-  <section class="goa-faq goa-section"><div class="goa-kicker">04 / QUESTIONS</div><h2>${safe(str(brief.faqHeading,90) || 'Good to know')}</h2>{{FAQ}}</section>
-  <section id="contact" class="goa-contact goa-section"><div class="goa-contact-orb" aria-hidden="true"></div><div class="goa-kicker">05 / LET’S CONNECT</div><h2>${safe(str(brief.contactHeadline,110) || 'Something great starts here.')}</h2><p>${safe(str(brief.contactSubheadline,190) || 'Get in touch to learn more.')}</p>{{CONTACT}}<a class="goa-btn" href="#offers">Browse offerings <span aria-hidden="true">↗</span></a></section></main>
-  <footer class="goa-footer"><span>${safe(siteName)}</span><span>Made with care · Built with GoldOffer Studio</span><a href="#home">Back to top ↑</a></footer></div>`;
-  const css = `.goa-site{--goa-accent:var(--a);color:var(--text);background:var(--bg);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
-.goa-site *{box-sizing:border-box}.goa-site a{text-decoration:none;color:inherit}.goa-site h1,.goa-site h2,.goa-site h3{font-family:Georgia,"Times New Roman",serif;letter-spacing:-.045em;line-height:1.04}.goa-site p{line-height:1.75}
-.goa-nav{max-width:1300px;margin:auto;padding:25px 5%;display:flex;align-items:center;gap:25px;justify-content:space-between}.goa-logo{font-weight:850;letter-spacing:-.03em;font-size:1.15rem;max-width:45%}.goa-nav nav{display:flex;gap:24px;align-items:center;font-size:.8rem;opacity:.8}.goa-navcta{padding:11px 17px;border:1px solid currentColor;border-radius:30px;font-size:.8rem;font-weight:700}
-.goa-hero{min-height:610px;min-height:75svh;position:relative;display:flex;flex-direction:column;justify-content:center;isolation:isolate;background:linear-gradient(130deg,var(--bg),var(--panel))}.goa-art{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;opacity:.85}.goa-orb{position:absolute;width:70vw;height:70vw;min-width:480px;min-height:480px;right:-18%;top:-27%;background:radial-gradient(circle at 36% 36%,var(--a),var(--b) 24%,transparent 66%);filter:blur(36px);opacity:.34}.goa-ring{position:absolute;right:8%;top:6%;width:40vw;height:40vw;min-width:260px;min-height:260px;border:1px solid var(--a);border-radius:50%;transform:rotate(-25deg) skewY(14deg);opacity:.35}.goa-beam{position:absolute;right:-12%;bottom:18%;width:65%;height:1px;background:linear-gradient(90deg,transparent,var(--a),transparent);transform:rotate(-22deg);box-shadow:0 0 30px 6px var(--a);opacity:.5}.goa-hero-inner{width:min(1200px,90%);margin:85px auto 70px;position:relative;z-index:1}.goa-eyebrow,.goa-kicker{font-size:.72rem;font-weight:850;letter-spacing:.19em;text-transform:uppercase;color:var(--a)}.goa-star{font-size:1.4rem;vertical-align:middle}.goa-hero h1{font-size:clamp(3.5rem,8.8vw,8rem);max-width:900px;margin:28px 0}.goa-sub{font-size:clamp(1.02rem,1.7vw,1.3rem);max-width:620px;opacity:.84}.goa-actions{display:flex;align-items:center;gap:28px;flex-wrap:wrap;margin-top:36px}.goa-btn{display:inline-flex;gap:20px;align-items:center;justify-content:space-between;background:var(--a);color:#111827!important;font-weight:800;padding:16px 25px;border-radius:5px;font-size:.9rem;box-shadow:0 12px 32px #0002}.goa-textlink{font-size:.9rem;font-weight:700;border-bottom:1px solid var(--a);padding:9px 0}.goa-hero-bottom{display:flex;justify-content:space-between;padding:22px 5%;font-size:.64rem;letter-spacing:.12em;font-weight:700;opacity:.65;border-top:1px solid currentColor}
-.goa-section{width:min(1180px,90%);margin:auto;padding:105px 0}.goa-section h2{font-size:clamp(2.5rem,5vw,4.7rem);margin:0 0 22px}.goa-about{display:grid;grid-template-columns:1fr 2fr;gap:30px}.goa-about p{max-width:700px;font-size:1.1rem;opacity:.8}.goa-benefits{border-top:1px solid currentColor}.goa-benefitgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:30px}.goa-benefit{background:var(--panel);border:1px solid color-mix(in srgb,var(--text) 16%,transparent);padding:33px 27px;min-height:240px}.goa-index{font-size:.73rem;color:var(--a);font-weight:800}.goa-benefit h3{font-size:1.9rem;margin:38px 0 10px}.goa-benefit p{font-size:.9rem;opacity:.78}.goa-products{border-top:1px solid currentColor}.goa-headingrow{display:flex;align-items:end;justify-content:space-between;gap:30px;margin:24px 0 32px}.goa-headingrow p{max-width:310px;opacity:.75}.goa-site .ai-offers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.goa-site .ai-offer{transition:transform .2s;overflow:hidden;border-radius:14px}.goa-site .ai-offer:hover{transform:translateY(-5px)}.goa-site .ai-offer-body{padding:24px}.goa-site .ai-offer-title{font-size:1.2rem}.goa-site .ai-offer-img{aspect-ratio:16/10;background:linear-gradient(135deg,var(--a),var(--b))}.goa-faq{border-top:1px solid currentColor}.goa-site .ai-faq details{border:1px solid color-mix(in srgb,var(--text) 18%,transparent);border-radius:5px;padding:20px 24px}.goa-contact{position:relative;padding:80px 6%;width:min(1180px,90%);margin:30px auto 95px;background:var(--panel);border:1px solid color-mix(in srgb,var(--a) 35%,transparent);overflow:hidden}.goa-contact-orb{position:absolute;right:-80px;top:-130px;width:300px;height:300px;border:1px solid var(--a);border-radius:50%;opacity:.3}.goa-contact h2{position:relative;max-width:750px}.goa-contact p{max-width:540px}.goa-contact .ai-contact{margin:24px 0}.goa-footer{border-top:1px solid color-mix(in srgb,var(--text) 22%,transparent);padding:38px 5%;display:flex;gap:20px;flex-wrap:wrap;align-items:center;justify-content:space-between;font-size:.83rem}.goa-footer span:first-child{font-weight:800}
-@media(max-width:760px){.goa-nav{gap:12px;padding:17px 5%}.goa-logo{max-width:64%}.goa-nav nav{display:none}.goa-navcta{font-size:.75rem;padding:9px 12px}.goa-hero{min-height:590px}.goa-hero-inner{margin:55px auto}.goa-hero h1{font-size:clamp(2.9rem,12vw,4.9rem);overflow-wrap:anywhere}.goa-hero-bottom{gap:20px}.goa-section{padding:75px 0}.goa-about{grid-template-columns:1fr;gap:20px}.goa-benefitgrid,.goa-site .ai-offers{grid-template-columns:1fr}.goa-headingrow{display:block}.goa-contact{padding:60px 6%;margin-bottom:45px}.goa-footer{flex-direction:column;align-items:flex-start}}`;
-  const variantCss = `.goa-site{--goa-layout:${layout};--goa-radius:${layout==='minimal'?'0px':layout==='mosaic'?'32px':'16px'};--goa-hero-overlay:rgba(0,0,0,.1)}
-.goa-site .goa-heading-sans-serif h1,.goa-site.goa-heading-sans-serif h1,.goa-site.goa-heading-sans-serif h2,.goa-site.goa-heading-sans-serif h3{font-family:Inter,Arial,system-ui,sans-serif}
-.goa-media-wrap{display:none}.goa-hero-media{width:100%;height:100%;object-fit:cover;display:block}.goa-photo-credit{position:absolute;bottom:8px;right:12px;font-size:10px;background:#0009;color:#fff;padding:4px 7px;border-radius:4px}
-.goa-site .goa-btn{border-radius:var(--goa-radius)}.goa-site .goa-benefit{border-radius:var(--goa-radius)}
-.goa-layout-split .goa-hero{display:grid;grid-template-columns:1fr 1fr;min-height:75vh;align-items:stretch}.goa-layout-split .goa-hero-inner{grid-column:1;grid-row:1;align-self:center;width:84%;margin:0 auto;padding:50px 0}.goa-layout-split .goa-media-wrap{display:block;grid-column:2;grid-row:1;min-height:610px;overflow:hidden;background:linear-gradient(125deg,var(--a),var(--panel))}.goa-layout-split .goa-hero-bottom{grid-column:1/-1}.goa-layout-split .goa-hero h1{font-size:clamp(3rem,6vw,6rem)}
-.goa-layout-cinematic .goa-hero{min-height:90svh;justify-content:end;color:#fff;background:linear-gradient(115deg,#0b1018,#192839)}.goa-layout-cinematic .goa-media-wrap{display:block;position:absolute;inset:0;z-index:-1;background:var(--panel)}.goa-layout-cinematic .goa-media-wrap::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.82),rgba(0,0,0,.23))}.goa-layout-cinematic .goa-hero-inner{margin:120px auto 65px}.goa-layout-cinematic .goa-hero h1{max-width:1050px;font-size:clamp(3.5rem,10vw,9.5rem)}.goa-layout-cinematic .goa-eyebrow{color:#fff}
-.goa-layout-editorial .goa-nav{border-bottom:1px solid currentColor}.goa-layout-editorial .goa-hero{min-height:75svh;display:grid;grid-template-columns:1.1fr .9fr;align-items:center}.goa-layout-editorial .goa-hero-inner{grid-column:1;grid-row:1;width:84%;margin:50px auto}.goa-layout-editorial .goa-media-wrap{display:block;grid-column:2;grid-row:1;height:75%;margin:5%;background:var(--panel);overflow:hidden;border-radius:60% 60% 4px 4px}.goa-layout-editorial .goa-hero-bottom{grid-column:1/-1}.goa-layout-editorial .goa-hero h1{font-weight:400;font-size:clamp(3.2rem,7vw,7.5rem)}
-.goa-layout-mosaic .goa-hero{min-height:70svh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:3%}.goa-layout-mosaic .goa-hero-inner{grid-column:2;grid-row:1;width:88%;margin:50px auto}.goa-layout-mosaic .goa-media-wrap{grid-column:1;grid-row:1;display:block;min-height:480px;height:85%;margin-left:5%;background:var(--panel);overflow:hidden;border-radius:var(--goa-radius)}.goa-layout-mosaic .goa-hero-bottom{grid-column:1/-1}.goa-layout-mosaic .goa-benefitgrid{grid-template-columns:1.3fr 1fr;gap:22px}.goa-layout-mosaic .goa-benefit:first-child{grid-row:span 2}.goa-layout-mosaic .goa-benefit{min-height:140px}
-.goa-layout-minimal .goa-nav{border-bottom:1px solid color-mix(in srgb,var(--text) 23%,transparent)}.goa-layout-minimal .goa-hero{min-height:58svh;background:var(--bg)}.goa-layout-minimal .goa-art{display:none}.goa-layout-minimal .goa-hero-inner{max-width:1000px;text-align:center}.goa-layout-minimal .goa-sub{margin:0 auto}.goa-layout-minimal .goa-actions{justify-content:center}.goa-layout-minimal .goa-hero h1{font-family:Inter,Arial,sans-serif;font-weight:800;letter-spacing:-.07em}.goa-layout-minimal .goa-media-wrap{display:block;height:min(480px,54vw);width:min(1080px,90%);margin:0 auto 30px;background:var(--panel);border-radius:0}.goa-layout-minimal .goa-hero-bottom{display:none}.goa-layout-minimal .goa-about{grid-template-columns:1fr}.goa-layout-minimal .goa-section{padding:60px 0}
-.goa-layout-showcase .goa-hero{min-height:75svh;display:grid;grid-template-columns:.9fr 1.1fr;align-items:center;gap:2%}.goa-layout-showcase .goa-hero-inner{grid-column:1;grid-row:1;width:88%;margin:50px auto}.goa-layout-showcase .goa-media-wrap{grid-column:2;grid-row:1;display:block;height:75%;min-height:420px;background:var(--panel);margin-right:4%;box-shadow:22px 22px 0 var(--a);border-radius:var(--goa-radius);overflow:hidden}.goa-layout-showcase .goa-hero-bottom{grid-column:1/-1}.goa-layout-showcase .goa-benefitgrid{grid-template-columns:repeat(2,1fr)}.goa-layout-showcase .goa-benefit:nth-child(3){grid-column:1/-1;min-height:130px}
-@media(max-width:800px){.goa-site .goa-hero{display:flex;flex-direction:column;min-height:0}.goa-site .goa-hero-inner{width:90%;margin:48px auto 32px;order:1}.goa-site .goa-media-wrap{position:relative;inset:auto;grid-column:auto;grid-row:auto;display:${heroMedia?'block':'none'};width:90%;height:300px;min-height:0;margin:0 auto 28px;order:2;border-radius:14px}.goa-site .goa-hero-bottom{order:3;width:100%}.goa-layout-cinematic .goa-media-wrap{position:absolute;inset:0;width:100%;height:100%;margin:0;z-index:-1}.goa-layout-cinematic .goa-hero{min-height:70svh}.goa-layout-cinematic .goa-hero-inner{margin:100px auto 40px}.goa-layout-minimal .goa-media-wrap{width:90%;height:260px}.goa-layout-mosaic .goa-benefitgrid,.goa-layout-showcase .goa-benefitgrid{grid-template-columns:1fr}.goa-layout-mosaic .goa-benefit:first-child,.goa-layout-showcase .goa-benefit:nth-child(3){grid-column:auto;grid-row:auto}}
-`;
-  return { ...brief, siteName, bio:about, palette, layout, html:siteHtml, css:css+variantCss, offers:list(brief.offers,6), faq:list(brief.faq,6) };
-}
-
-// Resilient original-design fallback for models that return no JSON/HTML (not a six-template catalog).
-// Content is the AI-written brief; structure, image placement and visual parameters vary per request.
-function goAiResilientPage(brief, name, description, media, photos, discoveredVideos=[]) {
-  const pick = a => a[crypto.randomInt(a.length)];
-  const rand = (min,max) => crypto.randomInt(min,max+1);
-  const text = (x,n=400) => esc(cleanStr(x||'',n));
-  const paletteIn = brief.palette && typeof brief.palette==='object' ? brief.palette : {};
-  const dark = /black|dark|noir|premium|luxur|черн|тъмен|лукс/i.test(description);
-  const base = dark ? {bg:'#0e1017',panel:'#1d2331',text:'#f7f8fc',a:'#c7a66a',b:'#76d8d1'} : {bg:'#f5f3ee',panel:'#ffffff',text:'#15232b',a:'#245ee9',b:'#b95753'};
-  const p = {};
-  for(const k of ['a','b','bg','panel','text'])p[k]=goAiHex(paletteIn[k])?paletteIn[k]:base[k];
-  const requested=goAiRequestedBg(description);
-  if(requested){p.bg=requested;p.text=goAiTextOn(requested);p.panel=p.text==='#fafbff'?'#1c2331':'#ffffff';}
-  else p.text=goAiTextOn(p.bg);
-  const imageList=[...(media||[]).filter(x=>x.type==='image'),...(photos||[]).filter(x=>x.url)].slice(0,10);
-  const videoList=[...(media||[]).filter(x=>x.type==='video'),...(discoveredVideos||[]).filter(x=>x.type==='video')];
-  const visualList=imageList;
-  const mediaHtml=visualList.map((m,i)=>m.type==='video'
-    ? `<video src="${esc(m.url)}" controls muted playsinline preload="metadata" aria-label="${text(m.name||name,100)}"></video>`
-    : `<img src="${esc(m.url)}" alt="${text(m.name||name,100)}" loading="${i?'lazy':'eager'}">`).join('');
-  const videoShowcase=videoList.length ? `<section class="go-r-video-showcase" aria-label="Product video"><p class="go-r-eyebrow">VIDEO SHOWCASE</p><h2>${text(name,110)} — Video</h2>${videoList.slice(0,2).map(v=>`<figure><video src="${esc(v.url)}" controls muted playsinline preload="metadata" aria-label="${text(v.name||name,110)}"></video><figcaption>${text(v.name||'Licensed visual footage',100)} · Preview footage, not necessarily the exact item for sale</figcaption></figure>`).join('')}</section>` : '';
-  const sections={
-    story:`<section id="about" class="go-r-story"><p class="go-r-eyebrow">${text(brief.eyebrow||brief.category||name,90)}</p><h2>${text(brief.aboutHeading||name,140)}</h2><p>${text(brief.bio||description,700)}</p></section>`,
-    benefits:`<section class="go-r-benefits">${(Array.isArray(brief.benefits)?brief.benefits:[]).slice(0,4).map((b,i)=>`<article><small>0${i+1}</small><h3>${text(b.title,100)}</h3><p>${text(b.description,260)}</p></article>`).join('')}</section>`,
-    offers:`<section id="offers" class="go-r-offers"><p class="go-r-eyebrow">${text(brief.offersIntro||'',180)}</p><h2>${text(brief.offersHeading||'Explore',110)}</h2>{{OFFERS}}</section>`,
-    faq:`<section class="go-r-faq"><h2>${text(brief.faqHeading||'Questions',110)}</h2>{{FAQ}}</section>`,
-    contact:`<section id="contact" class="go-r-contact"><h2>${text(brief.contactHeadline||name,110)}</h2><p>${text(brief.contactSubheadline||'',250)}</p>{{CONTACT}}</section>`
-  };
-  const order=['story','benefits','offers','faq','contact'];
-  // Preserve commerce/navigation anchors while varying the order of story and benefits.
-  if(rand(0,1))[order[0],order[1]]=[order[1],order[0]];
-  if(rand(0,1))[order[2],order[3]]=[order[3],order[2]];
-  const heroMediaFirst=/photo.*(?:left|first)|снимк.*(?:ляво|първо)/i.test(description) ? true
-    : /photo.*right|снимк.*дясно/i.test(description) ? false : !!rand(0,1);
-  const heroTitle=text(brief.heroHeadline||name,140);
-  // When photos exist, use the cinematic image-overlay treatment if the client asks for it.
-  // Otherwise keep a free composition; do not force automotive framing on other sectors.
-  const cinematic=!!imageList.length && /(?:luxur|premium|cinematic|hero|full.?screen|background photo|overla|дизайн.*снимк|лукс|кинематограф|текст.*снимк)/i.test(description);
-  const heroClass=cinematic?' go-r-hero-cinematic':'';
-  const hero=`<header class="go-r-nav"><a href="#top">${text(name,90)}</a><nav><a href="#about">About</a><a href="#offers">Offers</a><a href="#contact">Contact</a></nav></header><main id="top"><section class="go-r-hero${heroClass}"><div class="go-r-copy"><p class="go-r-eyebrow">${text(brief.category||name,80)}</p><h1>${heroTitle}</h1><p>${text(brief.heroSubheadline||description,400)}</p><a href="#offers" class="go-r-button">${text(brief.offersHeading||'Explore',80)} ↗</a></div><div class="go-r-media">${mediaHtml||'<div class="go-r-abstract" aria-hidden="true"></div>'}</div></section>${videoShowcase}${order.map(k=>sections[k]).join('')}</main><footer class="go-r-footer">${text(name,100)} <a href="#top">↑</a></footer>`;
-  const radius=rand(0,28),maxW=rand(1040,1440),heroSplit=rand(40,65),size=rand(55,95)/10;
-  const font=pick(['Georgia,serif','Arial,Helvetica,sans-serif','Trebuchet MS,Arial,sans-serif','Palatino,Georgia,serif','Verdana,Geneva,sans-serif']);
-  const padding=rand(58,118),shift=heroMediaFirst?'1':'2',copyShift=heroMediaFirst?'2':'1';
-  const css=`.ai-original{background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden;font-family:Arial,system-ui,sans-serif}`+
-    `.ai-original *{box-sizing:border-box}.ai-original a{color:inherit}.ai-original h1,.ai-original h2,.ai-original h3{font-family:${font};line-height:1.08;overflow-wrap:break-word}.ai-original p{line-height:1.65}`+
-    `.go-r-nav{max-width:${maxW}px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:25px 5%;border-bottom:1px solid currentColor}.go-r-nav>a{font-weight:850;text-decoration:none}.go-r-nav nav{display:flex;gap:18px;font-size:14px}.go-r-nav nav a{text-decoration:none}`+
-    `.go-r-hero{max-width:${maxW}px;margin:auto;display:grid;grid-template-columns:${heroSplit}% 1fr;align-items:center;gap:24px;min-height:75svh;padding:40px 5%}.go-r-copy{grid-column:${copyShift};grid-row:1}.go-r-copy h1{font-size:clamp(2.7rem,${size}vw,6.2rem);letter-spacing:-.035em;margin:15px 0 24px}.go-r-copy>p:not(.go-r-eyebrow){font-size:clamp(1.05rem,1.7vw,1.4rem);opacity:.85;max-width:65ch}.go-r-media{grid-column:${shift};grid-row:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}.go-r-media>*:first-child{grid-column:1/-1}.go-r-media img,.go-r-media video{width:100%;height:100%;min-height:170px;max-height:520px;object-fit:cover;border-radius:${radius}px}.go-r-abstract{height:480px;background:radial-gradient(circle at 30% 40%,var(--a),transparent 55%),linear-gradient(135deg,var(--panel),var(--b));border-radius:${radius}px}`+
-    `.go-r-video-showcase{max-width:${maxW}px;margin:30px auto;padding:45px 5%}.go-r-video-showcase h2{font-size:clamp(1.8rem,4vw,3.5rem)}.go-r-video-showcase figure{margin:0}.go-r-video-showcase video{display:block;width:100%;max-height:620px;object-fit:contain;background:#000;border-radius:${radius}px}.go-r-video-showcase figcaption{padding:15px 4px;font-size:.9rem;opacity:.7}`+
-    `.go-r-hero-cinematic{position:relative;isolation:isolate;display:grid;grid-template-columns:1fr;min-height:76svh;overflow:hidden;border-radius:${radius}px;margin-top:18px}.go-r-hero-cinematic .go-r-media{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:-1}.go-r-hero-cinematic .go-r-media:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(3,5,9,.89),rgba(3,5,9,.48) 54%,rgba(3,5,9,.07)),linear-gradient(0deg,rgba(3,5,9,.5),transparent 40%)}.go-r-hero-cinematic .go-r-media img:first-child{width:100%;height:100%;max-height:none;min-height:100%;object-fit:cover;border-radius:0}.go-r-hero-cinematic .go-r-media img:not(:first-child){display:none}.go-r-hero-cinematic .go-r-copy{grid-row:1;grid-column:1;z-index:2;width:min(760px,96%);padding:30px 3%;color:#fff}.go-r-hero-cinematic .go-r-copy h1{color:#fff;text-shadow:0 5px 35px #0009}.go-r-hero-cinematic .go-r-copy>p:not(.go-r-eyebrow){color:#f1f4f9;opacity:1;max-width:52ch}`+
-    `.go-r-eyebrow{color:var(--a);text-transform:uppercase;letter-spacing:.15em;font-weight:800;font-size:.78rem}.go-r-button{display:inline-block;background:var(--a);color:${goAiTextOn(p.a)}!important;padding:14px 24px;text-decoration:none;border-radius:${radius}px;margin-top:25px;font-weight:800}`+
-    `.go-r-story,.go-r-benefits,.go-r-offers,.go-r-faq,.go-r-contact{max-width:${maxW}px;margin:auto;padding:${padding}px 5%}.ai-original h2{font-size:clamp(2.3rem,5vw,5rem);margin:12px 0 28px}.go-r-story{display:grid;grid-template-columns:1fr 2fr;gap:24px}.go-r-story .go-r-eyebrow{grid-column:1/-1}.go-r-story p:last-child{font-size:1.15rem;max-width:68ch}.go-r-benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}.go-r-benefits article{background:var(--panel);padding:30px;border-radius:${radius}px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent)}.go-r-benefits article small{color:var(--a)}.go-r-faq,.go-r-contact{background:var(--panel);border-radius:${radius}px}.go-r-contact{margin-bottom:60px}.go-r-footer{padding:25px 5%;border-top:1px solid currentColor;display:flex;justify-content:space-between}.go-r-footer a{text-decoration:none}`+
-    `@media(max-width:760px){.go-r-nav nav{gap:9px;font-size:12px}.go-r-hero{display:flex;flex-direction:column;min-height:0;padding:50px 5%}.go-r-copy,.go-r-media{width:100%}.go-r-copy{order:1}.go-r-media{order:2}.go-r-copy h1{font-size:clamp(2.5rem,13vw,5rem)}.go-r-story{display:block}.go-r-story,.go-r-benefits,.go-r-offers,.go-r-faq,.go-r-contact{padding:50px 5%}.go-r-hero-cinematic{min-height:65svh}.go-r-hero-cinematic .go-r-media{position:absolute;inset:0;width:100%;height:100%;order:0}.go-r-hero-cinematic .go-r-copy{order:1;margin:0;width:100%;padding:30px 4%}}`;
-  return {...brief,html:`<div class="ai-original">${hero}</div>`,css,palette:p};
-}
+// No preset or server-generated website layout. AI authors the design; invalid output is rejected.
 
 // AI free-design pass: no preset layout names or server-side page grids.
 // The provider produces semantic HTML + authored CSS on every invocation;
@@ -5726,14 +5620,14 @@ async function goAiGenerateOriginalDesign({ key, model, name, description, langu
   const discoveredVideos=(videos||[]).filter(x=>x&&x.url).map((m,i)=>({id:'licensed-video-'+(i+1),type:'video',url:m.url,name:m.name||'Licensed footage',credit:m.credit||'',license:m.license||''}));
   const supplied = [...uploads,...discovered,...discoveredVideos];
   const userBg = goAiRequestedBg(description);
-  const system = `You are a world-class creative web designer and front-end engineer, NOT a template filler. Design a completely new website for this single customer. You choose the page's HTML DOM architecture, relative placement of blocks, graphics (CSS only), photography layout, navigation, section count/order, typography scale, spacing, radii, gradients, visual rhythm and animations independently every time. NEVER use a standard six-layout catalog, fixed starter structure, or copy the same ordering between customers. Take every explicit instruction in the customer's description literally and as the top priority, including colors, dark/light mode, hero orientation, image placement, product subject, section hierarchy and vibe. If the user asks for black, NEVER override it with white; same for every other specified color. When the client requests a luxury, premium or automotive site, deliver a cinematic art-directed design with substantial real photographic panels from the supplied manifest; dark sophisticated backgrounds, impeccable alignment, generous whitespace, readable listing previews via {{OFFERS}}, sharp typography, refined accent colors, navigation, meaningful content hierarchy. Never use a blank gradient square in place of a provided photo. NEVER fabricate seller inventory, exact vehicle specifications, offers, prices, customer counts, performance claims, awards or functional search systems. Use the navigation and menu design as part of the original brand identity rather than a generic GoldOffer menu. Include a readable branded header/nav within your generated HTML and give it a distinctive visual treatment. At least one intentional hero should art-direct text WITH a real supplied photograph (text overlay over an actual photo, with a contrast gradient), if images exist; do not rely only on a tiny photo beside a large heading. When a real video is supplied in the media manifest, include an elegant video showcase using actual <video controls> and a truthful descriptive caption; videos MUST NOT be simulated as playable images. Make careful use of perspective, depth, and subtle motion using CSS only, honor prefers-reduced-motion. Do not claim that stock footage is the exact item for sale. When the customer asks for another sector, choose visuals and layout appropriate for that sector, not automotive aesthetics. Treat a reference screenshot as inspiration only, never copy its brand or invented facts. Avoid horizontal overflow, excessive heading width, overlapping badges or text. Make layouts responsive at 375px, 768px and 1440px. Use distinct font stacks from installed web-safe fonts (no remote imports). Write the page copy in ${languageName}. Do not invent prices, addresses, contact data, testimonials or achievements. Only use grounded business facts in the supplied JSON. Return ONE JSON object with exactly 3 top-level keys: "html" (HTML string of complete, meaningful page fragment), "css" (CSS string, namespaced under .ai-original), and "palette" (object with a,b,bg,panel,text as valid six-digit hexadecimal colors). HTML MUST have ONE wrapping <div class="ai-original">, a substantial brand-specific hero, some meaningful sections, and MUST include exactly once each placeholder: {{OFFERS}}, {{FAQ}}, {{CONTACT}} in semantically appropriate parts of HTML. These are injected by the trusted backend: DO NOT create your own fake product cards or contact forms. Include links to #offers, #about and #contact where appropriate; do not link to made-up domains. Asset URLs: use ONLY URLs from the media manifest, and embed each user-uploaded photo/video at least once in an intentional location. Videos use <video src="..." controls muted playsinline preload="metadata"></video> (no scripts). Images use <img src="..." alt="..." loading="lazy">. Absolutely no JavaScript, <script>, <style>, <iframe>, <form>, inline on* handlers, external CSS imports or CDN links. Do not put HTML into CSS. CSS should be vivid, polished, fully responsive and distinctive; use var(--bg), var(--panel), var(--text), var(--a) and var(--b) for brand colors so every explicitly requested color is respected. Do not add global body selectors or !important overrides, use .ai-original scope. Aim for HTML under 12000 characters and CSS under 11000 characters. Output valid JSON only, no markdown.`;
+  const system = `You are a world-class creative web designer and front-end engineer, NOT a template filler. Design a completely new website for this single customer. You choose the page's HTML DOM architecture, relative placement of blocks, graphics (CSS only), photography layout, navigation, section count/order, typography scale, spacing, radii, gradients, visual rhythm and animations independently every time. NEVER use a standard six-layout catalog, fixed starter structure, or copy the same ordering between customers. Take every explicit instruction in the customer's description literally and as the top priority, including colors, dark/light mode, hero orientation, image placement, product subject, section hierarchy and vibe. If the user asks for black, NEVER override it with white; same for every other specified color. When the client requests luxury, design with sophisticated visual hierarchy and compelling, accurate photography, but DO NOT reuse a generic dark/car aesthetic for clothing, services or other sectors. Select an art-directed color system based on the actual brand, not a fallback gray. The contrast between hero, editorial narrative, commercial sections, featured offers and footer must be clearly intentional; do not paint every section identical gray. Vary spatial composition, scale, surface treatments and background tones, while retaining accessibility. Never use a blank gradient square in place of a provided photo. NEVER fabricate seller inventory, exact vehicle specifications, offers, prices, customer counts, performance claims, awards or functional search systems. Build a distinctive, functional navigation styled as part of the customer's brand, including accessible links to the actual site's sections. Navigation should clearly differentiate primary links, hover states, current state and CTA. Supporting pages keep trustworthy store features but inherit the exact palette, typography and visual tone from this design. Include a readable branded header/nav within your generated HTML and give it a distinctive visual treatment. At least one intentional hero should art-direct text WITH a real supplied photograph (text overlay over an actual photo, with a contrast gradient), if images exist; do not rely only on a tiny photo beside a large heading. When a real video is supplied in the media manifest, include an elegant video showcase using actual <video controls> and a truthful descriptive caption; videos MUST NOT be simulated as playable images. Make careful use of perspective, depth, and subtle motion using CSS only, honor prefers-reduced-motion. Do not claim that stock footage is the exact item for sale. When the customer asks for another sector, choose visuals and layout appropriate for that sector, not automotive aesthetics. Treat a reference screenshot as inspiration only, never copy its brand or invented facts. Avoid horizontal overflow, excessive heading width, overlapping badges or text. Make layouts responsive at 375px, 768px and 1440px. Use distinct font stacks from installed web-safe fonts (no remote imports). Write the page copy in ${languageName}. Do not invent prices, addresses, contact data, testimonials or achievements. Only use grounded business facts in the supplied JSON. Return ONE JSON object with exactly 3 top-level keys: "html" (HTML string of complete, meaningful page fragment), "css" (CSS string, namespaced under .ai-original), and "palette" (object with a,b,bg,panel,text as valid six-digit hexadecimal colors). HTML MUST have ONE wrapping <div class="ai-original">, a substantial brand-specific hero, some meaningful sections, and MUST include exactly once each placeholder: {{OFFERS}}, {{FAQ}}, {{CONTACT}} in semantically appropriate parts of HTML. These are injected by the trusted backend: DO NOT create your own fake product cards or contact forms. Include links to #offers, #about and #contact where appropriate; do not link to made-up domains. Asset URLs: use ONLY URLs from the media manifest, and embed each user-uploaded photo/video at least once in an intentional location. Videos use <video src="..." controls muted playsinline preload="metadata"></video> (no scripts). Images use <img src="..." alt="..." loading="lazy">. Absolutely no JavaScript, <script>, <style>, <iframe>, <form>, inline on* handlers, external CSS imports or CDN links. Do not put HTML into CSS. CSS must be polished, distinctive and fully responsive; use var(--bg), var(--panel), var(--text), var(--a), and var(--b), but create additional complementary surface colors with CSS color-mix() where needed. Ensure headers, buttons, filters, product cards and sections are visibly differentiated, with accessible contrast. Make stylistic decisions freely without defaulting to gray/black unless the brief genuinely calls for them. Do not add global body selectors or !important overrides, use .ai-original scope. Aim for HTML under 12000 characters and CSS under 11000 characters. Output valid JSON only, no markdown.`;
   const payload={
     model,
     messages:[{role:'system',content:system},{role:'user',content:JSON.stringify({name,description,brief,palette:colors,explicitBackground:userBg||null,media:supplied,designChallenge:crypto.randomBytes(12).toString('hex')})}],
     temperature:0.95,max_tokens:9200
   };
   let diagnostics='';
-  for(let attempt=0;attempt<(model==='openrouter/free'?1:2);attempt++){
+  for(let attempt=0;attempt<2;attempt++){
     if(attempt===0)payload.response_format={type:'json_object'};
     else delete payload.response_format;
     let resp;
@@ -5741,7 +5635,7 @@ async function goAiGenerateOriginalDesign({ key, model, name, description, langu
       resp=await axios.post('https://openrouter.ai/api/v1/chat/completions',payload,{headers:{Authorization:'Bearer '+key},timeout:110000});
     }catch(e){
       if(attempt===0 && e.response && [400,422].includes(e.response.status))continue;
-      if(!e.response || e.response.status>=500 || e.response.status===429){console.warn('AI original design provider unavailable; using resilient layout', {model,status:e.response&&e.response.status});break;}
+      if(!e.response || e.response.status>=500 || e.response.status===429){console.warn('AI original design provider unavailable', {model,status:e.response&&e.response.status});break;}
       throw e;
     }
     const choice=resp.data&&resp.data.choices&&resp.data.choices[0];
@@ -5775,8 +5669,10 @@ async function goAiGenerateOriginalDesign({ key, model, name, description, langu
     }
     console.warn('AI original design validation failed',{model,finishReason:diagnostics,htmlLength:html&&html.length,cssLength:css&&css.length,hasSections:!!hasSections,uploadsIncluded});
   }
-  console.warn('AI original design missing; using resilient layout', {model,reason:diagnostics});
-  return goAiResilientPage(brief,name,description,media,photos,videos);
+  console.warn('AI original design incomplete; no template substituted', {model,reason:diagnostics});
+  const err=new Error('The AI model did not produce a complete original design. No template was substituted and no website was published. Please retry or choose a more capable OPENROUTER_MODEL.');
+  err.statusCode=502;
+  throw err;
 }
 
 app.post('/api/ai/site-generate', authenticateToken, aiSiteLimiter, async (req, res) => {
@@ -6003,6 +5899,7 @@ All user-visible text must be written in ${languageName}. Pick a visual tone mat
       if (status === 429) return res.status(503).json({ message: 'AI provider rate limit reached. Please try again later.' });
       return res.status(502).json({ message: 'AI provider returned HTTP ' + status + '. Check OPENROUTER_MODEL and Render logs.' });
     }
+    if (e.statusCode === 502) return res.status(502).json({message:e.message, retryable:true});
     if (e.code === 'ECONNABORTED') return res.status(504).json({ message: 'AI provider timed out. Please retry.' });
     if (e.code === 'ENOTFOUND' || e.code === 'ECONNRESET') return res.status(503).json({ message: 'Could not reach AI provider. Check connectivity and retry.' });
     res.status(500).json({ message: 'Could not finish website generation. Check the Render server logs for the cause.' });

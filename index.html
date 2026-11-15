@@ -2283,7 +2283,7 @@ body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspa
               <div class="field"><label>Title</label><input type="text" id="oTitle" placeholder="e.g. Oil change" onblur="goRenderSpecFields()"></div>
               <div style="display:flex;gap:9px;flex-wrap:wrap">
                 <button class="btn-ghost" id="aiBtn" onclick="lookupPrice()">Check market price</button>
-                <button class="btn-ghost" id="descBtn" onclick="lookupDescription()">✦ Generate description from Google</button>
+                <button class="btn-ghost" id="descBtn" onclick="lookupDescription()">✦ Generate English description with AI</button>
               </div>
               <div class="range" id="oRange"></div>
               <div class="field" style="margin-top:12px"><label>Price (EUR)</label><input type="number" id="oPrice" min="0" step="0.01" placeholder="e.g. 25"></div>
@@ -3931,15 +3931,15 @@ async function deleteSite(id) {
     const title = $('oTitle').value.trim();
     if (title.length < 3) return notify('Enter a product name first (at least 3 characters).');
     const btn = $('descBtn');
-    btn.disabled = true; btn.textContent = 'Searching Google...';
+    btn.disabled = true; btn.textContent = 'Writing English description...';
     try {
       const d = await api('/api/ai/product-description', { method: 'POST', body: JSON.stringify({ query: title }) });
       if (d.description) {
         $('oDesc').value = d.description;
-        notify('Description generated. Please review it before publishing.', 'Description');
+        notify('English AI description ready. Review the details before publishing.', 'Description');
       } else notify(d.message || 'No suitable description found.', 'Description');
     } catch (e) { notify(e.message, 'Description'); }
-    finally { btn.disabled = false; btn.textContent = '✦ Generate description from Google'; }
+    finally { btn.disabled = false; btn.textContent = '✦ Generate English description with AI'; }
   }
   // ---- Add a new offer, or save changes when an existing one is being edited ----
   function renderExisting() {
