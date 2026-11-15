@@ -1714,6 +1714,47 @@ body:has(.view.on) .go-workspace,#v-orders .go-workspace,#v-calendar .go-workspa
 .stu-top button[class*="pub"],.stu-top .stu-publish,.stu-top .primary{background:#2f7cf6!important;color:#fff!important;border-radius:10px!important;border:0!important;font-weight:700}
 .stu-modal .stu-card{background:#141416!important;border:1px solid #26262a!important;border-radius:16px!important}
 </style>
+
+<style id="go-studio-light-20261115">
+/* Design Studio chrome only: never override the customer's iframe/site. */
+.stu{background:#f3f5f9!important;color:#182437!important}
+.stu-top{background:#fff!important;color:#172238!important;border-bottom:1px solid #dce3ed!important;box-shadow:0 2px 10px #1c32500a}
+.stu-stage{background:#e9edf4!important}
+.stu-hint,.stu-note{color:#64748b!important}
+.stu-wrap iframe{box-shadow:0 14px 42px #1b2b4730!important;border:1px solid #cad4e2!important}
+.stu-wrap.ph iframe{border:9px solid #384358!important}
+.stu-side{background:#fff!important;color:#182437!important;border-left:1px solid #dae2ec!important}
+.stu-tabs{background:#fff!important;border-bottom:1px solid #e2e7ef!important}
+.stu-tabs button{background:transparent!important;color:#66758b!important;border-radius:0!important;border-bottom:2px solid transparent!important}
+.stu-tabs button.on{background:#eff5ff!important;color:#2056b5!important;border-color:#3479eb!important}
+.stu-pane{background:#fff!important;color:#182437!important}
+.stu-pane h5{color:#68798d!important}
+.stu-b,.stu-s,.stu-x,.stu-tg button,.stu-seg button{background:#f6f8fc!important;color:#243750!important;border:1px solid #d6e0ed!important;box-shadow:none!important}
+.stu-b:hover:not(:disabled),.stu-s:hover,.stu-x:hover,.stu-tg button:hover{background:#e9f0fb!important;border-color:#9db9e6!important}
+.stu-b.pri,.stu-top .stu-publish,.stu-top button[class*="pub"],.stu-top .primary{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important;box-shadow:none!important}
+.stu-b.pri:hover,.stu-top .stu-publish:hover{background:#1d4ed8!important}
+.stu-seg{border:1px solid #d6e0ed!important}
+.stu-seg button.on,.stu-tg button.on{background:#dceafe!important;color:#184ca5!important;border-color:#8cb7f3!important}
+.stu-r>label{color:#526276!important}
+.stu-r input[type=number],.stu-r input[type=text],.stu-r select,
+.stu-pane textarea,.stu-pane input:not([type=color]):not([type=range]),.stu-pane select{background:#fff!important;color:#172238!important;border:1px solid #cbd6e3!important;box-shadow:none!important}
+.stu-pane input::placeholder,.stu-pane textarea::placeholder{color:#8b98a9!important}
+.stu-r input[type=color]{border-color:#ccd7e4!important}
+.stu-pill{background:#eaf2ff!important;border-color:#c4d8ff!important;color:#244f9e!important}
+.stu-more{background:#fff!important;border-color:#dce3ed!important}
+.stu-more>summary{color:#273d59!important}
+.stu-more[open]>summary{border-bottom-color:#dce3ed!important}
+.stu-v{border-bottom-color:#e4e9f1!important;color:#172238!important;background:#fff!important;box-shadow:none!important}
+.stu-v small{color:#697b90!important}
+.stu-launch{background:linear-gradient(135deg,#f3f7ff,#eaf2ff)!important;border-color:#cfdef7!important;color:#172238!important}
+.stu-launch p{color:#5b6d84!important}
+.stu-modal{background:rgba(18,32,55,.42)!important}
+.stu-modal .stu-card{background:#fff!important;color:#19263a!important;border:1px solid #d7e0eb!important;box-shadow:0 18px 65px #17233838!important}
+.stu-card p,.stu-card small{color:#596d83!important}
+.stu-card button:not(.stu-b):not(.stu-s){color:#213750}
+.stu-card .stu-b.pri,.stu-modal .stu-b.pri{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important}
+@media(max-width:900px){.stu-side{border-top:1px solid #dce3ed!important}}
+</style>
 </head>
 <body class="theme-neon-blue font-sans" id="top" data-page="home">
 <nav class="mtab" id="mtab"><a href="/dashboard" data-link data-t="dashboard"><i>🏠</i>Dashboard</a><a href="/studio" data-link data-t="studio"><i>🎨</i>Studio</a><a href="/pro" data-link data-t="pro"><i>⚡</i>Pro</a><a href="/messages" data-link data-t="messages"><i>💬</i>Messages</a><a href="/settings" data-link data-t="settings"><i>⚙️</i>Settings</a></nav>
@@ -4694,7 +4735,7 @@ function stuDup() { const f = stuFree(); if (!f) return; stuDo(D => { const c = 
 function stuReset() { const k = stuSelKey(); stuDo(D => { const r = stuRules(false); if (r && k) delete r[k]; if (D.t[ST.page] && ST.sel) delete D.t[ST.page][ST.sel.sel]; if (D.im[ST.page] && ST.sel) delete D.im[ST.page][ST.sel.sel]; }); }
 function stuAdd(kind) {
   const y = 160; const id = rid();
-  const base = { text: { k: 'text', w: 40, text: 'Your text', s: { 'font-size': '34px', 'font-weight': '800', color: '#ffffff' } }, btn: { k: 'btn', w: 24, h: 48, text: 'Button', href: '', s: {} }, shape: { k: 'shape', w: 30, h: 160, s: { 'border-radius': '24px', 'background-image': 'linear-gradient(135deg,#ff3d81,#ffcf00)' } } }[kind];
+  const base = { text: { k: 'text', w: 40, text: 'Your text', s: { 'font-size': '34px', 'font-weight': '800', color: '#ffffff' } }, textbox: { k: 'text', w: 50, text: 'Write your own text here.\nYou can add multiple lines.', s: { 'font-size': '18px', 'font-weight': '400', 'line-height': '1.6', color: '#ffffff', 'white-space': 'pre-line', 'padding': '16px', 'border-radius': '12px', 'background-color': '#1b2230' } }, btn: { k: 'btn', w: 24, h: 48, text: 'Button', href: '', s: {} }, shape: { k: 'shape', w: 30, h: 160, s: { 'border-radius': '24px', 'background-image': 'linear-gradient(135deg,#ff3d81,#ffcf00)' } } }[kind];
   stuDo(D => { D.f[ST.page] = D.f[ST.page] || []; D.f[ST.page].push(Object.assign({ id, x: 30, y }, base)); });
   setTimeout(() => stuSend({ t: 'select-free', id }), 120);
 }
@@ -4720,14 +4761,15 @@ function stuGrad(prop) { stuSet(prop, 'linear-gradient(' + ($('ga' + prop).value
 function stuRender() {
   const pane = $('stuPane'); if (!pane) return;
   if (ST.tab === 'site') return stuSiteTab(pane);
-  if (ST.tab === 'add') { pane.innerHTML = '<h5>Add anything, anywhere</h5><p style="color:#8a97ad;margin-bottom:10px">New items float on top of the page. Drag them wherever you want, then style them in the Element tab.</p><div class="stu-tg" style="flex-direction:column"><button onclick="stuAdd(\'text\')">+ Text or heading</button><button onclick="stuAdd(\'btn\')">+ Button (link)</button><button onclick="stuAddImage()">+ Image (upload)</button><button onclick="stuAdd(\'shape\')">+ Shape / colored block</button></div><h5>Tips</h5><p style="color:#8a97ad;line-height:1.5">Phone mode keeps its own positions for added items. Switch to Phone, then drag to fix how it looks on mobile.</p>'; return; }
+  if (ST.tab === 'add') { pane.innerHTML = '<h5>Add anything, anywhere</h5><p style="color:#8a97ad;margin-bottom:10px">New items float on top of the page. Drag them wherever you want, then style them in the Element tab.</p><div class="stu-tg" style="flex-direction:column"><button onclick="stuAdd(\'text\')">+ Text or heading</button><button onclick="stuAdd(\'textbox\')">+ Text box (write anything)</button><button onclick="stuAdd(\'btn\')">+ Button (link)</button><button onclick="stuAddImage()">+ Image (upload)</button><button onclick="stuAdd(\'shape\')">+ Shape / colored block</button></div><h5>Tips</h5><p style="color:#8a97ad;line-height:1.5">Phone mode keeps its own positions for added items. Switch to Phone, then drag to fix how it looks on mobile.</p>'; return; }
   const s = ST.sel;
   if (!s) { pane.innerHTML = '<div class="stu-pill">Nothing selected</div><p style="color:#8a97ad;line-height:1.6">Click any text, picture, button or box on your site. Then change its color, font, size, position, effects and more. Double-click text to retype it. Use <b>Whole site</b> for global colors, fonts and effects.</p>'; return; }
   const st = stuStyle(), cs = s.cs || {}, fr = stuFree(); const get = (p, d) => st[p] !== undefined ? st[p] : d;
   const tr = String(st.translate || '0px 0px').split(/\s+/).map(x => parseFloat(x) || 0);
   let h = '<div class="stu-pill">' + (fr ? 'Added ' + ({ text: 'text', btn: 'button', img: 'image', shape: 'shape' }[fr.k]) : esc(s.label || s.tag)) + (ST.phone ? ' &middot; <b>phone</b>' : '') + '</div>';
   if (!fr) h += '<div class="stu-tg"><button class="' + (ST.scopeAll ? '' : 'on') + '" onclick="ST.scopeAll=false;stuRender()">This page</button><button class="' + (ST.scopeAll ? 'on' : '') + '" onclick="ST.scopeAll=true;stuRender()">All pages</button>' + (s.sim ? '<button class="' + (ST.similar ? 'on' : '') + '" onclick="ST.similar=!ST.similar;stuRender()">All like this</button>' : '') + '</div>';
-  if (fr && (fr.k === 'text' || fr.k === 'btn')) h += '<div class="stu-r"><label>Text</label><input type="text" value="' + esc(fr.text || '') + '" onchange="stuDo(D=>{stuFree().text=this.value})"></div>';
+  if (fr && fr.k === 'text') h += '<div class="stu-r"><label>Your text</label><textarea rows="6" style="width:100%;min-height:125px;resize:vertical;padding:12px;border-radius:9px;background:#111827;color:#f8fafc" oninput="stuFreeTextInput(this.value)" placeholder="Write your text here...">' + esc(fr.text || '') + '</textarea><small>Changes appear in the site as you type. You can also double-click the text on the page.</small></div>';
+  if (fr && fr.k === 'btn') h += '<div class="stu-r"><label>Button text</label><input type="text" value="' + esc(fr.text || '') + '" onchange="stuDo(D=>{stuFree().text=this.value})"></div>';
   if (fr && fr.k === 'btn') h += '<div class="stu-r"><label>Link</label><input type="text" placeholder="https://... or tel:+359..." value="' + esc(fr.href || '') + '" onchange="stuDo(D=>{stuFree().href=this.value})"></div>';
   if (s.img || (fr && fr.k === 'img')) h += '<div class="stu-tg"><button onclick="stuReplaceImg()">Replace image</button></div>';
   if (s.text || (fr && fr.k !== 'img' && fr.k !== 'shape')) {
@@ -4756,6 +4798,18 @@ function stuRender() {
     h += '</details>';
   h += '<h5>Actions</h5><div class="stu-tg"><button onclick="stuSet(\'display\',\'none\')">Hide</button><button onclick="stuSet(\'display\',null)">Show</button>' + (fr ? '<button onclick="stuDup()">Duplicate</button><button onclick="stuDelete()">Delete</button>' : '<button onclick="stuReset()">Reset element</button>') + '</div><p style="color:#6f7d94;margin-top:8px">Arrow keys nudge &middot; Shift = 10x &middot; Delete hides</p>';
   pane.innerHTML = h;
+}
+let stuTextDebounce = 0;
+function stuFreeTextInput(value) {
+  const f=stuFree(); if(!f)return;
+  const id=f.id;
+  const frame=$('stuFrame');
+  try{const doc=frame.contentDocument;const el=doc&&doc.getElementById('gf-'+id);if(el)el.textContent=value;}catch(e){}
+  clearTimeout(stuTextDebounce);
+  stuTextDebounce=setTimeout(()=>{
+    const current=stuFree();if(!current||current.id!==id)return;
+    if(current.text!==value)stuDo(D=>{const item=(D.f[ST.page]||[]).find(x=>x.id===id);if(item)item.text=value;});
+  },550);
 }
 function stuMoveAxis(i, val) { const cur = String(stuStyle().translate || '0px 0px').split(/\s+/).map(x => parseFloat(x) || 0); cur[i] = parseFloat(val) || 0; stuSet('translate', (cur[0] || 0) + 'px ' + (cur[1] || 0) + 'px'); }
 function stuSiteTab(pane) {
